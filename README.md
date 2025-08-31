@@ -44,7 +44,7 @@ The goal of *Vybe* is to blend music discovery with social interaction, creating
 ## 👥 Team Member Bios  
 
 ### Vas Anbukumar’s Bio:  
-I am a senior Computer Science student with a strong focus on backend development, data handling, and scalable systems. My experience includes working with Python, JavaScript, SQL, and cloud technologies to build pipelines, APIs, and intelligent applications. I enjoy bridging technical complexity with real-world usability, especially in projects that combine data, AI, and interactive user experiences. For Vybe, I’ll be anchoring backend development while supporting every other area of the project as needed. Outside of class, I enjoy exploring new tech tools and working on side projects that challenge me to grow.  
+I am a senior Computer Science student with a strong focus on backend development, data handling, and scalable systems. My experience includes working with Python, JavaScript, FastAPI, and cloud technologies to build pipelines, APIs, and intelligent applications. I enjoy bridging technical complexity with real-world usability, especially in projects that combine data, AI, and interactive user experiences. For Vybe, I’ll be anchoring backend development while supporting every other area of the project as needed. Outside of class, I enjoy exploring new tech tools and working on side projects that challenge me to grow.  
 
 ### Ezzat AbdelKhalek’s Bio:  
 I am a computer science undergraduate student with experience in Java, C#, Python and HTML/CSS. I enjoy learning new things and working on projects that let me apply what I’ve learned. For Vybe, I will focus on machine learning. Outside of school, I like spending time on reading books and learning new things.  
