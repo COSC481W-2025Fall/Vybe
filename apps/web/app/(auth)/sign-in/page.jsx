@@ -3,19 +3,17 @@
 import { supabaseBrowser } from '@/lib/supabase/client';
 
 export default function SignInPage() {
+  const supabase = supabaseBrowser();
+
   const signInWithSpotify = async () => {
-    const supabase = supabaseBrowser();
-    const { error } = await supabase.auth.signInWithOAuth({
+    const next = '/library';
+    await supabase.auth.signInWithOAuth({
       provider: 'spotify',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=library`,
-        // scopes: 'user-read-email user-read-private playlist-read-private'
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        // scopes: 'user-read-email user-read-private'
       },
     });
-    if (error) {
-      console.error('Spotify login error:', error.message);
-      redirectTo: `${window.location.origin}/(auth)/sign-in/page`
-    }
   };
 
   return (

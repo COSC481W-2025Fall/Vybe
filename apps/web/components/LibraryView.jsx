@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Clock, ListMusic } from 'lucide-react';
+import { supabaseBrowser } from '@/lib/supabase/client';
 
 // --- sample data (replace with real data later) ---
 const RECENT = [
@@ -92,6 +93,27 @@ function Row({ item }) {
 
 export default function LibraryView() {
   const [tab, setTab] = useState('recent');
+
+  useEffect(() => {
+    const run = async () => {
+      // Supabase user (your app auth)
+      const sb = supabaseBrowser();
+      const { data: { user } } = await sb.auth.getUser();
+      console.log('[Supabase user]', user);
+
+      // Spotify profile (via your /api/spotify/me proxy)
+      try {
+        const res = await fetch('/api/spotify/me', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const me = await res.json();
+        console.log('[Spotify me]', me);
+        setSpotifyMe(me);
+      } catch (err) {
+        console.error('Failed to load Spotify profile', err);
+      }
+    };
+    run();
+  }, []);
 
   const content = useMemo(() => {
     if (tab === 'recent') {
