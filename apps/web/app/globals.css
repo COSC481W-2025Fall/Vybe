@@ -25,8 +25,9 @@
   100% { background-position: 0% 50% }
 }
 
+
 body {
-  background: #000000;
+  background: #0f0f0f;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   height: 100vh;
@@ -36,4 +37,38 @@ main {
   height: 70%;
   display: flex;
   align-items: center;
+}
+
+@layer utilities {
+  /* Softer, subtler outer glow */
+  .glow-shadow--soft {
+    background: #000;             /* keep inside opaque */
+    border-radius: 12px;          /* match your card */
+    will-change: box-shadow;
+    animation: glowShadowPulseSoft 4.6s ease-in-out infinite;
+
+    /* base (static) glow — lighter + tighter */
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.30),
+      0 0 10px 6px rgba(255,255,255,.12),
+      0 0 28px 16px rgba(168,85,247,.18),
+      0 0 48px 28px rgba(168,85,247,.10);
+  }
+
+  @keyframes glowShadowPulseSoft {
+    0%, 100% {
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.28),
+        0 0 8px 5px  rgba(255,255,255,.10),
+        0 0 24px 14px rgba(168,85,247,.16),
+        0 0 40px 24px rgba(168,85,247,.08);
+    }
+    50% {
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.36),
+        0 0 12px 7px rgba(255,255,255,.14),
+        0 0 34px 20px rgba(168,85,247,.20),
+        0 0 56px 30px rgba(168,85,247,.10);
+    }
+  }
 }
