@@ -78,7 +78,7 @@ function Row({ item }) {
         alt={`${item.title} cover`}
       />
       <div className="min-w-0">
-        <div className="truncate text-sm font-medium">{item.title}</div>
+        <div className="truncate text-sm font-medium text-white">{item.title}</div>
         <div className="truncate text-xs text-muted-foreground">
           {item.artist} • {item.album}
         </div>
@@ -136,7 +136,7 @@ export default function LibraryView() {
   const content = useMemo(() => {
     if (tab === 'recent') {
       return (
-        <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card">
+        <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card text-white">
           <div className="mb-3 flex items-center gap-2 text-sm font-medium">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span>Recent Listening History</span>
@@ -151,9 +151,9 @@ export default function LibraryView() {
     }
     // Saved playlists placeholder
     return (
-      <div className="rounded-2xl border border-border bg-card/60 p-6 shadow-xl backdrop-blur chroma-card">
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-          <ListMusic className="h-4 w-4 text-muted-foreground" />
+      <div className="rounded-2xl border border-border bg-card/60 p-6 shadow-xl backdrop-blur chroma-card text-white">
+        <div className="mb-2 flex items-center gap-2 text-sm font-medium ">
+          <ListMusic className="h-4 w-4 text-muted-foreground " />
         <span>Saved Playlists</span>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -166,8 +166,8 @@ export default function LibraryView() {
   return (
     <section className="mx-auto max-w-4xl px-4 py-8">
       <header className="mb-6">
-        <h1 className="text-xl font-semibold">Your Library</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl font-semibold text-white">Your Library</h1>
+        <p className="text-sm text-muted-foreground  text-white">
           Your listening history and saved playlists
         </p>
 
@@ -188,7 +188,7 @@ export default function LibraryView() {
                   className="h-8 w-8 rounded-full object-cover"
                 />
               )}
-              <span className="text-sm">
+              <span className="text-sm text-white">
                 Signed in as <span className="font-medium">{spotifyMe.display_name}</span>
               </span>
             </>
@@ -196,7 +196,7 @@ export default function LibraryView() {
         </div>
       </header>
 
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex items-center gap-2 text-white">
         {TABS.map(({ key, label }) => (
           <TabButton key={key} isActive={tab === key} onClick={() => setTab(key)}>
             {label}
