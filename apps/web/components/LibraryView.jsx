@@ -1,43 +1,10 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Clock, ListMusic } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 
-// --- sample data (replace with real data later) ---
-const RECENT = [
-  {
-    id: 1,
-    title: 'Blinding Lights',
-    artist: 'The Weeknd',
-    album: 'After Hours',
-    cover: 'https://picsum.photos/seed/blinding/80/80',
-    playedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 2,
-    title: 'Levitating',
-    artist: 'Dua Lipa',
-    album: 'Future Nostalgia',
-    cover: 'https://picsum.photos/seed/levitating/80/80',
-    playedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 3,
-    title: 'Good 4 U',
-    artist: 'Olivia Rodrigo',
-    album: 'SOUR',
-    cover: 'https://picsum.photos/seed/good4u/80/80',
-    playedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-const TABS = [
-  { key: 'recent', label: 'Recent History' },
-  { key: 'saved',  label: 'Saved Playlists' },
-];
-
-// --- helpers ---
+// ---------------- helpers ----------------
 function timeAgo(input) {
   const date = new Date(input);
   const diff = Math.max(0, Date.now() - date.getTime());
@@ -91,94 +58,179 @@ function Row({ item }) {
   );
 }
 
+// ---------------- component ----------------
+const TABS = [
+  { key: 'recent', label: 'Recent History' },
+  { key: 'saved',  label: 'Saved Playlists' },
+];
+
 export default function LibraryView() {
   const [tab, setTab] = useState('recent');
 
-  // NEW: state for Spotify profile + loading/error
-  const [spotifyMe, setSpotifyMe] = useState(null);
-  const [loadingMe, setLoadingMe] = useState(true);
-  const [apiError, setApiError] = useState(null);
+  // Spotify identity
+  const [spotifyMe, setSpotifyMe]   = useState(null);
+  const [loadingMe, setLoadingMe]   = useState(true);
+  const [meError, setMeError]       = useState(null);
 
+  // Listening history
+  const [recent, setRecent]         = useState([]);   // normalized items for UI
+  const [loadingRec, setLoadingRec] = useState(true);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [recError, setRecError]     = useState(null);
+  const [hasMore, setHasMore]       = useState(true); // we stop when Spotify returns empty
+
+  // --- load Spotify identity (optional, nice UX) ---
   useEffect(() => {
-    const run = async () => {
+    (async () => {
       try {
-        // (Optional) check our own Supabase user
         const sb = supabaseBrowser();
         const { data: { user } } = await sb.auth.getUser();
         console.log('[Supabase user]', user);
 
-        // Call your proxy which reads cookies & injects the bearer token
-        const controller = new AbortController();
-        const res = await fetch('/api/spotify/me', {
-          cache: 'no-store',
-          signal: controller.signal,
-        });
+        const res = await fetch('/api/spotify/me', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const me = await res.json();
+        setSpotifyMe(me);
+        setMeError(null);
+      } catch (err) {
+        console.error('Failed to load Spotify profile', err);
+        setMeError(String(err?.message || err));
+      } finally {
+        setLoadingMe(false);
+      }
+    })();
+  }, []);
 
+  // --- helper: map Spotify API -> UI row ---
+  const mapItem = useCallback((sp) => {
+    const t = sp.track;
+    return {
+      id: `${t.id}-${sp.played_at}`, // unique per play
+      title: t.name,
+      artist: t.artists?.map(a => a.name).join(', ') || 'Unknown',
+      album:  t.album?.name || '',
+      cover:  t.album?.images?.[1]?.url || t.album?.images?.[0]?.url || '',
+      playedAt: sp.played_at,
+    };
+  }, []);
+
+  // --- load first page of recently played ---
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingRec(true);
+        const res = await fetch('/api/spotify/me/player/recently-played?limit=20', { cache: 'no-store' });
         if (!res.ok) {
           const body = await res.text().catch(() => '');
           throw new Error(`HTTP ${res.status} ${body}`);
         }
-
-        const me = await res.json();
-        console.log('[Spotify me]', me);
-        setSpotifyMe(me);
-        setApiError(null);
+        const json = await res.json();              // { items: [...], cursors, next }
+        const items = (json.items || []).map(mapItem);
+        setRecent(items);
+        setHasMore((json.items || []).length > 0);
+        setRecError(null);
       } catch (err) {
-        console.error('Failed to load Spotify profile', err);
-        setApiError(String(err?.message || err));
+        console.error('Failed to load listening history', err);
+        setRecError(String(err?.message || err));
       } finally {
-        setLoadingMe(false);
+        setLoadingRec(false);
       }
-    };
-    run();
-  }, []);
+    })();
+  }, [mapItem]);
+
+  // --- load older history (uses "before" cursor = oldest played_at) ---
+  const loadMore = useCallback(async () => {
+    if (!recent.length) return;
+    try {
+      setMoreLoading(true);
+      const oldest = recent[recent.length - 1];
+      const beforeMs = new Date(oldest.playedAt).getTime(); // Spotify expects ms
+      const url = `/api/spotify/me/player/recently-played?limit=20&before=${beforeMs}`;
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status} ${body}`);
+      }
+      const json = await res.json();
+      const more = (json.items || []).map(mapItem);
+      setRecent(prev => [...prev, ...more]);
+      if (!json.items || json.items.length === 0) setHasMore(false);
+    } catch (err) {
+      console.error('Load more error', err);
+      setRecError(String(err?.message || err));
+    } finally {
+      setMoreLoading(false);
+    }
+  }, [recent, mapItem]);
 
   const content = useMemo(() => {
-    if (tab === 'recent') {
+    if (tab !== 'recent') {
       return (
-        <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card text-white">
-          <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span>Recent Listening History</span>
+        <div className="rounded-2xl border border-border bg-card/60 p-6 shadow-xl backdrop-blur chroma-card text-white">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <ListMusic className="h-4 w-4 text-muted-foreground" />
+            <span>Saved Playlists</span>
           </div>
-          <ul className="divide-y divide-border/60">
-            {RECENT.map((item) => (
-              <Row key={item.id} item={item} />
-            ))}
-          </ul>
+          <p className="text-sm text-muted-foreground">
+            You don’t have any saved playlists yet.
+          </p>
         </div>
       );
     }
-    // Saved playlists placeholder
+
     return (
-      <div className="rounded-2xl border border-border bg-card/60 p-6 shadow-xl backdrop-blur chroma-card text-white">
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium ">
-          <ListMusic className="h-4 w-4 text-muted-foreground " />
-        <span>Saved Playlists</span>
+      <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card text-white">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <span>Recent Listening History</span>
         </div>
-        <p className="text-sm text-muted-foreground">
-          You don’t have any saved playlists yet.
-        </p>
+
+        {loadingRec && (
+          <p className="text-xs text-muted-foreground">Loading your recent plays…</p>
+        )}
+        {recError && (
+          <p className="text-xs text-red-500 break-all">{recError}</p>
+        )}
+
+        {!loadingRec && !recError && recent.length === 0 && (
+          <p className="text-sm text-muted-foreground">No recent plays yet.</p>
+        )}
+
+        {recent.length > 0 && (
+          <>
+            <ul className="divide-y divide-border/60">
+              {recent.map((it) => <Row key={it.id} item={it} />)}
+            </ul>
+
+            {hasMore && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={moreLoading}
+                  className="rounded-full px-4 py-1.5 text-sm bg-white text-black shadow-sm disabled:opacity-60"
+                >
+                  {moreLoading ? 'Loading…' : 'Load more'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     );
-  }, [tab]);
+  }, [tab, recent, loadingRec, recError, hasMore, loadMore]);
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-8">
       <header className="mb-6">
         <h1 className="text-xl font-semibold text-white">Your Library</h1>
-        <p className="text-sm text-muted-foreground  text-white">
+        <p className="text-sm text-muted-foreground text-white/80">
           Your listening history and saved playlists
         </p>
 
-        {/* Optional: show Spotify identity when loaded */}
+        {/* Spotify identity */}
         <div className="mt-3 flex items-center gap-3">
           {loadingMe && <span className="text-xs text-muted-foreground">Connecting to Spotify…</span>}
-          {apiError && (
-            <span className="text-xs text-red-500">
-              {apiError}
-            </span>
-          )}
+          {meError && <span className="text-xs text-red-500 break-all">{meError}</span>}
           {spotifyMe && (
             <>
               {spotifyMe.images?.[0]?.url && (

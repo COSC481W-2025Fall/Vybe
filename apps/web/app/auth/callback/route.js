@@ -1,27 +1,38 @@
 // app/auth/callback/route.js
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
-export async function GET(req) {
-  const url  = new URL(req.url)
-  const code = url.searchParams.get('code')
-  const next = url.searchParams.get('next') || '/'
+export async function GET(request) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const next = url.searchParams.get('next') || '/';
 
-  if (!code) {
-    console.error('Callback: missing code')
-    return NextResponse.redirect(new URL('/sign-in?e=missing_code', req.url))
+  const cookieStore = await cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+  if (code) {
+    await supabase.auth.exchangeCodeForSession(code);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      const userId = session.user.id;
+      const accessToken  = session.provider_token ?? null;
+      const refreshToken = session.provider_refresh_token ?? null;  // must be non-null to “upgrade”
+      const expiresIn    = session.provider_token_expires_in ?? 3600;
+      const scope        = session.provider_scope ?? null;
+
+      // overwrite the row with the latest token info
+      await supabase.from('spotify_tokens').upsert({
+        user_id: userId,
+        access_token: accessToken,
+        refresh_token: refreshToken, // <-- NEEDS to be non-null to carry new scopes
+        expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+        scope,
+        token_type: 'Bearer',
+      }, { onConflict: 'user_id' });
+    }
   }
 
-  const cookieStore = await cookies()
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
-  if (error) {
-    console.error('Callback: exchange failed', error)
-    return NextResponse.redirect(new URL('/sign-in?e=exchange_failed', req.url))
-  }
-
-  // success -> session cookie is now set
-  return NextResponse.redirect(new URL(next, req.url))
+  return NextResponse.redirect(new URL(next, request.url));
 }

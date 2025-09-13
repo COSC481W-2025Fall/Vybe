@@ -16,7 +16,7 @@ export default async function RootLayout({ children }) {
     <html lang="en">
       <body>
         {user && <Navbar />}
-        <main className="p-6 flex justify-center">{children}</main>
+        <main className="flex justify-center">{children}</main>
       </body>
     </html>
   );
