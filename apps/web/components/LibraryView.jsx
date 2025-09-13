@@ -12,7 +12,7 @@ const RECENT = [
     artist: 'The Weeknd',
     album: 'After Hours',
     cover: 'https://picsum.photos/seed/blinding/80/80',
-    playedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    playedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 2,
@@ -20,7 +20,7 @@ const RECENT = [
     artist: 'Dua Lipa',
     album: 'Future Nostalgia',
     cover: 'https://picsum.photos/seed/levitating/80/80',
-    playedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
+    playedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 3,
@@ -28,7 +28,7 @@ const RECENT = [
     artist: 'Olivia Rodrigo',
     album: 'SOUR',
     cover: 'https://picsum.photos/seed/good4u/80/80',
-    playedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week ago
+    playedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -94,22 +94,40 @@ function Row({ item }) {
 export default function LibraryView() {
   const [tab, setTab] = useState('recent');
 
+  // NEW: state for Spotify profile + loading/error
+  const [spotifyMe, setSpotifyMe] = useState(null);
+  const [loadingMe, setLoadingMe] = useState(true);
+  const [apiError, setApiError] = useState(null);
+
   useEffect(() => {
     const run = async () => {
-      // Supabase user (your app auth)
-      const sb = supabaseBrowser();
-      const { data: { user } } = await sb.auth.getUser();
-      console.log('[Supabase user]', user);
-
-      // Spotify profile (via your /api/spotify/me proxy)
       try {
-        const res = await fetch('/api/spotify/me', { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // (Optional) check our own Supabase user
+        const sb = supabaseBrowser();
+        const { data: { user } } = await sb.auth.getUser();
+        console.log('[Supabase user]', user);
+
+        // Call your proxy which reads cookies & injects the bearer token
+        const controller = new AbortController();
+        const res = await fetch('/api/spotify/me', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          throw new Error(`HTTP ${res.status} ${body}`);
+        }
+
         const me = await res.json();
         console.log('[Spotify me]', me);
         setSpotifyMe(me);
+        setApiError(null);
       } catch (err) {
         console.error('Failed to load Spotify profile', err);
+        setApiError(String(err?.message || err));
+      } finally {
+        setLoadingMe(false);
       }
     };
     run();
@@ -136,7 +154,7 @@ export default function LibraryView() {
       <div className="rounded-2xl border border-border bg-card/60 p-6 shadow-xl backdrop-blur chroma-card">
         <div className="mb-2 flex items-center gap-2 text-sm font-medium">
           <ListMusic className="h-4 w-4 text-muted-foreground" />
-          <span>Saved Playlists</span>
+        <span>Saved Playlists</span>
         </div>
         <p className="text-sm text-muted-foreground">
           You don’t have any saved playlists yet.
@@ -152,6 +170,30 @@ export default function LibraryView() {
         <p className="text-sm text-muted-foreground">
           Your listening history and saved playlists
         </p>
+
+        {/* Optional: show Spotify identity when loaded */}
+        <div className="mt-3 flex items-center gap-3">
+          {loadingMe && <span className="text-xs text-muted-foreground">Connecting to Spotify…</span>}
+          {apiError && (
+            <span className="text-xs text-red-500">
+              {apiError}
+            </span>
+          )}
+          {spotifyMe && (
+            <>
+              {spotifyMe.images?.[0]?.url && (
+                <img
+                  src={spotifyMe.images[0].url}
+                  alt="Spotify avatar"
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              )}
+              <span className="text-sm">
+                Signed in as <span className="font-medium">{spotifyMe.display_name}</span>
+              </span>
+            </>
+          )}
+        </div>
       </header>
 
       <div className="mb-4 flex items-center gap-2">

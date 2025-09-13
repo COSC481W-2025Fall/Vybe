@@ -6,14 +6,14 @@ export default function SignInPage() {
   const supabase = supabaseBrowser();
 
   const signInWithSpotify = async () => {
-    const next = '/library';
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'spotify',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        // scopes: 'user-read-email user-read-private'
+        redirectTo: `${location.origin}/auth/callback?next=/library`,
+        scopes: 'user-read-email user-read-private playlist-read-private',
       },
     });
+    if (error) console.error('Spotify login error:', error.message);
   };
 
   return (
