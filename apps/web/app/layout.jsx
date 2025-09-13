@@ -14,7 +14,7 @@ export default async function RootLayout({ children }) {
 
   return (
     <html lang="en">
-      <body>
+      <body className='vybe-aurora'>
         {user && <Navbar />}
         <main className="flex justify-center">{children}</main>
       </body>

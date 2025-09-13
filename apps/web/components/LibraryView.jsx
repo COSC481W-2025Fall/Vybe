@@ -179,7 +179,7 @@ export default function LibraryView() {
     }
 
     return (
-      <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card text-white">
+      <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card mb-40 text-white">
         <div className="mb-3 flex items-center gap-2 text-sm font-medium">
           <Clock className="h-4 w-4 text-muted-foreground" />
           <span>Recent Listening History</span>
