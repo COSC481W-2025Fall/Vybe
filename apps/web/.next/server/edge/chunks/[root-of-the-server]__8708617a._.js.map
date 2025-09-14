@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 16, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/Documents/EMU_Course_Files/--Fall_'25--/COSC 481W Jiang/Vybe/apps/web/middleware.ts"],"sourcesContent":["import { NextResponse } from 'next/server';\r\nimport type { NextRequest } from 'next/server';\r\nimport { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';\r\n\r\nexport async function middleware(req: NextRequest) {\r\n  const res = NextResponse.next();\r\n  const supabase = createMiddlewareClient({ req, res });\r\n  await supabase.auth.getSession(); // refresh session if needed\r\n  return res;\r\n}\r\n\r\nexport const config = {\r\n  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],\r\n};\r\n"],"names":[],"mappings":";;;;;;AAAA;AAAA;AAEA;;;AAEO,eAAe,WAAW,GAAgB;IAC/C,MAAM,MAAM,oSAAY,CAAC,IAAI;IAC7B,MAAM,WAAW,IAAA,8SAAsB,EAAC;QAAE;QAAK;IAAI;IACnD,MAAM,SAAS,IAAI,CAAC,UAAU,IAAI,4BAA4B;IAC9D,OAAO;AACT;AAEO,MAAM,SAAS;IACpB,SAAS;QAAC;KAAgD;AAC5D"}}]
+}

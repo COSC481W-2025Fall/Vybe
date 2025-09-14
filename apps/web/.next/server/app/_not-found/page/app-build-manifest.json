@@ -1,0 +1,20 @@
+{
+  "pages": {
+    "/_not-found/page": [
+      "static/chunks/b3fbb_next_dist_1fdbfb94._.js",
+      "static/chunks/0dc94_Files_--Fall_'25--_COSC 481W Jiang_Vybe_apps_web_app_favicon_ico_mjs_1a59e95d._.js",
+      "static/chunks/7c3aa_Course_Files_--Fall_'25--_COSC 481W Jiang_Vybe_apps_web_app_globals_7107a30a.css",
+      "static/chunks/Documents_EMU_Course_Files_--Fall_'25--_COSC 481W Jiang_Vybe_apps_web_f50cf9a7._.js",
+      "static/chunks/7c3aa_Course_Files_--Fall_'25--_COSC 481W Jiang_Vybe_apps_web_app_layout_jsx_aacb7ac6._.js",
+      "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_a97d02aa._.js",
+      "static/chunks/b3fbb_next_dist_compiled_react-dom_f11f52cf._.js",
+      "static/chunks/b3fbb_next_dist_compiled_next-devtools_index_a39b6e4b.js",
+      "static/chunks/b3fbb_next_dist_compiled_fcdbb7d8._.js",
+      "static/chunks/b3fbb_next_dist_client_e6461a81._.js",
+      "static/chunks/b3fbb_next_dist_aa1d82b9._.js",
+      "static/chunks/b3fbb_@swc_helpers_cjs_384d616a._.js",
+      "static/chunks/Documents_EMU_Course_Files_--Fall_'25--_COSC 481W Jiang_Vybe_apps_web_a0ff3932._.js",
+      "static/chunks/358b3_EMU_Course_Files_--Fall_'25--_COSC 481W Jiang_Vybe_apps_web_9f3cab35._.js"
+    ]
+  }
+}
