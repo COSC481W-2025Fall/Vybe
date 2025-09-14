@@ -32,6 +32,7 @@
 ## 📖 Project Description  
 
 **Vybe** is a social music networking web application that helps people connect through playlists and daily music sharing. Users can:  
+
 - 🔗 Generate **group playlists** that balance multiple people’s tastes using play histories, correlations, and genre analysis.  
 - 🎵 Share a **Song of the Day** to showcase their current vibe.  
 - 🖤 Interact with friends by seeing their daily tracks and playlists.  
@@ -43,23 +44,30 @@ The goal of *Vybe* is to blend music discovery with social interaction, creating
 
 ## 👥 Team Member Bios  
 
-### Vas Anbukumar’s Bio:  
+### Vas Anbukumar’s Bio
+
 I am a senior Computer Science student with a strong focus on backend development, data handling, and scalable systems. My experience includes working with Python, JavaScript, FastAPI, and cloud technologies to build pipelines, APIs, and intelligent applications. I enjoy bridging technical complexity with real-world usability, especially in projects that combine data, AI, and interactive user experiences. For Vybe, I’ll be anchoring backend development while supporting every other area of the project as needed. Outside of class, I enjoy exploring new tech tools and working on side projects that challenge me to grow.  
 
-### Ezzat AbdelKhalek’s Bio:  
+### Ezzat AbdelKhalek’s Bio  
+
 I am a computer science undergraduate student with experience in Java, C#, Python and HTML/CSS. I enjoy learning new things and working on projects that let me apply what I’ve learned. For Vybe, I will focus on machine learning. Outside of school, I like spending time on reading books and learning new things.  
 
-### Fahd Algahmi’s Bio:  
+### Fahd Algahmi’s Bio
+
 I am a 3rd-year Computer Science student with knowledge in Java, Python, HTML, CSS, and JavaScript, as well as experience in both front-end and back-end development. For Vybe, I will be focusing on back-end development. I rarely have free time, but when I do, I enjoy spending it with my daughters.  
 
-### Hayoung Jung’s Bio:  
+### Hayoung Jung’s Bio
+
 I am a senior Data Science and Analytics student interested in data management, documentation, and system testing. I like organizing project information and creating documentation that supports collaboration. For Vybe, I will be focusing on testing and documentation, front-end development. Outside of school, I enjoy cooking, reading fantasy novels, and exploring ways to stay organized.  
 
-### S Ly’s Bio:  
-I am a post-grad student interested in artificial intelligence. I like making sure projects are reliable and well put together. For Vybe, I will be focusing on engine and machine learning. Outside of school, I enjoy playing and modding video games as well as watching sports, exercising, doing cardistry and playing cards.  
+### S Ly’s Bio
 
-### Darius Robinson’s Bio:  
+I am a senior CS student interested in artificial intelligence. I like making sure projects are reliable and well put together. For Vybe, I will be focusing on engine and machine learning. Outside of school, I enjoy playing and modding video games as well as watching sports, exercising, doing cardistry and playing cards.  
+
+### Darius Robinson’s Bio
+
 I am a third year CS student with experience in both frontend and backend development. I've used languages like java, python, javascript and C. I like building projects that are interactive and useful. For Vybe, I will be focusing on the front end. In my free time, I enjoy video games and sports.  
 
-### Charles Thorn’s Bio:  
+### Charles Thorn’s Bio
+
 I am a senior computer science student with knowledge in Java, C#, JavaScript, node.js, html/css, sql. I enjoy being creative. For Vybe, I will be focusing on everything. Outside of school, I like sports/exercise, video editing, and watching tv/movies.  
