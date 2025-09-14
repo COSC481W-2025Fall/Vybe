@@ -15,6 +15,7 @@ export async function GET(request) {
     await supabase.auth.exchangeCodeForSession(code);
 
     const { data: { session } } = await supabase.auth.getSession();
+    console.log('[callback] session user:', session?.user?.id)
     if (session?.user) {
       const userId = session.user.id;
       const accessToken  = session.provider_token ?? null;

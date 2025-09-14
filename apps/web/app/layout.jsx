@@ -7,14 +7,17 @@ import Navbar from '@/components/Navbar';
 import { supabaseServer } from '@/lib/supabase/server';
 
 export default async function RootLayout({ children }) {
-  const supabase = createServerComponentClient({cookies});
+  const cookieStore = await cookies();
+  const supabase = createServerComponentClient({
+    cookies: () => cookieStore,
+  });
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   return (
     <html lang="en">
-      <body className='vybe-aurora'>
+      <body>
         {user && <Navbar />}
         <main className="flex justify-center">{children}</main>
       </body>
