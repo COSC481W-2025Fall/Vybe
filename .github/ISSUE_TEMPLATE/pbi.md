@@ -1,3 +1,11 @@
+---
+name: "Product Backlog Item"
+about: "Create a new Product Backlog Item in INVEST format"
+title: "[PBI] <Feature Name>"
+labels: ["PBI"]
+assignees: []
+---
+
 # <Feature Name> [PBI]
 
 ## User Story
