@@ -3,23 +3,22 @@
 import { supabaseBrowser } from '@/lib/supabase/client';
 
 export default function SignInPage() {
+  const supabase = supabaseBrowser();
+
   const signInWithSpotify = async () => {
-    const supabase = supabaseBrowser();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'spotify',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=library`,
-        // scopes: 'user-read-email user-read-private playlist-read-private'
+        redirectTo: `${location.origin}/auth/callback?next=/library`,
+        scopes: 'user-read-email user-read-private playlist-read-private user-read-recently-played',
       },
+      queryParams: { show_dialog: 'true' },
     });
-    if (error) {
-      console.error('Spotify login error:', error.message);
-      redirectTo: `${window.location.origin}/(auth)/sign-in/page`
-    }
+    if (error) console.error('Spotify login error:', error.message);
   };
 
   return (
-    <div className="p-6 flex flex-col justify-center items-center h-80 w-fit bg-[#000000] rounded-lg glow-shadow--soft p-6 bg-black rounded-lg border border-white/40">
+    <div className="p-6 flex flex-col justify-center items-center h-80 w-fit bg-[#000000] rounded-lg glow-shadow--soft p-6 bg-black rounded-lg border border-white/40" id="login-box">
       <div className="flex flex-col items-center">
         <h1 className="text-3xl mb-3 bg-[linear-gradient(90deg,#8b5cf6,#ec4899,#f59e0b,#10b981,#3b82f6)] bg-clip-text text-transparent [background-size:300%_300%] animate-[gradient-move_8s_linear_infinite]">Welcome to Vybe</h1>
         <h2 className="mb-8 text-[#6A6A6A]">Connect with friends and share your musical journey</h2>
