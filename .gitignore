@@ -24,3 +24,8 @@ yarn-error.log*
 clean.txt
 bad.txt
 secret.txt
+
+# test files
+clean.txt
+bad.txt
+secret.txt
