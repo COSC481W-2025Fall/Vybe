@@ -1,15 +1,10 @@
 // middleware.js
 import { NextResponse } from 'next/server'
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { CONFIG } from './config/constants.js'
 
 // Paths that are always public
-const PUBLIC = new Set([
-  '/',              // landing
-  '/auth/callback', // Supabase OAuth will hit this
-  '/sign-in',
-  '/favicon.ico',
-  '/api/health',
-])
+const PUBLIC = new Set(CONFIG.PUBLIC_ROUTES)
 
 export async function middleware(req) {
   const { pathname } = req.nextUrl
@@ -29,15 +24,15 @@ export async function middleware(req) {
   // Not authenticated and path isn't public → send to sign-in
   if (!session) {
     const url = req.nextUrl.clone()
-    url.pathname = '/sign-in'
+    url.pathname = CONFIG.AUTH_REDIRECT_PATH
     url.searchParams.set('next', pathname + req.nextUrl.search)
     return NextResponse.redirect(url)
   }
 
-  // Already authenticated but visiting /sign-in → bounce to next or /library
-  if (pathname === '/sign-in') {
+  // Already authenticated but visiting /sign-in → bounce to next or default
+  if (pathname === CONFIG.AUTH_REDIRECT_PATH) {
     const url = req.nextUrl.clone()
-    url.pathname = req.nextUrl.searchParams.get('next') || '/library'
+    url.pathname = req.nextUrl.searchParams.get('next') || CONFIG.DEFAULT_REDIRECT_PATH
     url.search = ''
     return NextResponse.redirect(url)
   }

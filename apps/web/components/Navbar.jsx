@@ -3,15 +3,23 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Users, Music2, Library, User as UserIcon } from 'lucide-react';
+import { CONFIG } from '../config/constants.js';
 
-const links = [
-  { href: '/',        label: 'Home',   Icon: Home },
-  { href: '/groups',  label: 'Groups', Icon: Users },
-  { href: '/playlist',label: 'Playlist', Icon: Music2 },
-  { href: '/library', label: 'Library', Icon: Library },
-  { href: '/profile', label: 'Profile', Icon: UserIcon },
-];
+const links = CONFIG.NAV_LINKS.map(link => {
+  const iconMap = {
+    'Home': Home,
+    'Groups': Users,
+    'Playlist': Music2,
+    'Library': Library,
+    'Profile': UserIcon
+  };
+  return {
+    ...link,
+    Icon: iconMap[link.label] || UserIcon
+  };
+});
 
+// eslint-disable-next-line react/prop-types
 function NavPill({ href, label, Icon, active }) {
   return (
     <Link

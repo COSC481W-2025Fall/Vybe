@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Clock, ListMusic } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { CONFIG } from '../config/constants.js';
 
 // ---------------- helpers ----------------
 function timeAgo(input) {
@@ -18,6 +19,7 @@ function timeAgo(input) {
   return `${weeks} week${weeks === 1 ? '' : 's'} ago`;
 }
 
+// eslint-disable-next-line react/prop-types
 function TabButton({ isActive, children, onClick }) {
   return (
     <button
@@ -34,6 +36,7 @@ function TabButton({ isActive, children, onClick }) {
   );
 }
 
+/* eslint-disable react/prop-types */
 function Row({ item }) {
   return (
     <li className="flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-accent/30 transition">
@@ -57,12 +60,10 @@ function Row({ item }) {
     </li>
   );
 }
+/* eslint-enable react/prop-types */
 
 // ---------------- component ----------------
-const TABS = [
-  { key: 'recent', label: 'Recent History' },
-  { key: 'saved',  label: 'Saved Playlists' },
-];
+const TABS = CONFIG.LIBRARY_TABS;
 
 export default function LibraryView() {
   const [tab, setTab] = useState('recent');
