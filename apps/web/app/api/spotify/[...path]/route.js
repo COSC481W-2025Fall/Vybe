@@ -27,8 +27,10 @@ async function handler(req, { params }) {
   try {
     accessToken = await getValidAccessToken(sb, user.id);
   } catch (e) {
+    // Log full error details on the server for debugging
     console.error('[proxy] token error:', e);
-    return new NextResponse(JSON.stringify({ error: 'token_error', message: String(e) }), { status: 401 });
+    // Respond with a generic error message to the client
+    return new NextResponse(JSON.stringify({ error: 'token_error', message: 'An unexpected error occurred.' }), { status: 401 });
   }
 
   const path = params?.path?.join('/') ?? 'me';
