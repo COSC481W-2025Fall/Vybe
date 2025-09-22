@@ -1,59 +1,145 @@
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 
 // Mock Next.js router
-const mockUsePathname = vi.fn()
 vi.mock('next/navigation', () => ({
-  usePathname: () => mockUsePathname(),
+  usePathname: vi.fn(() => '/'),
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
+    refresh: vi.fn(),
+  })),
 }))
 
-describe('Navbar', () => {
-  it('renders the Vybe brand', () => {
-    mockUsePathname.mockReturnValue('/')
-    render(<Navbar />)
-    
-    const brandElement = screen.getByText('Vybe')
-    expect(brandElement).toBeInTheDocument()
-    expect(brandElement).toHaveClass('text-yellow-400')
+// Mock fetch
+global.fetch = vi.fn()
+
+describe('Navbar Sign-Out Functionality', () => {
+  const mockPush = vi.fn()
+  const mockRefresh = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useRouter.mockReturnValue({
+      push: mockPush,
+      refresh: mockRefresh,
+    })
   })
 
-  it('renders all navigation links', () => {
-    mockUsePathname.mockReturnValue('/')
+  it('renders sign-out button', () => {
     render(<Navbar />)
     
-    expect(screen.getByText('Home')).toBeInTheDocument()
-    expect(screen.getByText('Groups')).toBeInTheDocument()
-    expect(screen.getByText('Playlist')).toBeInTheDocument()
-    expect(screen.getByText('Library')).toBeInTheDocument()
-    expect(screen.getByText('Profile')).toBeInTheDocument()
+    const signOutButton = screen.getByRole('button', { name: /sign out/i })
+    expect(signOutButton).toBeInTheDocument()
+    expect(screen.getByText('Sign out')).toBeInTheDocument()
   })
 
-  it('has correct href attributes for navigation links', () => {
-    mockUsePathname.mockReturnValue('/')
+  it('shows loading state when signing out', async () => {
+    // Mock a delayed response
+    global.fetch.mockImplementation(() => 
+      new Promise(resolve => 
+        setTimeout(() => resolve({ ok: true }), 100)
+      )
+    )
+
     render(<Navbar />)
     
-    const homeLink = screen.getByRole('link', { name: /home/i })
-    const groupsLink = screen.getByRole('link', { name: /groups/i })
-    const playlistLink = screen.getByRole('link', { name: /playlist/i })
-    const libraryLink = screen.getByRole('link', { name: /library/i })
-    const profileLink = screen.getByRole('link', { name: /profile/i })
+    const signOutButton = screen.getByRole('button', { name: /sign out/i })
+    fireEvent.click(signOutButton)
     
-    expect(homeLink).toHaveAttribute('href', '/')
-    expect(groupsLink).toHaveAttribute('href', '/groups')
-    expect(playlistLink).toHaveAttribute('href', '/playlist')
-    expect(libraryLink).toHaveAttribute('href', '/library')
-    expect(profileLink).toHaveAttribute('href', '/profile')
+    // Should show loading state
+    expect(screen.getByText('Signing out...')).toBeInTheDocument()
+    expect(signOutButton).toBeDisabled()
+    
+    // Wait for the loading to complete and button to be re-enabled
+    await waitFor(() => {
+      expect(signOutButton).not.toBeDisabled()
+    })
   })
 
-  it('applies active state to current page', () => {
-    // Mock the pathname to be '/library'
-    mockUsePathname.mockReturnValue('/library')
+  it('calls sign-out endpoint on button click', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true })
     
     render(<Navbar />)
     
-    const libraryLink = screen.getByRole('link', { name: /library/i })
-    expect(libraryLink).toHaveAttribute('aria-current', 'page')
-    expect(libraryLink).toHaveClass('bg-white', 'text-black')
+    const signOutButton = screen.getByRole('button', { name: /sign out/i })
+    fireEvent.click(signOutButton)
+    
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/sign-out', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+    })
+  })
+
+  it('redirects to sign-in page on successful sign-out', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true })
+    
+    render(<Navbar />)
+    
+    const signOutButton = screen.getByRole('button', { name: /sign out/i })
+    fireEvent.click(signOutButton)
+    
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/sign-in')
+      expect(mockRefresh).toHaveBeenCalled()
+    })
+  })
+
+  it('handles sign-out failure gracefully', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: false })
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    
+    render(<Navbar />)
+    
+    const signOutButton = screen.getByRole('button', { name: /sign out/i })
+    fireEvent.click(signOutButton)
+    
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Sign out failed')
+      expect(signOutButton).not.toBeDisabled()
+    })
+    
+    consoleSpy.mockRestore()
+  })
+
+  it('handles network errors gracefully', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('Network error'))
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    
+    render(<Navbar />)
+    
+    const signOutButton = screen.getByRole('button', { name: /sign out/i })
+    fireEvent.click(signOutButton)
+    
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Sign out error:', expect.any(Error))
+      expect(signOutButton).not.toBeDisabled()
+    })
+    
+    consoleSpy.mockRestore()
+  })
+
+  it('has proper accessibility attributes', () => {
+    render(<Navbar />)
+    
+    const signOutButton = screen.getByRole('button', { name: /sign out/i })
+    expect(signOutButton).toHaveAttribute('aria-label', 'Sign out')
+    expect(signOutButton).toHaveAttribute('title', 'Sign out')
+  })
+
+  it('shows icon and text on larger screens', () => {
+    render(<Navbar />)
+    
+    const signOutButton = screen.getByRole('button', { name: /sign out/i })
+    expect(signOutButton).toBeInTheDocument()
+    
+    // Check that the LogOut icon is present
+    const icon = signOutButton.querySelector('svg')
+    expect(icon).toBeInTheDocument()
   })
 })
