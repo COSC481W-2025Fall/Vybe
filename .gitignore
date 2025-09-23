@@ -29,3 +29,9 @@ secret.txt
 clean.txt
 bad.txt
 secret.txt
+
+# Documentation
+docs/
+.cursorignore
+get-issues.ps1
+sprint-1-assignee-breakdown.txt
