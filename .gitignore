@@ -31,3 +31,6 @@ bad.txt
 secret.txt
 
 .cursorignore
+docs/
+get-issues.ps1
+sprint-1-assignee-breakdown.txt
