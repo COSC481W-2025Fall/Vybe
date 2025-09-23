@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-addopts = "-ra -q --maxfail=1 --strict-markers --strict-config --cov=backend/src --cov-report=term-missing --cov-report=xml:backend/coverage.xml"
+addopts = "-ra -q --maxfail=1 --strict-markers --strict-config --cov=backend/src --cov-report=term-missing --cov-report=xml:backend/coverage.xml --cov-report=html:backend/htmlcov"
 testpaths = [
   "backend/tests"
 ]

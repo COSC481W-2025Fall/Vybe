@@ -23,3 +23,10 @@ pytest -q
 
 ## Coverage (optional)
 Add `--cov=backend/src --cov-report=term-missing` to `pytest` or to `addopts` later.
+
+## Coverage
+- HTML report: backend/htmlcov/index.html
+- XML report: backend/coverage.xml
+- Raw data: .coverage (root)
+
+To open HTML locally: open backend/htmlcov/index.html
