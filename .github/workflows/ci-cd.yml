@@ -125,3 +125,4 @@ jobs:
       run: |
         echo "✅ Successfully deployed to production!"
         echo "🚀 Application is live at: https://vybe.vercel.app"
+
