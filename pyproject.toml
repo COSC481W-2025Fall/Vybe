@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+addopts = "-ra -q --maxfail=1 --strict-markers --strict-config"
+testpaths = [
+  "backend/tests"
+]
+pythonpath = [
+  "backend/src"
+]
+markers = [
+  "unit: unit tests",
+  "integration: integration tests"
+]
