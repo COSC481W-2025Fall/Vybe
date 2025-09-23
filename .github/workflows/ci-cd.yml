@@ -1,0 +1,127 @@
+name: Complete CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, github-actions ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+        
+    - name: Install dependencies
+      run: |
+        cd apps/web
+        npm ci
+        
+    - name: Run linter
+      run: |
+        cd apps/web
+        npm run lint
+        
+    - name: Run frontend tests
+      run: |
+        cd apps/web
+        npm run test -- --coverage --watchAll=false
+        
+    - name: Run API tests
+      run: |
+        cd apps/web
+        npm run test -- --testPathPattern=api --watchAll=false
+        
+    - name: Upload test coverage
+      uses: codecov/codecov-action@v4
+      with:
+        file: apps/web/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+        
+    - name: Install dependencies
+      run: |
+        cd apps/web
+        npm ci
+        
+    - name: Build application
+      run: |
+        cd apps/web
+        npm run build
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-files
+        path: apps/web/.next/
+        retention-days: 7
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/github-actions'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to Vercel (Staging)
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: apps/web
+        vercel-args: '--prod=false'
+
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to Vercel (Production)
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: apps/web
+        vercel-args: '--prod'
+        
+    - name: Notify deployment success
+      run: |
+        echo "✅ Successfully deployed to production!"
+        echo "🚀 Application is live at: https://vybe.vercel.app"

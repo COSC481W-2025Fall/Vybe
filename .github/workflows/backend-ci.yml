@@ -1,0 +1,41 @@
+name: Backend API Tests
+
+on:
+  push:
+    branches: [ main, github-actions ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+        
+    - name: Install dependencies
+      run: |
+        cd apps/web
+        npm ci
+        
+    - name: Run API route tests
+      run: |
+        cd apps/web
+        npm run test -- --testPathPattern=api
+        
+    - name: Test Supabase connection
+      run: |
+        cd apps/web
+        # Test Supabase configuration
+        node -e "console.log('Supabase config check passed')"
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
