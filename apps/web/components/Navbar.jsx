@@ -6,6 +6,11 @@ import { Home, Users, Music2, Library, User as UserIcon, LogOut } from 'lucide-r
 import { CONFIG } from '../config/constants.js';
 import { useState } from 'react';
 
+/**
+ * Navigation component with sign-out functionality
+ * Enhanced with better accessibility and user experience
+ */
+
 const links = CONFIG.NAV_LINKS.map(link => {
   const iconMap = {
     'Home': Home,
@@ -26,15 +31,19 @@ function NavPill({ href, label, Icon, active }) {
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
+      aria-label={`Navigate to ${label}`}
       className={[
-        'group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition',
+        'group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition-all duration-200',
         active
-          ? 'bg-white text-black shadow-sm'
-          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+          ? 'bg-white text-black shadow-sm ring-1 ring-black/10'
+          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50 hover:scale-105',
       ].join(' ')}
     >
-      <Icon className={`h-4 w-4 ${active ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
-      <span className="hidden sm:inline">{label}</span>
+      <Icon 
+        className={`h-4 w-4 transition-opacity duration-200 ${active ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} 
+        aria-hidden="true"
+      />
+      <span className="hidden sm:inline font-medium">{label}</span>
     </Link>
   );
 }
@@ -44,6 +53,9 @@ export default function Navbar() {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
+  /**
+   * Handles user sign out with improved error handling and user feedback
+   */
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
@@ -61,12 +73,14 @@ export default function Navbar() {
         // Reset loading state after successful redirect
         setIsSigningOut(false);
       } else {
-        console.error('Sign out failed');
+        console.error('Sign out failed with status:', response.status);
         setIsSigningOut(false);
+        // Could add toast notification here for better UX
       }
     } catch (error) {
       console.error('Sign out error:', error);
       setIsSigningOut(false);
+      // Could add toast notification here for better UX
     }
   };
 
@@ -98,16 +112,19 @@ export default function Navbar() {
         {/* spacer for right-aligned actions */}
         <div className="ml-auto" />
         
-        {/* Sign out button */}
+        {/* Sign out button with enhanced styling and accessibility */}
         <button
           onClick={handleSignOut}
           disabled={isSigningOut}
-          className="group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition text-muted-foreground hover:text-red-400 hover:bg-red-50/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Sign out"
-          title="Sign out"
+          className="group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition-all duration-200 text-muted-foreground hover:text-red-500 hover:bg-red-50/20 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-red-400/50"
+          aria-label={isSigningOut ? 'Signing out...' : 'Sign out of your account'}
+          title={isSigningOut ? 'Please wait...' : 'Click to sign out'}
         >
-          <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-70 group-hover:opacity-100'}`} />
-          <span className="hidden sm:inline">
+          <LogOut 
+            className={`h-4 w-4 transition-all duration-200 ${isSigningOut ? 'opacity-50 animate-pulse' : 'opacity-70 group-hover:opacity-100'}`} 
+            aria-hidden="true"
+          />
+          <span className="hidden sm:inline font-medium">
             {isSigningOut ? 'Signing out...' : 'Sign out'}
           </span>
         </button>
