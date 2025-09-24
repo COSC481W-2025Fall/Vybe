@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { Clock, ListMusic } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { Clock, ListMusic } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // ---------------- helpers ----------------
 function timeAgo(input) {
@@ -101,67 +101,54 @@ export default function LibraryView() {
     })();
   }, []);
 
-  // --- helper: map Spotify API -> UI row ---
-  const mapItem = useCallback((sp) => {
-    const t = sp.track;
-    return {
-      id: `${t.id}-${sp.played_at}`, // unique per play
-      title: t.name,
-      artist: t.artists?.map(a => a.name).join(', ') || 'Unknown',
-      album:  t.album?.name || '',
-      cover:  t.album?.images?.[1]?.url || t.album?.images?.[0]?.url || '',
-      playedAt: sp.played_at,
-    };
-  }, []);
 
-  // --- load first page of recently played ---
+  // --- load first page of imported play history ---
   useEffect(() => {
     (async () => {
       try {
         setLoadingRec(true);
-        const res = await fetch('/api/spotify/me/player/recently-played?limit=20', { cache: 'no-store' });
+        const res = await fetch('/api/play-history?limit=20', { cache: 'no-store' });
         if (!res.ok) {
           const body = await res.text().catch(() => '');
           throw new Error(`HTTP ${res.status} ${body}`);
         }
-        const json = await res.json();              // { items: [...], cursors, next }
-        const items = (json.items || []).map(mapItem);
+        const json = await res.json();              // { items: [...], total, hasMore }
+        const items = json.items || [];
         setRecent(items);
-        setHasMore((json.items || []).length > 0);
+        setHasMore(json.hasMore || false);
         setRecError(null);
       } catch (err) {
-        console.error('Failed to load listening history', err);
+        console.error('Failed to load imported play history', err);
         setRecError(String(err?.message || err));
       } finally {
         setLoadingRec(false);
       }
     })();
-  }, [mapItem]);
+  }, []);
 
-  // --- load older history (uses "before" cursor = oldest played_at) ---
+  // --- load more imported play history (uses offset pagination) ---
   const loadMore = useCallback(async () => {
     if (!recent.length) return;
     try {
       setMoreLoading(true);
-      const oldest = recent[recent.length - 1];
-      const beforeMs = new Date(oldest.playedAt).getTime(); // Spotify expects ms
-      const url = `/api/spotify/me/player/recently-played?limit=20&before=${beforeMs}`;
+      const offset = recent.length;
+      const url = `/api/play-history?limit=20&offset=${offset}`;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) {
         const body = await res.text().catch(() => '');
         throw new Error(`HTTP ${res.status} ${body}`);
       }
       const json = await res.json();
-      const more = (json.items || []).map(mapItem);
+      const more = json.items || [];
       setRecent(prev => [...prev, ...more]);
-      if (!json.items || json.items.length === 0) setHasMore(false);
+      setHasMore(json.hasMore || false);
     } catch (err) {
       console.error('Load more error', err);
       setRecError(String(err?.message || err));
     } finally {
       setMoreLoading(false);
     }
-  }, [recent, mapItem]);
+  }, [recent]);
 
   const content = useMemo(() => {
     if (tab !== 'recent') {
@@ -182,18 +169,18 @@ export default function LibraryView() {
       <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card mb-40 text-white">
         <div className="mb-3 flex items-center gap-2 text-sm font-medium">
           <Clock className="h-4 w-4 text-muted-foreground" />
-          <span>Recent Listening History</span>
+          <span>Imported Play History</span>
         </div>
 
         {loadingRec && (
-          <p className="text-xs text-muted-foreground">Loading your recent plays…</p>
+          <p className="text-xs text-muted-foreground">Loading your imported history…</p>
         )}
         {recError && (
           <p className="text-xs text-red-500 break-all">{recError}</p>
         )}
 
         {!loadingRec && !recError && recent.length === 0 && (
-          <p className="text-sm text-muted-foreground">No recent plays yet.</p>
+          <p className="text-sm text-muted-foreground">No history yet</p>
         )}
 
         {recent.length > 0 && (
