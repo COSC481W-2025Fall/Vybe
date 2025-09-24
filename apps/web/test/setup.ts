@@ -19,3 +19,8 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError
 })
+
+// Global test utilities
+global.testUtils = {
+  // Add any global test utilities here
+}

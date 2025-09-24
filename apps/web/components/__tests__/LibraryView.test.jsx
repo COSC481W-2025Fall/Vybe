@@ -1,6 +1,16 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { axe } from 'jest-axe'
 import LibraryView from '@/components/LibraryView'
+import { 
+  renderWithProviders, 
+  testAccessibility, 
+  userInteractions, 
+  mockFetch, 
+  createMockUser, 
+  createMockRecentlyPlayed,
+  testData 
+} from '@/test/test-utils'
 
 // Mock Supabase client
 vi.mock('@/lib/supabase/client', () => ({
@@ -60,27 +70,48 @@ describe('LibraryView', () => {
   })
 
   it('renders the library header', async () => {
-    render(<LibraryView />)
+    await act(async () => {
+      render(<LibraryView />)
+    })
     
     expect(screen.getByText('Your Library')).toBeInTheDocument()
     expect(screen.getByText('Your listening history and saved playlists')).toBeInTheDocument()
   })
 
-  it('renders tab buttons', () => {
-    render(<LibraryView />)
+  it('renders tab buttons', async () => {
+    await act(async () => {
+      render(<LibraryView />)
+    })
     
     expect(screen.getByText('Recent History')).toBeInTheDocument()
     expect(screen.getByText('Saved Playlists')).toBeInTheDocument()
   })
 
-  it('shows loading state initially', () => {
-    render(<LibraryView />)
+  it('shows loading state initially', async () => {
+    // Mock a slow API response to ensure loading state is visible
+    global.fetch.mockImplementation(() => 
+      new Promise(resolve => 
+        setTimeout(() => resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            display_name: 'Test User',
+            images: [{ url: 'https://example.com/avatar.jpg' }]
+          })
+        }), 100)
+      )
+    )
+
+    await act(async () => {
+      render(<LibraryView />)
+    })
     
     expect(screen.getByText('Connecting to Spotify…')).toBeInTheDocument()
   })
 
   it('displays Spotify user info when loaded', async () => {
-    render(<LibraryView />)
+    await act(async () => {
+      render(<LibraryView />)
+    })
     
     await waitFor(() => {
       expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
@@ -89,7 +120,9 @@ describe('LibraryView', () => {
   })
 
   it('shows recent listening history when data is loaded', async () => {
-    render(<LibraryView />)
+    await act(async () => {
+      render(<LibraryView />)
+    })
     
     await waitFor(() => {
       expect(screen.getByText('Recent Listening History')).toBeInTheDocument()
@@ -102,10 +135,15 @@ describe('LibraryView', () => {
   })
 
   it('switches to saved playlists tab', async () => {
-    render(<LibraryView />)
+    await act(async () => {
+      render(<LibraryView />)
+    })
     
     const savedPlaylistsTab = screen.getByRole('button', { name: 'Saved Playlists' })
-    savedPlaylistsTab.click()
+    
+    await act(async () => {
+      savedPlaylistsTab.click()
+    })
     
     await waitFor(() => {
       // Check that we're now showing the saved playlists content
@@ -113,6 +151,86 @@ describe('LibraryView', () => {
       expect(savedPlaylistsElements).toHaveLength(2) // Button and content span
       // The tab should now be active (have the active styling)
       expect(savedPlaylistsTab).toHaveClass('bg-white', 'text-black')
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('has no accessibility violations', async () => {
+      await act(async () => {
+        render(<LibraryView />)
+      })
+      
+      const { container } = render(<LibraryView />)
+      await testAccessibility(container)
+    })
+
+    it('has proper heading structure', async () => {
+      await act(async () => {
+        render(<LibraryView />)
+      })
+      
+      const mainHeading = screen.getByRole('heading', { level: 1 })
+      expect(mainHeading).toHaveTextContent('Your Library')
+    })
+
+    it('has proper button roles for tab navigation', async () => {
+      await act(async () => {
+        render(<LibraryView />)
+      })
+      
+      const recentTab = screen.getByRole('button', { name: 'Recent History' })
+      const playlistsTab = screen.getByRole('button', { name: 'Saved Playlists' })
+      
+      expect(recentTab).toBeInTheDocument()
+      expect(playlistsTab).toBeInTheDocument()
+    })
+
+    it('has proper alt text for images', async () => {
+      // Mock API to return data with images
+      global.fetch.mockImplementation((url) => {
+        if (url.includes('/api/spotify/me')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              display_name: 'Test User',
+              images: [{ url: 'https://example.com/avatar.jpg' }]
+            })
+          })
+        }
+        
+        if (url.includes('/api/spotify/me/player/recently-played')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              items: [
+                {
+                  track: {
+                    id: 'track1',
+                    name: 'Test Song',
+                    artists: [{ name: 'Test Artist' }],
+                    album: { 
+                      name: 'Test Album', 
+                      images: [{ url: 'https://example.com/cover.jpg' }] 
+                    }
+                  },
+                  played_at: '2024-01-01T12:00:00Z'
+                }
+              ]
+            })
+          })
+        }
+        
+        return Promise.resolve({ ok: false, status: 404 })
+      })
+
+      await act(async () => {
+        render(<LibraryView />)
+      })
+      
+      await waitFor(() => {
+        const avatarImage = screen.getByAltText('Spotify avatar')
+        expect(avatarImage).toBeInTheDocument()
+      })
     })
   })
 })
