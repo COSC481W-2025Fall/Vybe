@@ -9,12 +9,29 @@ export default function SignInPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'spotify',
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=/library`,
+        redirectTo: `${location.origin}/auth/callback?next=/library%3Ffrom%3Dspotify`,
         scopes: 'user-read-email user-read-private playlist-read-private user-read-recently-played',
       },
       queryParams: { show_dialog: 'true' },
     });
     if (error) console.error('Spotify login error:', error.message);
+  };
+
+  const signInWithYouTube = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${location.origin}/auth/callback?next=/library%3Ffrom%3Dgoogle`,
+        scopes: [
+          'openid',
+          'email',
+          'profile',
+          // YouTube Data API scopes (read-only minimal)
+          'https://www.googleapis.com/auth/youtube.readonly',
+        ].join(' '),
+      },
+    });
+    if (error) console.error('Google/YouTube login error:', error.message);
   };
 
   return (
@@ -30,6 +47,12 @@ export default function SignInPage() {
           className="rounded-md bg-primary px-4 py-2 text-primary-foreground bg-[#00A63E] text-amber-50 hover:bg-green-900"
         >
           Continue with Spotify
+        </button>
+        <button
+          onClick={signInWithYouTube}
+          className="rounded-md px-4 py-2 bg-white text-black hover:bg-gray-200"
+        >
+          Continue with YouTube
         </button>
         <div className="h-0.5 w-20 bg-[#6A6A6A]"></div>
       </div>
