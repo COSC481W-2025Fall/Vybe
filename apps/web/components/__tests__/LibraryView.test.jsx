@@ -1,16 +1,20 @@
+//Imported to support userEvent
 import { render, screen, waitFor, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { axe } from 'jest-axe'
 import LibraryView from '@/components/LibraryView'
-import { 
-  renderWithProviders, 
-  testAccessibility, 
-  userInteractions, 
-  mockFetch, 
-  createMockUser, 
+import {
+  renderWithProviders,
+  testAccessibility,
+  userInteractions,
+  mockFetch,
+  createMockUser,
   createMockRecentlyPlayed,
-  testData 
+  testData
 } from '@/test/test-utils'
+
 
 // Mock Supabase client
 vi.mock('@/lib/supabase/client', () => ({
@@ -30,7 +34,7 @@ global.fetch = vi.fn()
 describe('LibraryView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Mock successful API responses
     global.fetch.mockImplementation((url) => {
       if (url.includes('/api/spotify/me')) {
@@ -42,7 +46,7 @@ describe('LibraryView', () => {
           })
         })
       }
-      
+
       if (url.includes('/api/spotify/me/player/recently-played')) {
         return Promise.resolve({
           ok: true,
@@ -61,7 +65,7 @@ describe('LibraryView', () => {
           })
         })
       }
-      
+
       return Promise.resolve({
         ok: false,
         status: 404
@@ -70,27 +74,41 @@ describe('LibraryView', () => {
   })
 
   it('renders the library header', async () => {
-    await act(async () => {
+    //Removed await act wrapper
+    /* await act(async () => {
       render(<LibraryView />)
+    }) */
+    render(<LibraryView />)
+
+    // Wait for async operations to complete
+    await waitFor(() => {
+      expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
     })
-    
+
     expect(screen.getByText('Your Library')).toBeInTheDocument()
     expect(screen.getByText('Your listening history and saved playlists')).toBeInTheDocument()
   })
 
   it('renders tab buttons', async () => {
-    await act(async () => {
+    //Removed await act wrapper
+    /* await act(async () => {
       render(<LibraryView />)
+    }) */
+    render(<LibraryView />)
+
+    // Wait for async operations to complete
+    await waitFor(() => {
+      expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
     })
-    
+
     expect(screen.getByText('Recent History')).toBeInTheDocument()
     expect(screen.getByText('Saved Playlists')).toBeInTheDocument()
   })
 
   it('shows loading state initially', async () => {
     // Mock a slow API response to ensure loading state is visible
-    global.fetch.mockImplementation(() => 
-      new Promise(resolve => 
+    global.fetch.mockImplementation(() =>
+      new Promise(resolve =>
         setTimeout(() => resolve({
           ok: true,
           json: () => Promise.resolve({
@@ -101,18 +119,20 @@ describe('LibraryView', () => {
       )
     )
 
-    await act(async () => {
+    /*await act(async () => {
       render(<LibraryView />)
-    })
-    
+    }) */
+    render(<LibraryView />)
+
     expect(screen.getByText('Connecting to Spotify…')).toBeInTheDocument()
   })
 
   it('displays Spotify user info when loaded', async () => {
-    await act(async () => {
+    /*await act(async () => {
       render(<LibraryView />)
-    })
-    
+    }) */
+    render(<LibraryView />)
+
     await waitFor(() => {
       expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
       expect(screen.getByText('Test User')).toBeInTheDocument()
@@ -120,14 +140,15 @@ describe('LibraryView', () => {
   })
 
   it('shows recent listening history when data is loaded', async () => {
-    await act(async () => {
+    /*await act(async () => {
       render(<LibraryView />)
-    })
-    
+    }) */
+    render(<LibraryView />)
+
     await waitFor(() => {
       expect(screen.getByText('Recent Listening History')).toBeInTheDocument()
     })
-    
+
     // The API is returning empty data, so we should see "No recent plays yet."
     await waitFor(() => {
       expect(screen.getByText('No recent plays yet.')).toBeInTheDocument()
@@ -135,16 +156,26 @@ describe('LibraryView', () => {
   })
 
   it('switches to saved playlists tab', async () => {
-    await act(async () => {
+    //Removed await act wrapper
+    /* await act(async () => {
       render(<LibraryView />)
+    }) */
+    render(<LibraryView />)
+
+    // Wait for component to load first
+    await waitFor(() => {
+      expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
     })
-    
+
     const savedPlaylistsTab = screen.getByRole('button', { name: 'Saved Playlists' })
-    
-    await act(async () => {
-      savedPlaylistsTab.click()
-    })
-    
+
+    //Removed await act wrapper
+    /* await act(async () => {
+      //savedPlaylistsTab.click()
+      await userEvent.click(savedPlaylistsTab)
+    }) */
+    await userEvent.click(savedPlaylistsTab)
+
     await waitFor(() => {
       // Check that we're now showing the saved playlists content
       const savedPlaylistsElements = screen.getAllByText('Saved Playlists')
@@ -155,32 +186,52 @@ describe('LibraryView', () => {
   })
 
   describe('Accessibility', () => {
+
     it('has no accessibility violations', async () => {
-      await act(async () => {
-        render(<LibraryView />)
-      })
-      
       const { container } = render(<LibraryView />)
+
+      //Removed due to duplicate LibraryView render that already exists in line 160
+      /* await act(async () => {
+        render(<LibraryView />)
+      }) */
+
+      await waitFor(() => {
+        expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
+      })
+
       await testAccessibility(container)
     })
 
     it('has proper heading structure', async () => {
-      await act(async () => {
+      //Removed await act wrapper
+      /* await act(async () => {
         render(<LibraryView />)
+      }) */
+      render(<LibraryView />)
+
+      await waitFor(() => {
+        expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
       })
-      
+
       const mainHeading = screen.getByRole('heading', { level: 1 })
       expect(mainHeading).toHaveTextContent('Your Library')
     })
 
     it('has proper button roles for tab navigation', async () => {
-      await act(async () => {
+      //Removed await act wrapper
+      /* await act(async () => {
         render(<LibraryView />)
+      }) */
+      render(<LibraryView />)
+
+      // Wait for async operations to complete
+      await waitFor(() => {
+        expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
       })
-      
+
       const recentTab = screen.getByRole('button', { name: 'Recent History' })
       const playlistsTab = screen.getByRole('button', { name: 'Saved Playlists' })
-      
+
       expect(recentTab).toBeInTheDocument()
       expect(playlistsTab).toBeInTheDocument()
     })
@@ -197,7 +248,7 @@ describe('LibraryView', () => {
             })
           })
         }
-        
+
         if (url.includes('/api/spotify/me/player/recently-played')) {
           return Promise.resolve({
             ok: true,
@@ -208,9 +259,9 @@ describe('LibraryView', () => {
                     id: 'track1',
                     name: 'Test Song',
                     artists: [{ name: 'Test Artist' }],
-                    album: { 
-                      name: 'Test Album', 
-                      images: [{ url: 'https://example.com/cover.jpg' }] 
+                    album: {
+                      name: 'Test Album',
+                      images: [{ url: 'https://example.com/cover.jpg' }]
                     }
                   },
                   played_at: '2024-01-01T12:00:00Z'
@@ -219,14 +270,16 @@ describe('LibraryView', () => {
             })
           })
         }
-        
+
         return Promise.resolve({ ok: false, status: 404 })
       })
 
-      await act(async () => {
+      //Removed await act wrapper
+      /* await act(async () => {
         render(<LibraryView />)
-      })
-      
+      }) */
+      render(<LibraryView />)
+
       await waitFor(() => {
         const avatarImage = screen.getByAltText('Spotify avatar')
         expect(avatarImage).toBeInTheDocument()
