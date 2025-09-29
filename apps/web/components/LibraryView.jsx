@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { Clock, ListMusic } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { Clock, ListMusic } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // ---------------- helpers ----------------
 function timeAgo(input) {
@@ -36,23 +36,31 @@ function TabButton({ isActive, children, onClick }) {
 
 function Row({ item }) {
   return (
-    <li className="flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-accent/30 transition">
-      <img
-        src={item.cover}
-        width={48}
-        height={48}
-        className="h-12 w-12 rounded-md object-cover"
-        alt={`${item.title} cover`}
-      />
-      <div className="min-w-0">
-        <div className="truncate text-sm font-medium text-white">{item.title}</div>
-        <div className="truncate text-xs text-muted-foreground">
-          {item.artist} • {item.album}
+    <li className="group flex items-center gap-4 rounded-xl px-4 py-4 hover:bg-white/10 transition-all duration-200 border border-transparent hover:border-white/20">
+      <div className="relative">
+        <img
+          src={item.cover}
+          width={56}
+          height={56}
+          className="h-14 w-14 rounded-lg object-cover shadow-lg group-hover:shadow-xl transition-shadow"
+          alt={`${item.title} cover`}
+        />
+        <div className="absolute inset-0 rounded-lg bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-base font-semibold text-white group-hover:text-yellow-400 transition-colors">
+          {item.title}
+        </div>
+        <div className="truncate text-sm text-muted-foreground mt-0.5">
+          {item.artist}
+        </div>
+        <div className="truncate text-xs text-muted-foreground/70 mt-0.5">
+          {item.album}
         </div>
       </div>
-      <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-        <Clock className="h-3.5 w-3.5" />
-        <span>{timeAgo(item.playedAt)}</span>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/5 px-3 py-1.5 rounded-full">
+        <Clock className="h-3 w-3" />
+        <span className="font-medium">{timeAgo(item.playedAt)}</span>
       </div>
     </li>
   );
@@ -179,37 +187,58 @@ export default function LibraryView() {
     }
 
     return (
-      <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card mb-40 text-white">
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          <span>Recent Listening History</span>
+      <div className="vybe-aurora rounded-2xl border border-white/20 bg-white/5 p-6 shadow-2xl backdrop-blur-sm mb-40 text-white">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="p-2 bg-yellow-400/20 rounded-lg">
+            <Clock className="h-5 w-5 text-yellow-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Recent Listening History</h2>
+            <p className="text-sm text-muted-foreground">Your latest musical journey</p>
+          </div>
         </div>
 
         {loadingRec && (
-          <p className="text-xs text-muted-foreground">Loading your recent plays…</p>
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
+            <span className="ml-3 text-sm text-muted-foreground">Loading your recent plays…</span>
+          </div>
         )}
         {recError && (
-          <p className="text-xs text-red-500 break-all">{recError}</p>
+          <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+            <p className="text-sm text-red-400">{recError}</p>
+          </div>
         )}
 
         {!loadingRec && !recError && recent.length === 0 && (
-          <p className="text-sm text-muted-foreground">No recent plays yet.</p>
+          <div className="text-center py-12">
+            <Clock className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">No recent plays yet</h3>
+            <p className="text-sm text-muted-foreground">Start listening to music to see your history here</p>
+          </div>
         )}
 
         {recent.length > 0 && (
           <>
-            <ul className="divide-y divide-border/60">
+            <ul className="space-y-2">
               {recent.map((it) => <Row key={it.id} item={it} />)}
             </ul>
 
             {hasMore && (
-              <div className="mt-4 flex justify-center">
+              <div className="mt-6 flex justify-center">
                 <button
                   onClick={loadMore}
                   disabled={moreLoading}
-                  className="rounded-full px-4 py-1.5 text-sm bg-white text-black shadow-sm disabled:opacity-60"
+                  className="flex items-center gap-2 rounded-full px-6 py-3 text-sm bg-yellow-400 hover:bg-yellow-500 text-black font-medium shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                 >
-                  {moreLoading ? 'Loading…' : 'Load more'}
+                  {moreLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                      Loading…
+                    </>
+                  ) : (
+                    'Load more history'
+                  )}
                 </button>
               </div>
             )}
