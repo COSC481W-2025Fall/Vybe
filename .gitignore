@@ -29,5 +29,9 @@ secret.txt
 clean.txt
 bad.txt
 secret.txt
+playwright-report/
+docs/
 
 .cursorignore
+sprint-1-assignee-breakdown.txt
+get-issues.ps1

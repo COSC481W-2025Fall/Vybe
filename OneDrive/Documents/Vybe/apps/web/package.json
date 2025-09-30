@@ -4,18 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "dev:port": "next dev --turbopack --port 3001",
-    "dev:alt": "next dev --port 3002",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:run": "vitest run",
-    "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed",
-    "test:e2e:debug": "playwright test --debug",
-    "test:all": "npm run test:run && npm run test:e2e"
+    "lint": "eslint"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
@@ -32,24 +23,15 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@playwright/test": "^1.48.2",
     "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.1.0",
-    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20.19.13",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/ui": "^3.2.4",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "eslint-config-prettier": "^10.1.8",
-    "jest-axe": "^10.0.0",
-    "jsdom": "^25.0.1",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.13",
-    "typescript": "^5",
-    "vitest": "^3.2.4"
+    "typescript": "^5"
   }
 }

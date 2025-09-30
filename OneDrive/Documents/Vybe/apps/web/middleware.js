@@ -1,12 +1,12 @@
 // middleware.js
 import { NextResponse } from 'next/server'
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { CONFIG } from './config/constants.js'
 
-// Paths that are always public (exclude '/sign-in' so we can handle it explicitly)
+// Paths that are always public
 const PUBLIC = new Set([
   '/',              // landing
   '/auth/callback', // Supabase OAuth will hit this
+  '/sign-in',
   '/favicon.ico',
   '/api/health',
 ])
@@ -26,30 +26,19 @@ export async function middleware(req) {
   const { data: { session } } = await supabase.auth.getSession()
   console.log('[mw] path:', req.nextUrl.pathname, 'session?', !!session)
 
-  // If not authenticated:
-  // - allow access to '/sign-in'
-  // - otherwise redirect to '/sign-in?next=...'
+  // Not authenticated and path isn't public → send to sign-in
   if (!session) {
-    if (pathname === '/sign-in') return res
     const url = req.nextUrl.clone()
-    url.pathname = CONFIG.AUTH_REDIRECT_PATH
+    url.pathname = '/sign-in'
     url.searchParams.set('next', pathname + req.nextUrl.search)
     return NextResponse.redirect(url)
   }
 
-  // If authenticated and visiting '/sign-in' → bounce to next or '/library'
+  // Already authenticated but visiting /sign-in → bounce to next or /library
   if (pathname === '/sign-in') {
     const url = req.nextUrl.clone()
-    const nextParam = req.nextUrl.searchParams.get('next')
-    if (nextParam) {
-      // next may contain path + query (e.g., /library?from=google)
-      const dest = new URL(nextParam, req.nextUrl.origin)
-      url.pathname = dest.pathname
-      url.search = dest.search
-    } else {
-      url.pathname = '/library'
-      url.search = ''
-    }
+    url.pathname = req.nextUrl.searchParams.get('next') || '/library'
+    url.search = ''
     return NextResponse.redirect(url)
   }
 

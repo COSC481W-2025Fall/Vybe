@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Users, Music2, Library, User as UserIcon } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, Users, Music2, Library, User as UserIcon, LogOut } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
+import { useState } from 'react';
 
 const links = CONFIG.NAV_LINKS.map(link => {
   const iconMap = {
@@ -40,6 +41,34 @@ function NavPill({ href, label, Icon, active }) {
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      const response = await fetch('/sign-out', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        // The server will handle the redirect, but we can also do it client-side as backup
+        router.push('/sign-in');
+        router.refresh();
+        // Reset loading state after successful redirect
+        setIsSigningOut(false);
+      } else {
+        console.error('Sign out failed');
+        setIsSigningOut(false);
+      }
+    } catch (error) {
+      console.error('Sign out error:', error);
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur">
@@ -66,8 +95,22 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* spacer for right-aligned actions later */}
+        {/* spacer for right-aligned actions */}
         <div className="ml-auto" />
+        
+        {/* Sign out button */}
+        <button
+          onClick={handleSignOut}
+          disabled={isSigningOut}
+          className="group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition text-muted-foreground hover:text-red-400 hover:bg-red-50/10 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Sign out"
+          title="Sign out"
+        >
+          <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-70 group-hover:opacity-100'}`} />
+          <span className="hidden sm:inline">
+            {isSigningOut ? 'Signing out...' : 'Sign out'}
+          </span>
+        </button>
       </div>
     </nav>
   );
