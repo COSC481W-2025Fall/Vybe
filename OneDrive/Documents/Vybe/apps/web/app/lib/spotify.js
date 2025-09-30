@@ -1,7 +1,5 @@
 // apps/web/app/lib/spotify.js
-import { CONFIG } from '../../config/constants.js';
-
-const TOKEN_URL = CONFIG.SPOTIFY_TOKEN_URL;
+const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 
 function basicAuth() {
   const id = process.env.SPOTIFY_CLIENT_ID;
