@@ -43,3 +43,9 @@ htmlcov/
 .coverage
 backend/htmlcov/
 backend/coverage.xml
+playwright-report/
+docs/
+
+.cursorignore
+sprint-1-assignee-breakdown.txt
+get-issues.ps1
