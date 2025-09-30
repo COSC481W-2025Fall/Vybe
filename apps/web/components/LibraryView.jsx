@@ -122,18 +122,25 @@ export default function LibraryView() {
     };
   }, []);
 
-  // --- load first page of recently played ---
+  // --- load first page of play history (from DB) ---
   useEffect(() => {
     (async () => {
       try {
         setLoadingRec(true);
-        const res = await fetch('/api/spotify/me/player/recently-played?limit=20', { cache: 'no-store' });
+        const res = await fetch('/api/history?limit=20', { cache: 'no-store' });
         if (!res.ok) {
           const body = await res.text().catch(() => '');
           throw new Error(`HTTP ${res.status} ${body}`);
         }
-        const json = await res.json();              // { items: [...], cursors, next }
-        const items = (json.items || []).map(mapItem);
+        const json = await res.json();              // { items: [...] }
+        const items = (json.items || []).map((row) => ({
+          id: `${row.track_id}-${row.played_at}`,
+          title: row.title ?? row.track_name ?? 'Unknown',
+          artist: row.artist ?? row.artist_name ?? 'Unknown',
+          album: row.album ?? row.album_name ?? '',
+          cover: row.cover_url ?? row.album_image ?? '',
+          playedAt: row.played_at,
+        }));
         setRecent(items);
         setHasMore((json.items || []).length > 0);
         setRecError(null);
@@ -146,21 +153,28 @@ export default function LibraryView() {
     })();
   }, [mapItem]);
 
-  // --- load older history (uses "before" cursor = oldest played_at) ---
+  // --- load older history (keyset on played_at) ---
   const loadMore = useCallback(async () => {
     if (!recent.length) return;
     try {
       setMoreLoading(true);
       const oldest = recent[recent.length - 1];
-      const beforeMs = new Date(oldest.playedAt).getTime(); // Spotify expects ms
-      const url = `/api/spotify/me/player/recently-played?limit=20&before=${beforeMs}`;
+      const before = encodeURIComponent(oldest.playedAt);
+      const url = `/api/history?limit=20&before=${before}`;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) {
         const body = await res.text().catch(() => '');
         throw new Error(`HTTP ${res.status} ${body}`);
       }
       const json = await res.json();
-      const more = (json.items || []).map(mapItem);
+      const more = (json.items || []).map((row) => ({
+        id: `${row.track_id}-${row.played_at}`,
+        title: row.title ?? row.track_name ?? 'Unknown',
+        artist: row.artist ?? row.artist_name ?? 'Unknown',
+        album: row.album ?? row.album_name ?? '',
+        cover: row.cover_url ?? row.album_image ?? '',
+        playedAt: row.played_at,
+      }));
       setRecent(prev => [...prev, ...more]);
       if (!json.items || json.items.length === 0) setHasMore(false);
     } catch (err) {
