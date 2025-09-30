@@ -29,3 +29,17 @@ secret.txt
 clean.txt
 bad.txt
 secret.txt
+venv/
+.venv/
+backend/.venv/
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.env
+
+# Coverage
+.coverage
+backend/htmlcov/
+backend/coverage.xml
