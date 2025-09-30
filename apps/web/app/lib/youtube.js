@@ -1,17 +1,18 @@
-// apps/web/app/lib/spotify.js
-import { CONFIG } from '../../config/constants.js';
+// apps/web/app/lib/youtube.js
+const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
-const TOKEN_URL = CONFIG.SPOTIFY_TOKEN_URL;
-
-function basicAuth() {
-  const id = process.env.SPOTIFY_CLIENT_ID;
-  const secret = process.env.SPOTIFY_CLIENT_SECRET;
-  return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
+function basicAuthBody(params) {
+  const body = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    ...params,
+  });
+  return body;
 }
 
 export async function getTokensRow(sb, userId) {
   const { data, error } = await sb
-    .from('spotify_tokens')
+    .from('youtube_tokens')
     .select('*')
     .eq('user_id', userId)
     .single();
@@ -22,7 +23,7 @@ export async function getTokensRow(sb, userId) {
 
 export async function upsertTokens(sb, userId, tokens) {
   const { error } = await sb
-    .from('spotify_tokens')
+    .from('youtube_tokens')
     .upsert({ user_id: userId, ...tokens })
     .eq('user_id', userId);
 
@@ -30,7 +31,7 @@ export async function upsertTokens(sb, userId, tokens) {
 }
 
 export async function refreshAccessToken(refresh_token) {
-  const body = new URLSearchParams({
+  const body = basicAuthBody({
     grant_type: 'refresh_token',
     refresh_token,
   });
@@ -38,7 +39,6 @@ export async function refreshAccessToken(refresh_token) {
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: {
-      Authorization: basicAuth(),
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body,
@@ -46,38 +46,41 @@ export async function refreshAccessToken(refresh_token) {
 
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(`Failed to refresh Spotify token: ${res.status} ${txt}`);
+    throw new Error(`Failed to refresh Google token: ${res.status} ${txt}`);
   }
   return res.json(); // { access_token, expires_in, refresh_token? }
 }
 
-/** Return a valid access token; refresh & save if needed */
+/** Return a valid YouTube access token; refresh & save if needed */
 export async function getValidAccessToken(sb, userId) {
   const { data: row, error } = await sb
-    .from('spotify_tokens')
+    .from('youtube_tokens')
     .select('*')
     .eq('user_id', userId)
     .single();
 
   if (error || !row?.refresh_token) {
-    throw new Error('No Spotify tokens on file');
+    throw new Error('No YouTube tokens on file');
   }
 
   const now = Math.floor(Date.now() / 1000) + 60; // 1 min leeway
   if (row.access_token && row.expires_at > now) {
-    return row.access_token;                      // 👈 return *string*
+    return row.access_token;
   }
 
-  const refreshed = await refreshAccessToken(row.refresh_token); // fetch to Spotify token endpoint
+  const refreshed = await refreshAccessToken(row.refresh_token);
 
-  await sb.from('spotify_tokens').upsert({
+  await sb.from('youtube_tokens').upsert({
     user_id: userId,
     access_token: refreshed.access_token,
     refresh_token: refreshed.refresh_token || row.refresh_token,
-    expires_at: Math.floor(Date.now() / 1000) + refreshed.expires_in,
+    expires_at: Math.floor(Date.now() / 1000) + (refreshed.expires_in || 3600),
     scope: refreshed.scope,
-    token_type: refreshed.token_type,
+    token_type: refreshed.token_type || 'Bearer',
   });
 
-  return refreshed.access_token;                  // 👈 return *string*
+  return refreshed.access_token;
 }
+
+
+

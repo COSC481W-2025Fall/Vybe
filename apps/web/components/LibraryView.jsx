@@ -4,6 +4,7 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 import { Clock, ListMusic } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+
 // ---------------- helpers ----------------
 function timeAgo(input) {
   const date = new Date(input);
@@ -18,6 +19,7 @@ function timeAgo(input) {
   return `${weeks} week${weeks === 1 ? '' : 's'} ago`;
 }
 
+// eslint-disable-next-line react/prop-types
 function TabButton({ isActive, children, onClick }) {
   return (
     <button
@@ -34,6 +36,7 @@ function TabButton({ isActive, children, onClick }) {
   );
 }
 
+/* eslint-disable react/prop-types */
 function Row({ item }) {
   return (
     <li className="group relative flex items-center gap-5 rounded-xl px-5 py-5 hover:bg-white/10 transition-all duration-300 border border-transparent hover:border-white/20 backdrop-blur-sm">
@@ -65,12 +68,10 @@ function Row({ item }) {
     </li>
   );
 }
+/* eslint-enable react/prop-types */
 
 // ---------------- component ----------------
-const TABS = [
-  { key: 'recent', label: 'Recent History' },
-  { key: 'saved',  label: 'Saved Playlists' },
-];
+const TABS = CONFIG.LIBRARY_TABS;
 
 export default function LibraryView() {
   const [tab, setTab] = useState('recent');
@@ -80,26 +81,52 @@ export default function LibraryView() {
   const [loadingMe, setLoadingMe]   = useState(true);
   const [meError, setMeError]       = useState(null);
 
+  // Auth provider (spotify | google | others)
+  const [provider, setProvider]     = useState(null);
+  const [userDisplayName, setUserDisplayName] = useState(null); // for non-Spotify providers (e.g., Google)
+  const [userAvatarUrl, setUserAvatarUrl] = useState(null);
+
   // Listening history
   const [recent, setRecent]         = useState([]);   // normalized items for UI
   const [loadingRec, setLoadingRec] = useState(true);
   const [moreLoading, setMoreLoading] = useState(false);
   const [recError, setRecError]     = useState(null);
   const [hasMore, setHasMore]       = useState(true); // we stop when Spotify returns empty
+  const [fromParam, setFromParam]   = useState(null);
 
-  // --- load Spotify identity (optional, nice UX) ---
+  // --- load user and, if effective provider is Spotify, fetch Spotify identity ---
   useEffect(() => {
     (async () => {
       try {
         const sb = supabaseBrowser();
         const { data: { user } } = await sb.auth.getUser();
-        console.log('[Supabase user]', user);
+        setProvider(user?.app_metadata?.provider || null);
+        // Derive a friendly display name from identity metadata
+        const m = user?.user_metadata || {};
+        const derivedName = m.full_name || m.name || m.user_name || m.preferred_username || (m.email ? m.email.split('@')[0] : null);
+        if (derivedName) setUserDisplayName(derivedName);
+        const avatar = m.avatar_url || m.picture || null;
+        if (avatar) setUserAvatarUrl(avatar);
 
-        const res = await fetch('/api/spotify/me', { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const me = await res.json();
-        setSpotifyMe(me);
-        setMeError(null);
+        // Read ?from=... query param if present (set by sign-in redirects)
+        let override = null;
+        try {
+          const url = new URL(window.location.href);
+          const from = url.searchParams.get('from');
+          if (from) {
+            setFromParam(from);
+            override = from;
+          }
+        } catch {}
+
+        const effectiveProvider = override || user?.app_metadata?.provider || null;
+        if (effectiveProvider === 'spotify') {
+          const res = await fetch('/api/spotify/me', { cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const me = await res.json();
+          setSpotifyMe(me);
+          setMeError(null);
+        }
       } catch (err) {
         console.error('Failed to load Spotify profile', err);
         setMeError(String(err?.message || err));
@@ -122,12 +149,22 @@ export default function LibraryView() {
     };
   }, []);
 
+
   // --- load first page of play history (from DB) ---
   useEffect(() => {
     (async () => {
       try {
         setLoadingRec(true);
-        const res = await fetch('/api/history?limit=20', { cache: 'no-store' });
+
+        const effectiveProvider = fromParam || provider;
+        if (effectiveProvider !== 'spotify') {
+          setRecent([]);
+          setHasMore(false);
+          setRecError(null);
+          return;
+        }
+        const res = await fetch('/api/spotify/me/player/recently-played?limit=20', { cache: 'no-store' });
+
         if (!res.ok) {
           const body = await res.text().catch(() => '');
           throw new Error(`HTTP ${res.status} ${body}`);
@@ -151,7 +188,7 @@ export default function LibraryView() {
         setLoadingRec(false);
       }
     })();
-  }, [mapItem]);
+  }, [mapItem, provider, fromParam]);
 
   // --- load older history (keyset on played_at) ---
   const loadMore = useCallback(async () => {
@@ -273,11 +310,11 @@ export default function LibraryView() {
           Your listening history and saved playlists
         </p>
 
-        {/* Spotify identity */}
+        {/* Provider-aware identity */}
         <div className="mt-3 flex items-center gap-3">
-          {loadingMe && <span className="text-xs text-muted-foreground">Connecting to Spotify…</span>}
-          {meError && <span className="text-xs text-red-500 break-all">{meError}</span>}
-          {spotifyMe && (
+          {loadingMe && <span className="text-xs text-muted-foreground">Connecting…</span>}
+          {meError && provider === 'spotify' && <span className="text-xs text-red-500 break-all">{meError}</span>}
+          {((fromParam || provider) === 'spotify') && spotifyMe && (
             <>
               {spotifyMe.images?.[0]?.url && (
                 <img
@@ -291,6 +328,18 @@ export default function LibraryView() {
               </span>
             </>
           )}
+          {(fromParam || provider) && (fromParam || provider) !== 'spotify' && (
+            <>
+              {userAvatarUrl && (
+                <img
+                  src={userAvatarUrl}
+                  alt="User avatar"
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              )}
+              <span className="text-sm text-white">Signed in as <span className="font-medium">{userDisplayName || 'User'}</span></span>
+            </>
+          )}
         </div>
       </header>
 
@@ -302,7 +351,15 @@ export default function LibraryView() {
         ))}
       </div>
 
-      {content}
+      {(fromParam || provider) && (fromParam || provider) !== 'spotify' ? (
+        <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-xl backdrop-blur chroma-card mb-40 text-white">
+          <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span>Recent Listening History</span>
+          </div>
+          <p className="text-sm text-muted-foreground">No recent plays yet.</p>
+        </div>
+      ) : content}
     </section>
   );
 }
