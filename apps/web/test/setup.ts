@@ -1,6 +1,13 @@
 import '@testing-library/jest-dom'
 import { beforeAll, afterAll } from 'vitest'
 
+// Extend global type to include testUtils
+declare global {
+  var testUtils: {
+    // Add any global test utilities here
+  }
+}
+
 // Suppress React act warnings in tests
 const originalError = console.error
 beforeAll(() => {
