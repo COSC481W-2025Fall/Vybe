@@ -82,7 +82,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           {links.map(({ href, label, Icon }) => {
             const active =
-              pathname === href || (href !== '/' && pathname.startsWith(href));
+              pathname === href || (href !== '/' && pathname && pathname.startsWith(href));
             return (
               <NavPill
                 key={href}

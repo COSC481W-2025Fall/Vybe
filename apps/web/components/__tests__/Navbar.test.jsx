@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
+import { renderWithProviders, testAccessibility, userInteractions } from '@/test/test-utils'
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
