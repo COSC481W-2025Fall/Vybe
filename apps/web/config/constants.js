@@ -28,6 +28,7 @@ export const CONFIG = {
   // Public Routes (matching middleware.js)
   PUBLIC_ROUTES: [
     '/',
+    '/home',
     '/auth/callback',
     '/sign-in',
     '/favicon.ico',
@@ -36,7 +37,7 @@ export const CONFIG = {
   
   // Navigation Links (matching Navbar.jsx)
   NAV_LINKS: [
-    { href: '/', label: 'Home' },
+    { href: '/home', label: 'Home' },
     { href: '/groups', label: 'Groups' },
     { href: '/playlist', label: 'Playlist' },
     { href: '/library', label: 'Library' },

@@ -6,6 +6,7 @@ import { CONFIG } from './config/constants.js'
 // Paths that are always public (exclude '/sign-in' so we can handle it explicitly)
 const PUBLIC = new Set([
   '/',              // landing
+  '/home',          // home page
   '/auth/callback', // Supabase OAuth will hit this
   '/favicon.ico',
   '/api/health',
