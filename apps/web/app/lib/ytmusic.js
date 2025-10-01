@@ -18,7 +18,12 @@ export async function validateYTMusicConnection() {
       return { success: false, error: extractError(maybeJson) };
     }
 
-    return { success: !!maybeJson?.ok, data: maybeJson };
+    const ok = !!maybeJson?.ok;
+    return {
+      success: ok,
+      data: maybeJson,
+      error: ok ? undefined : (maybeJson?.message || 'Not connected'),
+    };
   } catch (error) {
     return { success: false, error: error?.message || 'Network error' };
   }

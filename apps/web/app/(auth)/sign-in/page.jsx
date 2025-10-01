@@ -48,8 +48,10 @@ export default function SignInPage() {
   };
 
   const handleYTMusicClick = () => {
+    // Open modal and immediately attempt a check; if not connected, the
+    // modal will display the friendly reason. If connected, we redirect.
     setShowYTMusicSetup(true);
-    // Do not auto-check here to avoid surprise redirects; user will press Check
+    void checkYTMusicConnection();
   };
 
   return (

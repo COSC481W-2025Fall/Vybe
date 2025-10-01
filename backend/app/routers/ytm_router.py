@@ -108,6 +108,7 @@ async def validate_connection(x_client_token: Optional[str] = Header(None), cfg:
     loop = asyncio.get_event_loop()
     def _try_history():
         try:
+            # Mirror template: get full history, allow empty without raising
             return yt.get_history()
         except Exception:
             return []
@@ -142,7 +143,8 @@ async def get_history(limit: int = Query(50, ge=1, le=200), x_client_token: Opti
             return []
     history = await loop.run_in_executor(_executor, _try_history)
     if not history:
-        raise HTTPException(status_code=500, detail="Failed to get history from YouTube Music API")
+        # Match template UX: return empty list instead of 500
+        return []
     if isinstance(history, list) and len(history) > limit:
         history = history[:limit]
     # Normalize fields used by UI
