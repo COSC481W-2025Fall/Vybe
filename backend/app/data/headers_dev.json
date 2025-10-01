@@ -1,0 +1,14 @@
+{
+  "url": "https://music.youtube.com/youtubei/v1/feedback?prettyPrint=false",
+  "time": "2025-10-01T15:53:48.859Z",
+  "headers": {
+    "authorization": "SAPISIDHASH 1759334028_942fffe144ad704ea1d2f71a0e7581af5e37b742_u SAPISID1PHASH 1759334028_942fffe144ad704ea1d2f71a0e7581af5e37b742_u SAPISID3PHASH 1759334028_942fffe144ad704ea1d2f71a0e7581af5e37b742_u",
+    "x-youtube-client-name": "67",
+    "x-origin": "https://music.youtube.com",
+    "x-youtube-client-version": "1.20250929.03.00",
+    "x-goog-visitor-id": "Cgt2eVNYY2ZrSHA0dyidkPXGBjIKCgJVUxIEGgAgUg%3D%3D",
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "x-goog-authuser": "0",
+    "cookie": "PREF=f4=4000000&tz=America.Detroit&repeat=NONE; __Secure-1PSIDTS=sidts-CjUBmkD5SzP4zsAO0kQG43dMsi0hDCsK0f8yck2RtPOvrcjYRAr1HmyFetczekW6IpgEdrNGwRAA; __Secure-3PSIDTS=sidts-CjUBmkD5SzP4zsAO0kQG43dMsi0hDCsK0f8yck2RtPOvrcjYRAr1HmyFetczekW6IpgEdrNGwRAA; __Secure-1PSID=g.a0001wggagyOawe4034qf8dbOUzFSlHJfMVRwa9JzjGraDbwU2wBmbrq001WEsLNPVM6HXdXWQACgYKAaASARASFQHGX2MibMMbgiQgHYiLkM7Js2-QORoVAUF8yKozbAMww5TQh-XH5_FXrAen0076; __Secure-3PSID=g.a0001wggagyOawe4034qf8dbOUzFSlHJfMVRwa9JzjGraDbwU2wBktxd4D3aiWO-yFw2EprqlgACgYKAVkSARASFQHGX2MieB2ADX1D9zKG1kIoUQMRSRoVAUF8yKqFvuT_yCKPO6MJu0k3atnI0076; SSID=A4oNGwKlLMI8I9J99; SAPISID=as_cyzEhv75RUP57/ATrRs-NBZ9koRSt-U; __Secure-1PAPISID=as_cyzEhv75RUP57/ATrRs-NBZ9koRSt-U; __Secure-3PAPISID=as_cyzEhv75RUP57/ATrRs-NBZ9koRSt-U; LOGIN_INFO=AFmmF2swRQIgP9trx59wQrgLxMNoSgtYXxkhs4P7yYrER3u-tbOqLwUCIQC5zaub6LLgsI1EKxSFQ2ufOFg6xu_sJagC5dweV_OvEA:QUQ3MjNmdzZIcTlaTV9LMW1uTnQ3Wllqbk9FNEljbEc3d3ltWTd3WjRQVWVxVUtxUlJxYlR5UkVCaDlTaHZhYXVCTHBMbWw3NW1weXJDbHozU3NuNkxsZnVoa3I3UkVSbXFWZGRNUGJtSnhSVkItR1M5cnlISjdQTFZKeHYydFBNNkktWGpnWXh2Q3ZNU3lsYU9HOVhQUTg4TjZxbGZPNDFn; __Secure-1PSIDCC=AKEyXzXSXzy3wm6MYavJIjybDWK5F-gAo1PXrNz9vISEgQIXu95VZ2CTeG41qAW89WFxBARNaQ; __Secure-3PSIDCC=AKEyXzWepnvY6y8xn7az_LSxRtkJKcaUNbAYobv-6b_IIAfVT3fwDAAeD1PJEMeZv6Q5390gBA"
+  }
+}

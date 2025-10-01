@@ -1,0 +1,11 @@
+{
+  "ignorePatterns": [
+    "playwright-report/**",
+    "test-results/**",
+    "node_modules/**",
+    ".next/**",
+    "out/**",
+    "build/**"
+  ]
+}
+
