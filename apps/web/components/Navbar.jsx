@@ -107,8 +107,8 @@ export default function Navbar() {
           title="Sign out"
         >
           <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-70 group-hover:opacity-100'}`} />
-          <span className="hidden sm:inline">
-            {isSigningOut ? 'Signing out...' : 'Sign out'}
+          <span className="hidden sm:inline" suppressHydrationWarning>
+            {isSigningOut ? 'Logging out...' : 'Log out'}
           </span>
         </button>
       </div>
