@@ -89,7 +89,11 @@ def _get_cached_auth_string() -> Optional[str]:
     if not raw_lines:
         return None
     raw = "\n".join(raw_lines)
-    return setup(headers_raw=raw)
+    # ytmusicapi will raise if required headers (e.g., x-goog-authuser) are missing
+    try:
+        return setup(headers_raw=raw)
+    except Exception:
+        return None
 
 def _make_yt() -> Optional[YTMusic]:
     auth = _get_cached_auth_string()

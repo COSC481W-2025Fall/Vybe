@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 
-const VYBE_BACKEND_URL = process.env.VYBE_BACKEND_URL || 'http://localhost:8001';
-const API_TOKEN = process.env.VYBE_API_TOKEN || 'vybe-dev-token';
+// Align with backend and client envs
+const VYBE_BACKEND_URL = process.env.NEXT_PUBLIC_VYBE_BACKEND_URL || 'http://localhost:8000';
+const API_TOKEN = process.env.APP_YTM_CLIENT_TOKEN || process.env.NEXT_PUBLIC_YTMUSIC_CLIENT_TOKEN || 'dev-token';
 
 export async function GET(request, { params }) {
   const { path } = params;
   const url = new URL(request.url);
   
   try {
-    // Forward the request to the Vybe backend
-    const backendUrl = `${VYBE_BACKEND_URL}/ytmusic/${path.join('/')}${url.search}`;
+    // Forward the request to the Vybe backend (ytm routes)
+    const backendUrl = `${VYBE_BACKEND_URL}/ytm/${path.join('/')}${url.search}`;
     
     const response = await fetch(backendUrl, {
       method: 'GET',
@@ -39,7 +40,7 @@ export async function POST(request, { params }) {
   const body = await request.json();
   
   try {
-    const backendUrl = `${VYBE_BACKEND_URL}/ytmusic/${path.join('/')}`;
+    const backendUrl = `${VYBE_BACKEND_URL}/ytm/${path.join('/')}`;
     
     const response = await fetch(backendUrl, {
       method: 'POST',
@@ -70,7 +71,7 @@ export async function DELETE(request, { params }) {
   const url = new URL(request.url);
   
   try {
-    const backendUrl = `${VYBE_BACKEND_URL}/ytmusic/${path.join('/')}${url.search}`;
+    const backendUrl = `${VYBE_BACKEND_URL}/ytm/${path.join('/')}${url.search}`;
     
     const response = await fetch(backendUrl, {
       method: 'DELETE',

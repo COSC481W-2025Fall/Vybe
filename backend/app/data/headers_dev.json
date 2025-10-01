@@ -1,14 +1,14 @@
 {
-  "url": "https://music.youtube.com/youtubei/v1/account/account_menu?prettyPrint=false",
-  "time": "2025-10-01T14:35:48.314Z",
+  "url": "https://music.youtube.com/youtubei/v1/feedback?prettyPrint=false",
+  "time": "2025-10-01T15:53:48.859Z",
   "headers": {
-    "authorization": "SAPISIDHASH 1759329348_b85885860ccdbc0cd0c1d4f3f4228e53bab9b7e1_u SAPISID1PHASH 1759329348_b85885860ccdbc0cd0c1d4f3f4228e53bab9b7e1_u SAPISID3PHASH 1759329348_b85885860ccdbc0cd0c1d4f3f4228e53bab9b7e1_u",
+    "authorization": "SAPISIDHASH 1759334028_942fffe144ad704ea1d2f71a0e7581af5e37b742_u SAPISID1PHASH 1759334028_942fffe144ad704ea1d2f71a0e7581af5e37b742_u SAPISID3PHASH 1759334028_942fffe144ad704ea1d2f71a0e7581af5e37b742_u",
     "x-youtube-client-name": "67",
     "x-origin": "https://music.youtube.com",
     "x-youtube-client-version": "1.20250929.03.00",
-    "x-goog-visitor-id": "Cgt2eVNYY2ZrSHA0dyjD-PTGBjIKCgJVUxIEGgAgUg%3D%3D",
+    "x-goog-visitor-id": "Cgt2eVNYY2ZrSHA0dyidkPXGBjIKCgJVUxIEGgAgUg%3D%3D",
     "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
     "x-goog-authuser": "0",
-    "cookie": "LOGIN_INFO=AFmmF2swRgIhANnOSr1AZIrsjsyEwobEju_eHHOeSg_pUiptJhs3dwXzAiEA-InCCL7GWIirIap-cqs6lIJ9iMZ5y-7pcaMVurymbQg:QUQ3MjNmeXRFZEFLQTdtYjU4ZFJ4MDhYdjg5X0xYN1FnZ052WDJaR1RJTTdMSUdCTnltZEF3NXU1Vkdzb25xd0dGVS11cTdBdHRZc2I3SEZMY0VKYzdXa1o4Ykp2LXZRWXAtdk5TQXJpTXNEYU1RYzBZZ2hha0VTbUwzWS1uM2RxclBjOGdKaGs3UmVFRDVfRDJlZUU3S09wcXQwWW4wVERB; __Secure-1PSID=g.a0001gggaudbt3wmNn1kvnILdmbTsGSTUZuPSBzkmR2iRkN-Bt9G6LSz0X3wxSWcxI3Wq5N_0wACgYKAXoSARASFQHGX2Mi5jAK_4-TfbYg-OwMGG6hDxoVAUF8yKqlWIyZlG1jaIdVgQeZUcn30076; __Secure-3PSID=g.a0001gggaudbt3wmNn1kvnILdmbTsGSTUZuPSBzkmR2iRkN-Bt9Gi0UdGgVsr5pFhl8-GaSzNQACgYKAVsSARASFQHGX2MiiFR5G_xmJpm3SxOcBpH2xxoVAUF8yKoPozxk1EF896NXElLhHfvd0076; SSID=Azz9YpW7nyWjSiGlc; SAPISID=-4FvIZpgy2Px1a86/AYc4VMSseO_oeJFPl; __Secure-1PAPISID=-4FvIZpgy2Px1a86/AYc4VMSseO_oeJFPl; __Secure-3PAPISID=-4FvIZpgy2Px1a86/AYc4VMSseO_oeJFPl; __Secure-1PSIDTS=sidts-CjUBmkD5S8k3zBb5jmzewaS14VVPkzRfzB4ye19qrYg0dpH7A7dGa67Ql7TzH5SeurRiCYYcqxAA; __Secure-3PSIDTS=sidts-CjUBmkD5S8k3zBb5jmzewaS14VVPkzRfzB4ye19qrYg0dpH7A7dGa67Ql7TzH5SeurRiCYYcqxAA; PREF=f4=4000000&tz=America.Detroit&repeat=NONE; __Secure-1PSIDCC=AKEyXzXBlYHYUW471FReiYu9dfrHr4QwnERIOiMw3Tch2_xrdZVNjY1RzsSmBvTkeS1WgCyM2g; __Secure-3PSIDCC=AKEyXzXqnXhGc4z2HOd6en2LW7XUe76QyG-H5Q-cBPONH2mtBSJ8GqtCREGV2ZXWf5ICwiN_CA"
+    "cookie": "PREF=f4=4000000&tz=America.Detroit&repeat=NONE; __Secure-1PSIDTS=sidts-CjUBmkD5SzP4zsAO0kQG43dMsi0hDCsK0f8yck2RtPOvrcjYRAr1HmyFetczekW6IpgEdrNGwRAA; __Secure-3PSIDTS=sidts-CjUBmkD5SzP4zsAO0kQG43dMsi0hDCsK0f8yck2RtPOvrcjYRAr1HmyFetczekW6IpgEdrNGwRAA; __Secure-1PSID=g.a0001wggagyOawe4034qf8dbOUzFSlHJfMVRwa9JzjGraDbwU2wBmbrq001WEsLNPVM6HXdXWQACgYKAaASARASFQHGX2MibMMbgiQgHYiLkM7Js2-QORoVAUF8yKozbAMww5TQh-XH5_FXrAen0076; __Secure-3PSID=g.a0001wggagyOawe4034qf8dbOUzFSlHJfMVRwa9JzjGraDbwU2wBktxd4D3aiWO-yFw2EprqlgACgYKAVkSARASFQHGX2MieB2ADX1D9zKG1kIoUQMRSRoVAUF8yKqFvuT_yCKPO6MJu0k3atnI0076; SSID=A4oNGwKlLMI8I9J99; SAPISID=as_cyzEhv75RUP57/ATrRs-NBZ9koRSt-U; __Secure-1PAPISID=as_cyzEhv75RUP57/ATrRs-NBZ9koRSt-U; __Secure-3PAPISID=as_cyzEhv75RUP57/ATrRs-NBZ9koRSt-U; LOGIN_INFO=AFmmF2swRQIgP9trx59wQrgLxMNoSgtYXxkhs4P7yYrER3u-tbOqLwUCIQC5zaub6LLgsI1EKxSFQ2ufOFg6xu_sJagC5dweV_OvEA:QUQ3MjNmdzZIcTlaTV9LMW1uTnQ3Wllqbk9FNEljbEc3d3ltWTd3WjRQVWVxVUtxUlJxYlR5UkVCaDlTaHZhYXVCTHBMbWw3NW1weXJDbHozU3NuNkxsZnVoa3I3UkVSbXFWZGRNUGJtSnhSVkItR1M5cnlISjdQTFZKeHYydFBNNkktWGpnWXh2Q3ZNU3lsYU9HOVhQUTg4TjZxbGZPNDFn; __Secure-1PSIDCC=AKEyXzXSXzy3wm6MYavJIjybDWK5F-gAo1PXrNz9vISEgQIXu95VZ2CTeG41qAW89WFxBARNaQ; __Secure-3PSIDCC=AKEyXzWepnvY6y8xn7az_LSxRtkJKcaUNbAYobv-6b_IIAfVT3fwDAAeD1PJEMeZv6Q5390gBA"
   }
 }
