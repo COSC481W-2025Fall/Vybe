@@ -1,135 +1,139 @@
-# Testing Setup
+# Frontend Testing Guide
 
-This project uses a comprehensive testing framework with both unit tests and end-to-end tests.
-
-## Testing Stack
-
-- **Vitest**: Fast unit testing framework with React Testing Library
-- **Playwright**: End-to-end testing for browser automation
-- **React Testing Library**: Component testing utilities
-- **Jest DOM**: Custom matchers for DOM testing
-
-## Running Tests
-
-### Unit Tests
-
-```bash
-# Run all unit tests
-npm test
-
-# Run tests in watch mode
-npm run test
-
-# Run tests once (CI mode)
-npm run test:run
-
-# Open Vitest UI
-npm run test:ui
-```
-
-### End-to-End Tests
-
-```bash
-# Run Playwright tests
-npm run test:e2e
-
-# Run Playwright tests in headed mode
-npm run test:e2e:headed
-
-# Run Playwright tests in debug mode
-npm run test:e2e:debug
-```
-
-### All Tests
-
-```bash
-# Run both unit and E2E tests
-npm run test:all
-```
+This document explains how to run and write tests for the Vybe frontend application.
 
 ## Test Structure
 
-```text
-apps/web/
-├── components/
-│   └── __tests__/           # Component unit tests
-│       ├── Navbar.test.jsx
-│       └── LibraryView.test.jsx
-├── test/
-│   ├── setup.ts             # Test setup configuration
-│   ├── helpers.js            # Test helper utilities
-│   └── utils.test.js        # Utility function tests
-├── tests/
-│   └── e2e/                 # End-to-end tests
-│       └── app.spec.ts
-├── vitest.config.ts         # Vitest configuration
-└── playwright.config.ts     # Playwright configuration
+The frontend uses two testing frameworks:
+- **Vitest** - Unit and component tests
+- **Playwright** - End-to-end (E2E) tests
+
+## Running Tests
+
+### Install Dependencies
+```bash
+npm install
 ```
+
+### All Tests
+```bash
+npm run test:all
+```
+
+### Unit Tests Only
+```bash
+npm test -- --run
+```
+
+### E2E Tests Only
+```bash
+npm run test:e2e
+```
+
+### Interactive Test UI
+```bash
+npm run test:ui
+```
+
+### E2E Tests with Browser
+```bash
+npm run test:e2e:headed
+```
+
+### Debug E2E Tests
+```bash
+npm run test:e2e:debug
+```
+
+## Test Files
+
+### Unit Tests
+- `components/__tests__/` - Component tests
+- `test/` - Utility and helper tests
+
+### E2E Tests
+- `tests/e2e/` - End-to-end test scenarios
 
 ## Writing Tests
 
-### Unit Test Guidelines
+### Component Tests
+```javascript
+import { render, screen } from '@testing-library/react'
+import { expect, test } from 'vitest'
+import MyComponent from '../MyComponent'
 
-- Use `describe` and `it` blocks for test organization
-- Import testing utilities from `@testing-library/react`
-- Mock external dependencies using `vi.mock()`
-- Test component rendering, user interactions, and state changes
+test('renders component', () => {
+  render(<MyComponent />)
+  expect(screen.getByText('Hello')).toBeInTheDocument()
+})
+```
 
-### End-to-End Test Guidelines
+### E2E Tests
+```javascript
+import { test, expect } from '@playwright/test'
 
-- Use Playwright's `test` and `expect` functions
-- Test complete user workflows
-- Verify page navigation and interactions
-- Test responsive design across different viewports
+test('user can sign in', async ({ page }) => {
+  await page.goto('/sign-in')
+  await page.fill('[data-testid="email"]', 'test@example.com')
+  await page.click('[data-testid="sign-in-button"]')
+  await expect(page).toHaveURL('/dashboard')
+})
+```
 
-## Configuration
+## Test Configuration
 
-### Vitest Configuration
+### Vitest
+- Configuration: `vitest.config.ts`
+- Test utilities: `test/test-utils.jsx`
+- Setup file: `test/setup.ts`
 
-- Configured with React plugin and jsdom environment
-- Includes path aliases for `@/` imports
-- Setup file includes Jest DOM matchers and act warning suppression
-- Enhanced ESM compatibility with esbuild configuration
-- CSS processing enabled for component testing
-
-### Playwright Configuration
-
-- Configured for Chrome, Firefox, and Safari
-- Automatically starts dev server before tests with 2-minute timeout
-- Includes trace collection for debugging
-- Robust error handling with stdout/stderr piping
-
-## Demo Tests Included
-
-1. **Navbar Component**: Tests brand rendering, navigation links, and active states
-2. **LibraryView Component**: Tests Spotify integration, tab switching, and data loading
-3. **Utility Functions**: Tests time formatting helper functions
-4. **E2E App Flow**: Tests homepage, navigation, and responsive design
-
-## Test Results & Performance
-
-- **Unit Tests**: 20 tests passing (comprehensive component and utility coverage)
-- **E2E Tests**: 4 comprehensive tests covering navigation and responsive design
-- **Performance**: Tests run efficiently with proper mocking and act warning suppression
-- **Maintainability**: Centralized test helpers and parameterized test cases
+### Playwright
+- Configuration: `playwright.config.ts`
+- Test helpers: `test/helpers.js`
 
 ## Best Practices
 
-- Write tests that focus on user behavior rather than implementation details
+### Component Testing
+- Use `data-testid` attributes for reliable element selection
+- Test user interactions, not implementation details
+- Mock external dependencies
+- Test accessibility with `jest-axe`
+
+### E2E Testing
+- Test critical user journeys
+- Use page object pattern for complex flows
+- Keep tests independent and isolated
 - Use meaningful test descriptions
-- Mock external API calls and dependencies
-- Test both happy paths and error scenarios
-- Keep tests isolated and independent
-- Use data-testid attributes for reliable element selection when needed
-- Leverage test helpers for consistent mock data and selectors
-- Use parameterized tests for comprehensive coverage of utility functions
 
-## Recent Improvements
+## Debugging Tests
 
-- ✅ Fixed all markdown linting issues (15 → 0)
-- ✅ Enhanced test configuration with better ESM compatibility
-- ✅ Added act warning suppression for cleaner test output
-- ✅ Improved E2E tests with proper wait states and network idle checks
-- ✅ Created centralized test helpers for better maintainability
-- ✅ Added comprehensive test scripts for different scenarios
-- ✅ Enhanced utility tests with parameterized test cases
+### Unit Tests
+- Use `console.log()` for debugging
+- Run specific tests with `test.only()`
+- Use `test.skip()` to temporarily skip tests
+
+### E2E Tests
+- Use `npm run test:e2e:debug` for step-by-step debugging
+- Take screenshots with `await page.screenshot()`
+- Use `await page.pause()` to pause execution
+
+## CI/CD Integration
+
+Tests run automatically in GitHub Actions:
+- Unit tests run on every push and PR
+- E2E tests run on every push and PR
+- All tests must pass before deployment
+
+## Troubleshooting
+
+### Common Issues
+- **Tests failing**: Check console output for error messages
+- **E2E timeouts**: Increase timeout in `playwright.config.ts`
+- **Component not found**: Verify `data-testid` attributes
+- **Async issues**: Use `await` for async operations
+
+### Getting Help
+- Check test output in terminal
+- Review test configuration files
+- Look at existing test examples
+- Check GitHub Actions logs for CI failures
