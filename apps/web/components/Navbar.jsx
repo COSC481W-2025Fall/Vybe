@@ -1,17 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Users, Music2, Library, User as UserIcon } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, Users, Music2, Library, User as UserIcon, LogOut } from 'lucide-react';
+import { CONFIG } from '../config/constants.js';
+import { useState } from 'react';
 
-const links = [
-  { href: '/',        label: 'Home',   Icon: Home },
-  { href: '/groups',  label: 'Groups', Icon: Users },
-  { href: '/playlist',label: 'Playlist', Icon: Music2 },
-  { href: '/library', label: 'Library', Icon: Library },
-  { href: '/profile', label: 'Profile', Icon: UserIcon },
-];
+const links = CONFIG.NAV_LINKS.map(link => {
+  const iconMap = {
+    'Home': Home,
+    'Groups': Users,
+    'Playlist': Music2,
+    'Library': Library,
+    'Profile': UserIcon
+  };
+  return {
+    ...link,
+    Icon: iconMap[link.label] || UserIcon
+  };
+});
 
+// eslint-disable-next-line react/prop-types
 function NavPill({ href, label, Icon, active }) {
   return (
     <Link
@@ -32,6 +41,34 @@ function NavPill({ href, label, Icon, active }) {
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      const response = await fetch('/sign-out', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        // The server will handle the redirect, but we can also do it client-side as backup
+        router.push('/sign-in');
+        router.refresh();
+        // Reset loading state after successful redirect
+        setIsSigningOut(false);
+      } else {
+        console.error('Sign out failed');
+        setIsSigningOut(false);
+      }
+    } catch (error) {
+      console.error('Sign out error:', error);
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur">
@@ -45,7 +82,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           {links.map(({ href, label, Icon }) => {
             const active =
-              pathname === href || (href !== '/' && pathname.startsWith(href));
+              pathname === href || (href !== '/' && pathname && pathname.startsWith(href));
             return (
               <NavPill
                 key={href}
@@ -58,8 +95,22 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* spacer for right-aligned actions later */}
+        {/* spacer for right-aligned actions */}
         <div className="ml-auto" />
+        
+        {/* Sign out button */}
+        <button
+          onClick={handleSignOut}
+          disabled={isSigningOut}
+          className="group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition text-muted-foreground hover:text-red-400 hover:bg-red-50/10 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Sign out"
+          title="Sign out"
+        >
+          <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-70 group-hover:opacity-100'}`} />
+          <span className="hidden sm:inline" suppressHydrationWarning>
+            {isSigningOut ? 'Logging out...' : 'Log out'}
+          </span>
+        </button>
       </div>
     </nav>
   );

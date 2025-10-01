@@ -1,88 +1,91 @@
 // apps/web/app/lib/ytmusic.js
 
-const VYBE_BACKEND_URL = process.env.NEXT_PUBLIC_VYBE_BACKEND_URL || 'http://localhost:8001';
+const VYBE_BACKEND_URL = process.env.NEXT_PUBLIC_VYBE_BACKEND_URL || 'http://localhost:8000';
+const CLIENT_TOKEN = process.env.NEXT_PUBLIC_YTMUSIC_CLIENT_TOKEN || 'dev-token';
 
 export async function validateYTMusicConnection() {
   try {
-    const response = await fetch(`${VYBE_BACKEND_URL}/ytmusic/validate`, {
+    const response = await fetch(`${VYBE_BACKEND_URL}/ytm/validate`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'X-Client-Token': 'vybe-dev-token',
+        'X-Client-Token': CLIENT_TOKEN,
       },
     });
 
+    const maybeJson = await safeJson(response);
     if (!response.ok) {
-      throw new Error(`Validation failed: ${response.status}`);
+      return { success: false, error: extractError(maybeJson) };
     }
 
-    return await response.json();
+    return { success: !!maybeJson?.ok, data: maybeJson };
   } catch (error) {
-    console.error('YTMusic validation error:', error);
-    throw error;
+    return { success: false, error: error?.message || 'Network error' };
   }
 }
 
 export async function getYTMusicHistory(limit = 50) {
   try {
-    const response = await fetch(`${VYBE_BACKEND_URL}/ytmusic/history?limit=${limit}`, {
+    const response = await fetch(`${VYBE_BACKEND_URL}/ytm/history?limit=${limit}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'X-Client-Token': 'vybe-dev-token',
+        'X-Client-Token': CLIENT_TOKEN,
       },
     });
 
+    const maybeJson = await safeJson(response);
     if (!response.ok) {
-      throw new Error(`Failed to get history: ${response.status}`);
+      return { success: false, data: [], error: extractError(maybeJson) };
     }
 
-    return await response.json();
+    const data = Array.isArray(maybeJson) ? maybeJson : [];
+    return { success: true, data };
   } catch (error) {
-    console.error('YTMusic history error:', error);
-    throw error;
+    return { success: false, data: [], error: error?.message || 'Network error' };
   }
 }
 
 export async function getYTMusicLibrary() {
   try {
-    const response = await fetch(`${VYBE_BACKEND_URL}/ytmusic/library`, {
+    const response = await fetch(`${VYBE_BACKEND_URL}/ytm/library`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'X-Client-Token': 'vybe-dev-token',
+        'X-Client-Token': CLIENT_TOKEN,
       },
     });
 
+    const maybeJson = await safeJson(response);
     if (!response.ok) {
-      throw new Error(`Failed to get library: ${response.status}`);
+      return { success: false, data: [], error: extractError(maybeJson) };
     }
 
-    return await response.json();
+    const data = Array.isArray(maybeJson) ? maybeJson : [];
+    return { success: true, data };
   } catch (error) {
-    console.error('YTMusic library error:', error);
-    throw error;
+    return { success: false, data: [], error: error?.message || 'Network error' };
   }
 }
 
 export async function disconnectYTMusic() {
   try {
-    const response = await fetch(`${VYBE_BACKEND_URL}/ytmusic/disconnect`, {
+    const response = await fetch(`${VYBE_BACKEND_URL}/ytm/connect`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'X-Client-Token': 'vybe-dev-token',
+        'X-Client-Token': CLIENT_TOKEN,
       },
     });
 
+    const maybeJson = await safeJson(response);
     if (!response.ok) {
-      throw new Error(`Failed to disconnect: ${response.status}`);
+      return { success: false, error: extractError(maybeJson) };
     }
 
-    return await response.json();
+    return { success: true, data: maybeJson };
   } catch (error) {
-    console.error('YTMusic disconnect error:', error);
-    throw error;
+    return { success: false, error: error?.message || 'Network error' };
   }
 }
 
@@ -95,8 +98,20 @@ export async function checkYTMusicBackendHealth() {
 
     return response.ok;
   } catch (error) {
-    console.error('YTMusic backend health check failed:', error);
     return false;
+  }
+}
+
+function extractError(json) {
+  if (!json) return 'Unknown error';
+  return json.detail || json.message || json.error || 'Request failed';
+}
+
+async function safeJson(resp) {
+  try {
+    return await resp.json();
+  } catch {
+    return null;
   }
 }
 
