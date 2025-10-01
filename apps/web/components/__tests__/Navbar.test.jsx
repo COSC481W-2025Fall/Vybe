@@ -33,7 +33,7 @@ describe('Navbar Sign-Out Functionality', () => {
     
     const signOutButton = screen.getByRole('button', { name: /sign out/i })
     expect(signOutButton).toBeInTheDocument()
-    expect(screen.getByText('Sign out')).toBeInTheDocument()
+    expect(screen.getByText('Log out')).toBeInTheDocument()
   })
 
   it('shows loading state when signing out', async () => {
@@ -50,7 +50,7 @@ describe('Navbar Sign-Out Functionality', () => {
     fireEvent.click(signOutButton)
     
     // Should show loading state
-    expect(screen.getByText('Signing out...')).toBeInTheDocument()
+    expect(screen.getByText('Logging out...')).toBeInTheDocument()
     expect(signOutButton).toBeDisabled()
     
     // Wait for the loading to complete and button to be re-enabled
