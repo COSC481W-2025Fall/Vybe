@@ -21,7 +21,17 @@ vi.mock('@/lib/supabase/client', () => ({
   supabaseBrowser: () => ({
     auth: {
       getUser: vi.fn().mockResolvedValue({
-        data: { user: { id: 'test-user' } },
+        data: { 
+          user: { 
+            id: 'test-user',
+            app_metadata: { provider: 'spotify' },
+            user_metadata: {
+              full_name: 'Test User',
+              avatar_url: 'https://example.com/avatar.jpg'
+            },
+            email: 'test@example.com'
+          } 
+        },
         error: null
       })
     }
@@ -34,6 +44,14 @@ global.fetch = vi.fn()
 describe('LibraryView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    // Mock window.location for URL parameter testing
+    Object.defineProperty(window, 'location', {
+      value: {
+        search: '?from=spotify'
+      },
+      writable: true
+    });
 
     // Mock successful API responses
     global.fetch.mockImplementation((url) => {
@@ -119,10 +137,9 @@ describe('LibraryView', () => {
       )
     )
 
-    /*await act(async () => {
+    await act(async () => {
       render(<LibraryView />)
-    }) */
-    render(<LibraryView />)
+    })
 
     expect(screen.getByText('Connecting to Spotify…')).toBeInTheDocument()
   })
@@ -149,9 +166,9 @@ describe('LibraryView', () => {
       expect(screen.getByText('Recent Listening History')).toBeInTheDocument()
     })
 
-    // The API is returning empty data, so we should see "No recent plays yet."
+    // The API is returning empty data, so we should see "No recent plays yet"
     await waitFor(() => {
-      expect(screen.getByText('No recent plays yet.')).toBeInTheDocument()
+      expect(screen.getByText('No recent plays yet')).toBeInTheDocument()
     })
   })
 
