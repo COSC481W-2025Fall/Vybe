@@ -36,3 +36,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+---
+
+## YTMusic integration (Vybe)
+
+- Set environment variables:
+  - `NEXT_PUBLIC_VYBE_BACKEND_URL` pointing to your Vybe backend (e.g. `http://localhost:8001`).
+  - `YTMUSIC_EXTENSION_ZIP_PATH` (optional) absolute path to a prepared extension ZIP.
+- Download the browser extension from `/api/ytmusic/extension.zip`.
+- Unzip and load it in Chrome: `chrome://extensions` → enable Developer mode → Load unpacked → select the unzipped folder.
+- Visit `music.youtube.com` and play a track to activate the extension.
+- Go to `Sign in` → YouTube Music to validate the connection and view history in `Library`.
