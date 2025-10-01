@@ -1,18 +1,17 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Vybe App E2E Tests', () => {
-  test('homepage loads and displays navigation', async ({ page }) => {
+  test('homepage redirects to sign-in when not authenticated', async ({ page }) => {
     await page.goto('/');
     
     // Wait for the page to load completely
     await page.waitForLoadState('networkidle');
     
-    // Check that the Vybe brand is visible
-    await expect(page.getByText('Vybe')).toBeVisible();
+    // Should be redirected to sign-in page
+    await expect(page).toHaveURL(/sign-in/);
     
-    // Since the app requires authentication, we should see sign-in related content
-    // The navbar should still be visible but navigation might redirect to sign-in
-    await expect(page.getByText('Vybe')).toBeVisible();
+    // Check that sign-in page loads (use more specific selector to avoid route announcer)
+    await expect(page.getByRole('heading', { name: 'Welcome to Vybe' })).toBeVisible();
   });
 
   test('sign-in page loads correctly', async ({ page }) => {
@@ -22,29 +21,35 @@ test.describe('Vybe App E2E Tests', () => {
     // Check that sign-in page loads
     await expect(page).toHaveURL(/sign-in/);
     
-    // The Vybe brand should still be visible
-    await expect(page.getByText('Vybe')).toBeVisible();
+    // Check sign-in content
+    await expect(page.getByText('Welcome to Vybe')).toBeVisible();
+    await expect(page.getByText('Continue with Spotify')).toBeVisible();
+    await expect(page.getByText('Continue with YouTube')).toBeVisible();
   });
 
-  test('unauthenticated access redirects to sign-in', async ({ page }) => {
-    await page.goto('/library');
-    await page.waitForLoadState('networkidle');
+  test('protected pages redirect to sign-in when not authenticated', async ({ page }) => {
+    const protectedPages = ['/library', '/groups', '/playlist', '/profile'];
     
-    // Should be redirected to sign-in page
-    await expect(page).toHaveURL(/sign-in/);
-    
-    // Should have next parameter set
-    const url = page.url();
-    expect(url).toContain('next=%2Flibrary');
+    for (const path of protectedPages) {
+      await page.goto(path);
+      await page.waitForLoadState('networkidle');
+      
+      // Should be redirected to sign-in page
+      await expect(page).toHaveURL(/sign-in/);
+      
+      // Should have next parameter set
+      const url = page.url();
+      expect(url).toContain(`next=${encodeURIComponent(path)}`);
+    }
   });
 
   test('responsive design works on mobile', async ({ page }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
+    await page.goto('/sign-in');
     await page.waitForLoadState('networkidle');
     
-    // Check that navigation is still functional
-    await expect(page.getByText('Vybe')).toBeVisible();
+    // Check that sign-in page is still functional
+    await expect(page.getByRole('heading', { name: 'Welcome to Vybe' })).toBeVisible();
   });
 });
