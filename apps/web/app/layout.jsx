@@ -18,7 +18,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        {user && <Navbar />}
+        <Navbar />
         <main className="flex justify-center">{children}</main>
       </body>
     </html>
