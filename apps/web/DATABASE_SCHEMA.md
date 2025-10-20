@@ -10,14 +10,20 @@ CREATE TABLE groups (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT,
+  privacy VARCHAR(10) DEFAULT 'public' CHECK (privacy IN ('public', 'private')),
   code VARCHAR(6) UNIQUE NOT NULL,
+  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('pending', 'active', 'deleted')),
+  expires_at TIMESTAMP WITH TIME ZONE,
   created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create index for faster code lookups
+-- Create indexes for faster lookups
 CREATE INDEX idx_groups_code ON groups(code);
 CREATE INDEX idx_groups_created_by ON groups(created_by);
+CREATE INDEX idx_groups_status ON groups(status);
+CREATE INDEX idx_groups_expires_at ON groups(expires_at);
+CREATE INDEX idx_groups_privacy ON groups(privacy);
 ```
 
 ### 2. `group_members` table
@@ -109,9 +115,29 @@ CREATE POLICY "Admins can manage members" ON group_members
   );
 ```
 
+## Migration Commands (If Tables Already Exist)
+
+If you already have the `groups` table, run these commands to add the new columns:
+
+```sql
+-- Add privacy column
+ALTER TABLE groups ADD COLUMN privacy VARCHAR(10) DEFAULT 'public' CHECK (privacy IN ('public', 'private'));
+
+-- Add status column for temporary groups
+ALTER TABLE groups ADD COLUMN status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('pending', 'active', 'deleted'));
+
+-- Add expiration column for cleanup
+ALTER TABLE groups ADD COLUMN expires_at TIMESTAMP WITH TIME ZONE;
+
+-- Add indexes for new columns
+CREATE INDEX idx_groups_status ON groups(status);
+CREATE INDEX idx_groups_expires_at ON groups(expires_at);
+CREATE INDEX idx_groups_privacy ON groups(privacy);
+```
+
 ## Setup Instructions
 
-1. **Create the tables** in your Supabase SQL editor
+1. **Create the tables** in your Supabase SQL editor (or run migration commands if tables exist)
 2. **Set up RLS policies** for security
 3. **Test the policies** by creating a group and joining it
 4. **Update your `.env.local`** with Supabase credentials
@@ -122,3 +148,7 @@ CREATE POLICY "Admins can manage members" ON group_members
 - The creator automatically becomes an admin member
 - RLS ensures users can only see groups they belong to
 - All timestamps use UTC timezone
+- **Privacy levels**: 'public' (anyone can join) or 'private' (invite only)
+- **Status levels**: 'pending' (temporary, expires in 3 days), 'active' (permanent), 'deleted' (soft delete)
+- **Temporary groups**: Groups created without members start as 'pending' and expire after 3 days
+- **Group activation**: When someone joins a pending group, it becomes 'active' and expires_at is set to null
