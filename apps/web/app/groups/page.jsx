@@ -36,12 +36,15 @@ export default function GroupsPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Get groups where user is owner or member with member count
+    // Get groups where user is owner or member with member details
     const { data: ownedGroups } = await supabase
       .from('groups')
       .select(`
         *,
-        group_members(count)
+        group_members(
+          user_id,
+          users(id, username, avatar_url)
+        )
       `)
       .eq('owner_id', session.user.id);
 
@@ -51,7 +54,10 @@ export default function GroupsPage() {
         group_id,
         groups(
           *,
-          group_members(count)
+          group_members(
+            user_id,
+            users(id, username, avatar_url)
+          )
         )
       `)
       .eq('user_id', session.user.id);
@@ -59,15 +65,33 @@ export default function GroupsPage() {
     const memberGroupsList = memberGroups?.map(m => m.groups) || [];
     const allGroups = [...(ownedGroups || []), ...memberGroupsList];
 
-    // Remove duplicates and count members
+    // Remove duplicates and add member info
     const uniqueGroups = Array.from(
       new Map(allGroups.map(g => [g.id, g])).values()
     ).map(group => ({
       ...group,
-      memberCount: (group.group_members?.[0]?.count || 0) + 1 // +1 for owner
+      memberCount: (group.group_members?.length || 0) + 1, // +1 for owner
+      members: group.group_members?.map(m => m.users).filter(Boolean) || []
     }));
 
-    setGroups(uniqueGroups);
+    // Fetch owner info for each group
+    const groupsWithOwners = await Promise.all(
+      uniqueGroups.map(async (group) => {
+        const { data: owner } = await supabase
+          .from('users')
+          .select('id, username, avatar_url')
+          .eq('id', group.owner_id)
+          .single();
+
+        return {
+          ...group,
+          owner,
+          allMembers: [owner, ...group.members].filter(Boolean)
+        };
+      })
+    );
+
+    setGroups(groupsWithOwners);
     setLoading(false);
   }
 
@@ -177,8 +201,9 @@ function GroupCard({ group, isOwner, onClick }) {
     year: 'numeric'
   });
 
-  // Get first 3 member avatars (mock for now - you'd query actual members)
-  const memberAvatars = Array.from({ length: Math.min(3, group.memberCount || 0) }, (_, i) => i);
+  // Get first 3 members to display
+  const displayMembers = (group.allMembers || []).slice(0, 3);
+  const remainingCount = Math.max(0, (group.memberCount || 0) - 3);
 
   return (
     <div
@@ -220,17 +245,28 @@ function GroupCard({ group, isOwner, onClick }) {
       <div className="flex items-center justify-between">
         {/* Member avatars */}
         <div className="flex -space-x-2">
-          {memberAvatars.map((_, index) => (
+          {displayMembers.map((member, index) => (
             <div
-              key={index}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-gray-900 flex items-center justify-center text-white text-xs font-semibold"
+              key={member?.id || index}
+              className="w-8 h-8 rounded-full border-2 border-gray-900 overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500"
+              title={member?.username || 'Member'}
             >
-              M{index + 1}
+              {member?.avatar_url ? (
+                <img
+                  src={member.avatar_url}
+                  alt={member.username || 'Member'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white text-xs font-semibold">
+                  {member?.username?.[0]?.toUpperCase() || 'M'}
+                </div>
+              )}
             </div>
           ))}
-          {group.memberCount > 3 && (
+          {remainingCount > 0 && (
             <div className="w-8 h-8 rounded-full bg-gray-700 border-2 border-gray-900 flex items-center justify-center text-white text-xs">
-              +{group.memberCount - 3}
+              +{remainingCount}
             </div>
           )}
         </div>
