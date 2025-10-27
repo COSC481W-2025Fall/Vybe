@@ -1,6 +1,6 @@
-# Database Schema for Groups Feature
+# Database Schema for Groups and Friends Features
 
-This document outlines the database tables needed for the group creation feature.
+This document outlines the database tables needed for the group creation and friends features.
 
 ## Required Tables
 
@@ -40,6 +40,25 @@ CREATE TABLE group_members (
 -- Create indexes for better performance
 CREATE INDEX idx_group_members_group_id ON group_members(group_id);
 CREATE INDEX idx_group_members_user_id ON group_members(user_id);
+```
+
+### 3. `friends` table
+```sql
+CREATE TABLE friends (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user1_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user2_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'blocked')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user1_id, user2_id),
+  CHECK (user1_id < user2_id)
+);
+
+-- Create indexes for better performance
+CREATE INDEX idx_friends_user1_id ON friends(user1_id);
+CREATE INDEX idx_friends_user2_id ON friends(user2_id);
+CREATE INDEX idx_friends_status ON friends(status);
 ```
 
 ## Row Level Security (RLS) Policies
@@ -112,6 +131,35 @@ CREATE POLICY "Admins can manage members" ON group_members
       SELECT group_id FROM group_members 
       WHERE user_id = auth.uid() AND role = 'admin'
     )
+  );
+```
+
+### Friends table policies
+```sql
+-- Enable RLS
+ALTER TABLE friends ENABLE ROW LEVEL SECURITY;
+
+-- Users can view friendships they are part of
+CREATE POLICY "Users can view their friendships" ON friends
+  FOR SELECT USING (
+    user1_id = auth.uid() OR user2_id = auth.uid()
+  );
+
+-- Users can send friend requests (as user1_id where user1_id is less than user2_id)
+CREATE POLICY "Users can send friend requests" ON friends
+  FOR INSERT WITH CHECK (user1_id = auth.uid());
+
+-- Users can accept friend requests (update where they are user2_id)
+CREATE POLICY "Users can accept friend requests" ON friends
+  FOR UPDATE USING (
+    (user1_id = auth.uid() OR user2_id = auth.uid())
+    AND status = 'pending'
+  );
+
+-- Users can delete friendships (cancel requests, unfriend)
+CREATE POLICY "Users can delete friendships" ON friends
+  FOR DELETE USING (
+    user1_id = auth.uid() OR user2_id = auth.uid()
   );
 ```
 
