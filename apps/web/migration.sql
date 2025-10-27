@@ -1,5 +1,9 @@
--- Migration SQL Commands for Enhanced Groups Feature
+-- Migration SQL Commands for Enhanced Groups Feature + Friends System
 -- Run these commands in your Supabase SQL Editor
+
+-- =============================================
+-- GROUPS TABLE UPDATES
+-- =============================================
 
 -- Add privacy column to groups table
 ALTER TABLE groups ADD COLUMN privacy VARCHAR(10) DEFAULT 'public' CHECK (privacy IN ('public', 'private'));
@@ -17,6 +21,47 @@ CREATE INDEX idx_groups_privacy ON groups(privacy);
 
 -- Update existing groups to have 'active' status (if any exist)
 UPDATE groups SET status = 'active' WHERE status IS NULL;
+
+-- =============================================
+-- FRIENDS TABLE CREATION
+-- =============================================
+
+-- Create friends table
+CREATE TABLE friends (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user1_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  user2_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'blocked')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  accepted_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(user1_id, user2_id),
+  CHECK (user1_id != user2_id)
+);
+
+-- Create indexes for better performance
+CREATE INDEX idx_friends_user1_id ON friends(user1_id);
+CREATE INDEX idx_friends_user2_id ON friends(user2_id);
+CREATE INDEX idx_friends_status ON friends(status);
+
+-- Enable RLS on friends table
+ALTER TABLE friends ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for friends table
+CREATE POLICY "Users can view their friendships" ON friends
+  FOR SELECT USING (
+    user1_id = auth.uid() OR user2_id = auth.uid()
+  );
+
+CREATE POLICY "Users can send friend requests" ON friends
+  FOR INSERT WITH CHECK (user1_id = auth.uid());
+
+CREATE POLICY "Users can respond to friend requests" ON friends
+  FOR UPDATE USING (user2_id = auth.uid());
+
+CREATE POLICY "Users can delete their friendships" ON friends
+  FOR DELETE USING (
+    user1_id = auth.uid() OR user2_id = auth.uid()
+  );
 
 -- Optional: Create a function to clean up expired groups
 CREATE OR REPLACE FUNCTION cleanup_expired_groups()

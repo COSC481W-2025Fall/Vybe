@@ -25,11 +25,30 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { name, description } = body;
+    const { name, description , members , privacy} = body;
 
+    // check if this is a group name *required*
     if (!name || name.trim().length === 0) {
       return NextResponse.json({ error: 'Group name is required' }, { status: 400 });
     }
+
+    // check if private or public (one is required)
+    if (!privacy || privacy.trim().length === 0 || (privacy !== 'public' && privacy !== 'private')) {
+      return NextResponse.json({ error: 'Privacy level must be public or private' }, { status: 400 });
+    }
+   
+// Validate members (optional - groups can exist with just creator)
+if (members && members.length > 0) {
+  // Check for self-invitation
+  if (members.some(member => member.id === user.id)) {
+    return NextResponse.json({ error: 'You cannot invite yourself to a group' }, { status: 400 });
+  }
+  
+  // Check minimum members for private groups
+  if (privacy.trim().toLowerCase() === 'private' && members.length < 1) {
+    return NextResponse.json({ error: 'Private groups must have at least one other member' }, { status: 400 });
+  }
+}
 
     // Generate unique group code
     let groupCode;
