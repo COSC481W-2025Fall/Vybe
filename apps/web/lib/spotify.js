@@ -1,5 +1,5 @@
-// apps/web/app/lib/spotify.js
-import { CONFIG } from '../../config/constants.js';
+// apps/web/lib/spotify.js
+import { CONFIG } from '../config/constants.js';
 
 const TOKEN_URL = CONFIG.SPOTIFY_TOKEN_URL;
 

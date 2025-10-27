@@ -1,9 +1,23 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 
 export default function SignInPage() {
   const supabase = supabaseBrowser();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is already logged in
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/library');
+      }
+    }
+    checkAuth();
+  }, [router]);
 
   const signInWithSpotify = async () => {
     const { error } = await supabase.auth.signInWithOAuth({

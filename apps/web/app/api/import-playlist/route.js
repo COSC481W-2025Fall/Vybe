@@ -35,6 +35,25 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
     }
 
+    // Check if user already has a playlist in this group
+    const { data: existingPlaylists } = await supabase
+      .from('group_playlists')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('added_by', session.user.id);
+
+    // If user already has a playlist, delete it (cascade will delete songs)
+    if (existingPlaylists && existingPlaylists.length > 0) {
+      console.log(`[import-playlist] User already has ${existingPlaylists.length} playlist(s), removing old ones...`);
+
+      for (const oldPlaylist of existingPlaylists) {
+        await supabase
+          .from('group_playlists')
+          .delete()
+          .eq('id', oldPlaylist.id);
+      }
+    }
+
     // Import playlist based on platform
     let playlistData;
     if (platform === 'youtube') {
@@ -147,9 +166,12 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
   // Fetch all playlist items (videos)
   const tracks = [];
   let nextPageToken = null;
+  let pageCount = 0;
 
   do {
     const itemsUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${playlistId}&maxResults=50${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`;
+
+    console.log(`[YouTube Import] Fetching page ${pageCount + 1} for playlist ${playlistId}`);
 
     const itemsResponse = await fetch(itemsUrl, {
       headers: {
@@ -158,30 +180,40 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
     });
 
     if (!itemsResponse.ok) {
+      const errorText = await itemsResponse.text();
+      console.error(`[YouTube Import] Failed to fetch page ${pageCount + 1}:`, errorText);
       throw new Error('Failed to fetch playlist items');
     }
 
     const itemsData = await itemsResponse.json();
+    console.log(`[YouTube Import] Page ${pageCount + 1}: Found ${itemsData.items?.length || 0} items`);
 
-    // Get video durations (requires separate API call)
-    const videoIds = itemsData.items.map(item => item.contentDetails.videoId).join(',');
-    const videosResponse = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoIds}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
+    // Filter out videos without valid IDs first
+    const validItems = itemsData.items.filter(item =>
+      item.contentDetails?.videoId &&
+      item.snippet?.title !== 'Private video' &&
+      item.snippet?.title !== 'Deleted video'
     );
 
-    const videosData = await videosResponse.json();
-    const durationMap = {};
-    videosData.items?.forEach(video => {
-      durationMap[video.id] = parseYouTubeDuration(video.contentDetails.duration);
-    });
+    // Get video durations (requires separate API call)
+    if (validItems.length > 0) {
+      const videoIds = validItems.map(item => item.contentDetails.videoId).join(',');
+      const videosResponse = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoIds}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
-    itemsData.items.forEach(item => {
-      if (item.snippet.title !== 'Private video' && item.snippet.title !== 'Deleted video') {
+      const videosData = await videosResponse.json();
+      const durationMap = {};
+      videosData.items?.forEach(video => {
+        durationMap[video.id] = parseYouTubeDuration(video.contentDetails.duration);
+      });
+
+      validItems.forEach(item => {
         tracks.push({
           id: item.contentDetails.videoId,
           title: item.snippet.title,
@@ -189,10 +221,13 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
           thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
           duration: durationMap[item.contentDetails.videoId] || 0,
         });
-      }
-    });
+      });
+    }
 
     nextPageToken = itemsData.nextPageToken;
+    pageCount++;
+
+    console.log(`[YouTube Import] Total tracks so far: ${tracks.length}, Next page token: ${nextPageToken ? 'exists' : 'none'}`);
   } while (nextPageToken);
 
   return {

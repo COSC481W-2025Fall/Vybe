@@ -142,12 +142,27 @@ export default function LibraryView() {
         const urlParams = new URLSearchParams(window.location.search);
         const fromParam = urlParams.get('from');
         const userProvider = user.app_metadata?.provider;
-        
-        // Prioritize URL parameter over metadata
-        const finalProvider = fromParam === 'google' ? 'google' : 
-                             fromParam === 'spotify' ? 'spotify' : 
-                             userProvider;
-        
+
+        // Check which tokens the user has to determine provider
+        let detectedProvider = null;
+        const { data: spotifyToken } = await sb.from('spotify_tokens').select('user_id').eq('user_id', user.id).single();
+        const { data: youtubeToken } = await sb.from('youtube_tokens').select('user_id').eq('user_id', user.id).single();
+
+        if (spotifyToken) {
+          detectedProvider = 'spotify';
+        } else if (youtubeToken) {
+          detectedProvider = 'google';
+        }
+
+        // Prioritize URL parameter > detected tokens > user metadata
+        const finalProvider = fromParam === 'google' ? 'google' :
+                             fromParam === 'spotify' ? 'spotify' :
+                             detectedProvider ||
+                             (userProvider === 'google' ? 'google' : null) ||
+                             (userProvider === 'spotify' ? 'spotify' : null);
+
+        console.log('[LibraryView] User provider:', userProvider);
+        console.log('[LibraryView] Detected provider from tokens:', detectedProvider);
         console.log('[LibraryView] Final provider:', finalProvider);
         setProvider(finalProvider);
 
@@ -166,7 +181,13 @@ export default function LibraryView() {
             email: user.email,
           });
         } else {
-          throw new Error(`Unknown provider: ${finalProvider}`);
+          // No provider detected - user needs to connect Spotify or YouTube
+          console.log('[LibraryView] No provider connected');
+          setUserInfo({
+            display_name: user.email?.split('@')[0] || 'User',
+            images: [],
+            email: user.email,
+          });
         }
         
         setMeError(null);
@@ -360,12 +381,34 @@ export default function LibraryView() {
   }, [tab, provider, playlists.length, loadingPlaylists, loadPlaylists]);
 
   const content = useMemo(() => {
+    // Show "connect account" message if no provider
+    if (!provider) {
+      return (
+        <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-b from-black via-gray-900 to-purple-900 p-8 shadow-2xl backdrop-blur-sm mb-40 text-white">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-purple-900/40 pointer-events-none" />
+          <div className="relative text-center py-16">
+            <ListMusic className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
+            <h3 className="text-xl font-semibold text-white mb-3">No Music Account Connected</h3>
+            <p className="text-base text-muted-foreground mb-6">
+              Connect your Spotify or YouTube account in Settings to view your library
+            </p>
+            <a
+              href="/settings"
+              className="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+            >
+              Go to Settings
+            </a>
+          </div>
+        </div>
+      );
+    }
+
     if (tab !== 'recent') {
       return (
         <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-b from-black via-gray-900 to-purple-900 p-8 shadow-2xl backdrop-blur-sm mb-40 text-white">
           {/* Gradient overlay for depth */}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-purple-900/40 pointer-events-none" />
-          
+
           <div className="relative mb-8 flex items-center gap-3">
             <div className="p-2 bg-yellow-400/20 rounded-lg">
               <ListMusic className="h-5 w-5 text-yellow-400" />

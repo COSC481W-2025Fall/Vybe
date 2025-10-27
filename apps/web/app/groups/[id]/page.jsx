@@ -13,10 +13,13 @@ export default function GroupDetailPage({ params }) {
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
   const [playlists, setPlaylists] = useState([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState('all');
   const [playlistSongs, setPlaylistSongs] = useState([]);
+  const [actualTrackCounts, setActualTrackCounts] = useState({});
+  const [showAllSongs, setShowAllSongs] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
 
   useEffect(() => {
     // Unwrap params Promise
@@ -33,10 +36,11 @@ export default function GroupDetailPage({ params }) {
   }, [groupId]);
 
   useEffect(() => {
-    if (selectedPlaylist) {
+    if (selectedPlaylist && playlists.length > 0) {
+      setShowAllSongs(false); // Reset when switching playlists
       loadPlaylistSongs(selectedPlaylist);
     }
-  }, [selectedPlaylist]);
+  }, [selectedPlaylist, playlists]);
 
   async function checkAuth() {
     const { data: { session }, error } = await supabase.auth.getSession();
@@ -76,34 +80,70 @@ export default function GroupDetailPage({ params }) {
       .select('user_id, joined_at')
       .eq('group_id', groupId);
 
-    // Fetch owner user data
-    const { data: ownerUser } = await supabase
+    // Fetch owner user data - only select fields that exist in the users table
+    let ownerUser = null;
+    const { data: ownerUserData, error: ownerError } = await supabase
       .from('users')
-      .select('id, username, email, avatar_url')
+      .select('id, username, profile_picture_url')
       .eq('id', groupData.owner_id)
-      .single();
+      .maybeSingle();
+
+    if (ownerError) {
+      console.error('Error fetching owner user:', ownerError);
+      // Fallback: use session user data if it's the current user
+      if (session?.user?.id === groupData.owner_id) {
+        ownerUser = {
+          id: session.user.id,
+          username: session.user.email?.split('@')[0],
+          profile_picture_url: session.user.user_metadata?.avatar_url || null
+        };
+      }
+    } else {
+      ownerUser = ownerUserData;
+    }
 
     // Fetch all member users data
     const memberUserIds = (memberData || []).map(m => m.user_id);
-    const { data: memberUsers } = await supabase
-      .from('users')
-      .select('id, username, email, avatar_url')
-      .in('id', memberUserIds);
+    let memberUsers = [];
+
+    if (memberUserIds.length > 0) {
+      const { data: memberUsersData, error: memberUsersError } = await supabase
+        .from('users')
+        .select('id, username, profile_picture_url')
+        .in('id', memberUserIds);
+
+      if (memberUsersError) {
+        console.error('Error fetching member users:', memberUsersError);
+        // Continue without member user data rather than failing
+        memberUsers = [];
+      } else {
+        memberUsers = memberUsersData || [];
+      }
+    }
 
     // Combine owner and members with full user data
-    const allMembers = [
-      {
-        user_id: groupData.owner_id,
-        isOwner: true,
-        joined_at: groupData.created_at,
-        users: ownerUser
-      },
-      ...(memberData || []).map(m => ({
+    // Always include the owner, even if user data is missing
+    const ownerMember = {
+      user_id: groupData.owner_id,
+      isOwner: true,
+      joined_at: groupData.created_at,
+      users: ownerUser || {
+        id: groupData.owner_id,
+        username: null,
+        email: null,
+        profile_picture_url: null
+      }
+    };
+
+    const otherMembers = (memberData || [])
+      .map(m => ({
         ...m,
         isOwner: false,
         users: memberUsers?.find(u => u.id === m.user_id)
       }))
-    ].filter(m => m.users); // Filter out members without user data
+      .filter(m => m.users); // Only filter out non-owner members without user data
+
+    const allMembers = [ownerMember, ...otherMembers];
 
     setMembers(allMembers);
 
@@ -115,9 +155,21 @@ export default function GroupDetailPage({ params }) {
 
     setPlaylists(playlistData || []);
 
+    // Get actual song counts for each playlist
     if (playlistData && playlistData.length > 0) {
-      setSelectedPlaylist(playlistData[0].id);
+      const counts = {};
+      for (const playlist of playlistData) {
+        const { count } = await supabase
+          .from('playlist_songs')
+          .select('*', { count: 'exact', head: true })
+          .eq('playlist_id', playlist.id);
+        counts[playlist.id] = count || 0;
+      }
+      setActualTrackCounts(counts);
     }
+
+    // Always start with "all" view to show merged playlists
+    setSelectedPlaylist('all');
 
     setLoading(false);
   }
@@ -126,23 +178,62 @@ export default function GroupDetailPage({ params }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Get songs with like information
-    const { data: songs } = await supabase
-      .from('playlist_songs')
-      .select(`
-        *,
-        song_likes (
-          user_id
-        )
-      `)
-      .eq('playlist_id', playlistId)
-      .order('position', { ascending: true });
+    let songs;
 
-    // Transform songs to include liked status
+    if (playlistId === 'all') {
+      // Load all songs from all playlists in this group
+      const playlistIds = playlists.map(p => p.id);
+
+      if (playlistIds.length === 0) {
+        setPlaylistSongs([]);
+        return;
+      }
+
+      const { data: allSongs } = await supabase
+        .from('playlist_songs')
+        .select(`
+          *,
+          song_likes (
+            user_id
+          ),
+          group_playlists!inner (
+            id,
+            name,
+            platform
+          )
+        `)
+        .in('playlist_id', playlistIds)
+        .order('created_at', { ascending: true });
+
+      songs = allSongs;
+    } else {
+      // Get songs from specific playlist
+      const { data: playlistSongs } = await supabase
+        .from('playlist_songs')
+        .select(`
+          *,
+          song_likes (
+            user_id
+          ),
+          group_playlists!inner (
+            id,
+            name,
+            platform
+          )
+        `)
+        .eq('playlist_id', playlistId)
+        .order('position', { ascending: true });
+
+      songs = playlistSongs;
+    }
+
+    // Transform songs to include liked status and playlist info
     const songsWithLikes = (songs || []).map(song => ({
       ...song,
       isLiked: song.song_likes?.some(like => like.user_id === session.user.id) || false,
       likeCount: song.song_likes?.length || 0,
+      playlistName: song.group_playlists?.name || 'Unknown',
+      platform: song.group_playlists?.platform || 'unknown',
     }));
 
     setPlaylistSongs(songsWithLikes);
@@ -203,26 +294,10 @@ export default function GroupDetailPage({ params }) {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Side - Members List */}
-          <div className="lg:col-span-1">
-            <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Members</h2>
-                <span className="text-gray-400">{members.length}</span>
-              </div>
-
-              <div className="space-y-3">
-                {members.map((member, index) => (
-                  <MemberCard key={member.user_id} member={member} index={index} />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Side - Playlist Songs */}
-          <div className="lg:col-span-2">
+      <div className="w-full max-w-4xl mx-auto px-6 py-8">
+        <div className="w-full">
+          {/* Playlist Songs */}
+          <div className="w-full">
             <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
               {/* Playlist Selector */}
               {playlists.length > 0 ? (
@@ -233,13 +308,16 @@ export default function GroupDetailPage({ params }) {
                     </label>
                     <div className="relative">
                       <select
-                        value={selectedPlaylist || ''}
+                        value={selectedPlaylist || 'all'}
                         onChange={(e) => setSelectedPlaylist(e.target.value)}
                         className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer hover:bg-gray-750 transition-colors pr-10"
                       >
+                        <option value="all">
+                          All Playlists • {Object.values(actualTrackCounts).reduce((sum, count) => sum + count, 0)} tracks
+                        </option>
                         {playlists.map((playlist) => (
                           <option key={playlist.id} value={playlist.id}>
-                            {playlist.name} • {playlist.track_count || 0} tracks
+                            {playlist.name} • {actualTrackCounts[playlist.id] ?? playlist.track_count ?? 0} tracks
                           </option>
                         ))}
                       </select>
@@ -250,7 +328,7 @@ export default function GroupDetailPage({ params }) {
                   {/* Playlist Header */}
                   <div className="mb-6">
                     <h2 className="text-3xl font-bold mb-2">
-                      {playlists.find(p => p.id === selectedPlaylist)?.name}
+                      {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
                     </h2>
                     <p className="text-gray-400">
                       {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
@@ -260,13 +338,15 @@ export default function GroupDetailPage({ params }) {
                   {/* Songs List */}
                   <div className="space-y-2">
                     {playlistSongs.length > 0 ? (
-                      playlistSongs.map((song, index) => (
+                      (showAllSongs ? playlistSongs : playlistSongs.slice(0, 20)).map((song, index) => (
                         <SongItem
                           key={song.id}
                           song={song}
                           index={index}
                           onToggleLike={toggleLikeSong}
                           userId={user?.id}
+                          onPlay={setCurrentlyPlaying}
+                          isPlaying={currentlyPlaying?.id === song.id}
                         />
                       ))
                     ) : (
@@ -276,9 +356,24 @@ export default function GroupDetailPage({ params }) {
                     )}
                   </div>
 
-                  {playlistSongs.length > 5 && (
-                    <button className="w-full mt-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-colors">
+                  {playlistSongs.length > 20 && !showAllSongs && (
+                    <button
+                      onClick={() => setShowAllSongs(true)}
+                      className="w-full mt-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-colors"
+                    >
                       View All {playlistSongs.length} Tracks
+                    </button>
+                  )}
+
+                  {showAllSongs && playlistSongs.length > 20 && (
+                    <button
+                      onClick={() => {
+                        setShowAllSongs(false);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full mt-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-colors"
+                    >
+                      Show Less
                     </button>
                   )}
                 </>
@@ -311,73 +406,36 @@ export default function GroupDetailPage({ params }) {
           }}
         />
       )}
+
+      {/* Embedded Player */}
+      {currentlyPlaying && (
+        <EmbeddedPlayer
+          song={currentlyPlaying}
+          onClose={() => setCurrentlyPlaying(null)}
+        />
+      )}
     </div>
   );
 }
 
-function MemberCard({ member, index }) {
-  const userName = member.users?.username ||
-                   member.users?.email?.split('@')[0] ||
-                   'User';
-
-  const userEmail = member.users?.email || '';
-  const avatarUrl = member.users?.avatar_url;
-
-  const joinedDate = new Date(member.joined_at).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
-
-  // Generate a consistent color based on user ID
-  const colors = [
-    'from-purple-500 to-pink-500',
-    'from-blue-500 to-cyan-500',
-    'from-green-500 to-emerald-500',
-    'from-orange-500 to-red-500',
-    'from-indigo-500 to-purple-500',
-  ];
-  const colorIndex = (member.user_id?.charCodeAt(0) || index) % colors.length;
-
-  return (
-    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800/50 transition-colors">
-      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center text-white font-semibold text-lg flex-shrink-0 overflow-hidden`}>
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={userName}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          userName.charAt(0).toUpperCase()
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="font-semibold text-white truncate">{userName}</p>
-          {member.isOwner && (
-            <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 rounded text-xs font-medium">
-              Owner
-            </span>
-          )}
-        </div>
-        <p className="text-sm text-gray-400 truncate">{userEmail}</p>
-        <p className="text-xs text-gray-500">Joined {joinedDate}</p>
-      </div>
-    </div>
-  );
-}
-
-function SongItem({ song, index, onToggleLike, userId }) {
+function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
   const [isLiked, setIsLiked] = useState(song.isLiked || false);
 
-  const handleLikeClick = () => {
+  const handleLikeClick = (e) => {
+    e.stopPropagation(); // Prevent opening player when clicking like button
     setIsLiked(!isLiked);
     onToggleLike(song.id, isLiked);
   };
 
+  const handleSongClick = () => {
+    onPlay(song);
+  };
+
   return (
-    <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-800/50 transition-colors group">
+    <div
+      onClick={handleSongClick}
+      className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-800/50 transition-colors group cursor-pointer"
+    >
       {/* Track Number */}
       <span className="text-gray-400 font-medium w-8 text-center flex-shrink-0">
         {index + 1}
@@ -397,13 +455,29 @@ function SongItem({ song, index, onToggleLike, userId }) {
       {/* Song Info */}
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-white truncate">{song.title || 'Untitled'}</p>
-        <p className="text-sm text-gray-400 truncate">{song.artist || 'Unknown Artist'}</p>
+        <div className="flex items-center gap-2 min-w-0">
+          <p className="text-sm text-gray-400 truncate flex-shrink">{song.artist || 'Unknown Artist'}</p>
+          {song.playlistName && (
+            <>
+              <span className="text-gray-600 flex-shrink-0">•</span>
+              <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap ${
+                song.platform === 'youtube'
+                  ? 'bg-red-900/30 text-red-400'
+                  : song.platform === 'spotify'
+                  ? 'bg-green-900/30 text-green-400'
+                  : 'bg-gray-700/30 text-gray-400'
+              }`}>
+                {song.platform === 'youtube' ? 'YT' : song.platform === 'spotify' ? 'Spotify' : song.platform}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Like Button */}
       <button
         onClick={handleLikeClick}
-        className="p-2 hover:scale-110 transition-transform"
+        className="p-2 hover:scale-110 transition-transform z-10"
       >
         <Heart
           className={`h-5 w-5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
@@ -420,10 +494,107 @@ function SongItem({ song, index, onToggleLike, userId }) {
 
 function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   const supabase = supabaseBrowser();
-  const [platform, setPlatform] = useState('youtube'); // 'youtube' or 'spotify'
-  const [playlistUrl, setPlaylistUrl] = useState('');
+  const [platform, setPlatform] = useState('spotify'); // 'youtube' or 'spotify'
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
+  const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchingPlaylists, setFetchingPlaylists] = useState(false);
   const [error, setError] = useState('');
+  const [hasSpotify, setHasSpotify] = useState(false);
+  const [hasYoutube, setHasYoutube] = useState(false);
+  const [userExistingPlaylist, setUserExistingPlaylist] = useState(null);
+
+  useEffect(() => {
+    checkConnectedAccounts();
+    checkUserExistingPlaylist();
+  }, []);
+
+  useEffect(() => {
+    if (platform === 'spotify' && hasSpotify) {
+      fetchSpotifyPlaylists();
+    } else if (platform === 'youtube' && hasYoutube) {
+      fetchYoutubePlaylists();
+    }
+  }, [platform]);
+
+  async function checkUserExistingPlaylist() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    // Check if user already has a playlist in this group
+    const { data: existingPlaylist } = await supabase
+      .from('group_playlists')
+      .select('name, platform')
+      .eq('group_id', groupId)
+      .eq('added_by', session.user.id)
+      .maybeSingle();
+
+    setUserExistingPlaylist(existingPlaylist);
+  }
+
+  async function checkConnectedAccounts() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    // Check provider from user metadata
+    const provider = session.user?.app_metadata?.provider;
+
+    if (provider === 'spotify') {
+      setHasSpotify(true);
+      setHasYoutube(false);
+      setPlatform('spotify');
+      fetchSpotifyPlaylists();
+    } else if (provider === 'google') {
+      setHasSpotify(false);
+      setHasYoutube(true);
+      setPlatform('youtube');
+      fetchYoutubePlaylists();
+    } else {
+      // Fallback - try both APIs
+      setHasSpotify(false);
+      setHasYoutube(false);
+    }
+  }
+
+  async function fetchSpotifyPlaylists() {
+    setFetchingPlaylists(true);
+    setError('');
+    try {
+      const response = await fetch('/api/spotify/me/playlists?limit=50');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch Spotify playlists');
+      }
+
+      setPlaylists(data.items || []);
+    } catch (err) {
+      console.error('Error fetching Spotify playlists:', err);
+      setError('Failed to load Spotify playlists. Please try reconnecting your account.');
+    } finally {
+      setFetchingPlaylists(false);
+    }
+  }
+
+  async function fetchYoutubePlaylists() {
+    setFetchingPlaylists(true);
+    setError('');
+    try {
+      const response = await fetch('/api/youtube/youtube/v3/playlists?part=snippet&mine=true&maxResults=50');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch YouTube playlists');
+      }
+
+      setPlaylists(data.items || []);
+    } catch (err) {
+      console.error('Error fetching YouTube playlists:', err);
+      setError('Failed to load YouTube playlists. Please try reconnecting your account.');
+    } finally {
+      setFetchingPlaylists(false);
+    }
+  }
 
   async function handleAddPlaylist(e) {
     e.preventDefault();
@@ -434,6 +605,22 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
     if (!session) return;
 
     try {
+      const selectedPlaylist = playlists.find(p =>
+        platform === 'spotify' ? p.id === selectedPlaylistId : p.id === selectedPlaylistId
+      );
+
+      if (!selectedPlaylist) {
+        throw new Error('Please select a playlist');
+      }
+
+      // Generate playlist URL based on platform
+      let playlistUrl;
+      if (platform === 'spotify') {
+        playlistUrl = selectedPlaylist.external_urls?.spotify || `https://open.spotify.com/playlist/${selectedPlaylist.id}`;
+      } else {
+        playlistUrl = `https://www.youtube.com/playlist?list=${selectedPlaylist.id}`;
+      }
+
       // Call API to import playlist
       const response = await fetch('/api/import-playlist', {
         method: 'POST',
@@ -460,10 +647,49 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
     }
   }
 
+  if (!hasSpotify && !hasYoutube) {
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-900 rounded-lg max-w-md w-full p-6 border border-gray-800">
+          <h2 className="text-2xl font-bold mb-4">No Accounts Connected</h2>
+          <p className="text-gray-400 mb-6">
+            Please connect your Spotify or YouTube account in Settings to add playlists to this group.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => window.location.href = '/settings'}
+              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
+            >
+              Go to Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-lg max-w-md w-full p-6 border border-gray-800">
-        <h2 className="text-2xl font-bold mb-4">Add Playlist</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          {userExistingPlaylist ? 'Replace Your Playlist' : 'Add Playlist'}
+        </h2>
+
+        {userExistingPlaylist && (
+          <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded text-yellow-400 text-sm">
+            <p className="font-semibold mb-1">⚠️ You already have a playlist in this group</p>
+            <p>
+              Your current playlist "<strong>{userExistingPlaylist.name}</strong>" ({userExistingPlaylist.platform})
+              will be removed and replaced with your new selection.
+            </p>
+          </div>
+        )}
 
         <form onSubmit={handleAddPlaylist}>
           <div className="mb-4">
@@ -474,44 +700,93 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={() => setPlatform('youtube')}
+                disabled={!hasYoutube}
                 className={`px-4 py-3 rounded-lg font-medium transition-colors ${
                   platform === 'youtube'
                     ? 'bg-red-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    : hasYoutube
+                    ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                 }`}
               >
-                YouTube
+                YouTube {!hasYoutube && '(Not Connected)'}
               </button>
               <button
                 type="button"
                 onClick={() => setPlatform('spotify')}
+                disabled={!hasSpotify}
                 className={`px-4 py-3 rounded-lg font-medium transition-colors ${
                   platform === 'spotify'
                     ? 'bg-green-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    : hasSpotify
+                    ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                 }`}
               >
-                Spotify
+                Spotify {!hasSpotify && '(Not Connected)'}
               </button>
             </div>
           </div>
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Playlist URL
+              Select Playlist
             </label>
-            <input
-              type="url"
-              value={playlistUrl}
-              onChange={(e) => setPlaylistUrl(e.target.value)}
-              placeholder={
-                platform === 'youtube'
-                  ? 'https://youtube.com/playlist?list=...'
-                  : 'https://open.spotify.com/playlist/...'
-              }
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
+            {fetchingPlaylists ? (
+              <div className="text-center py-8 text-gray-400">
+                Loading playlists...
+              </div>
+            ) : playlists.length > 0 ? (
+              <div className="max-h-64 overflow-y-auto bg-gray-800 border border-gray-700 rounded-md">
+                {playlists.map((playlist) => {
+                  const playlistName = platform === 'spotify'
+                    ? playlist.name
+                    : playlist.snippet?.title;
+                  const playlistImage = platform === 'spotify'
+                    ? playlist.images?.[0]?.url
+                    : playlist.snippet?.thumbnails?.default?.url;
+                  const trackCount = platform === 'spotify'
+                    ? playlist.tracks?.total
+                    : null;
+
+                  return (
+                    <button
+                      key={playlist.id}
+                      type="button"
+                      onClick={() => setSelectedPlaylistId(playlist.id)}
+                      className={`w-full flex items-center gap-3 p-3 hover:bg-gray-700 transition-colors ${
+                        selectedPlaylistId === playlist.id ? 'bg-gray-700' : ''
+                      }`}
+                    >
+                      {playlistImage && (
+                        <img
+                          src={playlistImage}
+                          alt={playlistName}
+                          className="w-12 h-12 rounded object-cover"
+                        />
+                      )}
+                      <div className="flex-1 text-left">
+                        <p className="text-white font-medium truncate">{playlistName}</p>
+                        {trackCount !== null && (
+                          <p className="text-sm text-gray-400">{trackCount} tracks</p>
+                        )}
+                      </div>
+                      {selectedPlaylistId === playlist.id && (
+                        <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                No playlists found
+              </div>
+            )}
           </div>
 
           {error && (
@@ -530,14 +805,76 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
             </button>
             <button
               type="submit"
-              disabled={loading || !playlistUrl}
+              disabled={loading || !selectedPlaylistId}
               className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-md transition-colors"
             >
-              {loading ? 'Importing...' : 'Add Playlist'}
+              {loading
+                ? (userExistingPlaylist ? 'Replacing...' : 'Adding...')
+                : (userExistingPlaylist ? 'Replace Playlist' : 'Add Playlist')
+              }
             </button>
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function EmbeddedPlayer({ song, onClose }) {
+  const getEmbedUrl = () => {
+    if (song.platform === 'youtube') {
+      return `https://www.youtube.com/embed/${song.external_id}?autoplay=1`;
+    } else if (song.platform === 'spotify') {
+      // Note: Spotify doesn't support autoplay in embeds due to browser policies
+      return `https://open.spotify.com/embed/track/${song.external_id}?utm_source=generator&theme=0`;
+    }
+    return null;
+  };
+
+  const embedUrl = getEmbedUrl();
+
+  if (!embedUrl) return null;
+
+  const playerWidth = song.platform === 'youtube' ? 360 : 400;
+  const playerHeight = song.platform === 'youtube' ? 203 : 152; // 16:9 for YouTube
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50 bg-gray-900 rounded-lg shadow-2xl border border-gray-700 overflow-hidden animate-in slide-in-from-bottom-4 duration-300" style={{ width: `${playerWidth}px` }}>
+      <div className="flex items-center justify-between bg-gray-800 px-4 py-2 border-b border-gray-700">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <img
+            src={song.thumbnail_url}
+            alt={song.title}
+            className="w-10 h-10 rounded object-cover flex-shrink-0"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-white font-semibold text-sm truncate">{song.title}</p>
+            <p className="text-gray-400 text-xs truncate">{song.artist}</p>
+          </div>
+          {song.platform === 'spotify' && (
+            <span className="ml-2 px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded border border-green-600/30 whitespace-nowrap flex-shrink-0">
+              Click ▶
+            </span>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="ml-2 p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+        >
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <iframe
+        src={embedUrl}
+        width={playerWidth}
+        height={playerHeight}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        className="block w-full"
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { getValidAccessToken } from '@/app/lib/youtube';
+import { getValidAccessToken } from '@/lib/youtube';
 
 const BASE = 'https://www.googleapis.com';
 

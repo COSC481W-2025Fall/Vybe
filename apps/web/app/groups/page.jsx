@@ -187,7 +187,7 @@ function GroupCard({ group, isOwner, onClick }) {
       // Fetch owner
       const { data: owner } = await supabase
         .from('users')
-        .select('id, username, avatar_url')
+        .select('id, username, profile_picture_url')
         .eq('id', group.owner_id)
         .single();
 
@@ -201,7 +201,7 @@ function GroupCard({ group, isOwner, onClick }) {
       if (groupMembers && groupMembers.length > 0) {
         const { data: memberUsers } = await supabase
           .from('users')
-          .select('id, username, avatar_url')
+          .select('id, username, profile_picture_url')
           .in('id', groupMembers.map(m => m.user_id));
 
         setMembers([owner, ...(memberUsers || [])].filter(Boolean));
@@ -268,9 +268,9 @@ function GroupCard({ group, isOwner, onClick }) {
               className="w-8 h-8 rounded-full border-2 border-gray-900 overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500"
               title={member?.username || 'Member'}
             >
-              {member?.avatar_url ? (
+              {member?.profile_picture_url ? (
                 <img
-                  src={member.avatar_url}
+                  src={member.profile_picture_url}
                   alt={member.username || 'Member'}
                   className="w-full h-full object-cover"
                 />
@@ -333,10 +333,13 @@ function JoinGroupModal({ onClose, onSuccess }) {
       });
 
     if (joinError) {
+      console.error('Join group error:', joinError);
       if (joinError.code === '23505') {
         setError('You are already a member of this group');
+      } else if (joinError.code === '23503') {
+        setError('Your user account is not properly set up. Please contact support.');
       } else {
-        setError('Failed to join group');
+        setError(`Failed to join group: ${joinError.message}`);
       }
       setLoading(false);
       return;
