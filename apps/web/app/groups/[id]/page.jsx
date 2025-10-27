@@ -76,29 +76,34 @@ export default function GroupDetailPage({ params }) {
       .select('user_id, joined_at')
       .eq('group_id', groupId);
 
-    // Combine owner and members with basic user data
-    // Note: We'll use user_id to display. You can create a public 'profiles' table later for better UX
+    // Fetch owner user data
+    const { data: ownerUser } = await supabase
+      .from('users')
+      .select('id, username, email, avatar_url')
+      .eq('id', groupData.owner_id)
+      .single();
+
+    // Fetch all member users data
+    const memberUserIds = (memberData || []).map(m => m.user_id);
+    const { data: memberUsers } = await supabase
+      .from('users')
+      .select('id, username, email, avatar_url')
+      .in('id', memberUserIds);
+
+    // Combine owner and members with full user data
     const allMembers = [
       {
         user_id: groupData.owner_id,
         isOwner: true,
         joined_at: groupData.created_at,
-        users: {
-          id: groupData.owner_id,
-          email: session.user.id === groupData.owner_id ? session.user.email : `User ${groupData.owner_id.slice(0, 8)}`,
-          raw_user_meta_data: session.user.id === groupData.owner_id ? session.user.user_metadata : {}
-        }
+        users: ownerUser
       },
       ...(memberData || []).map(m => ({
         ...m,
         isOwner: false,
-        users: {
-          id: m.user_id,
-          email: session.user.id === m.user_id ? session.user.email : `User ${m.user_id.slice(0, 8)}`,
-          raw_user_meta_data: session.user.id === m.user_id ? session.user.user_metadata : {}
-        }
+        users: memberUsers?.find(u => u.id === m.user_id)
       }))
-    ];
+    ].filter(m => m.users); // Filter out members without user data
 
     setMembers(allMembers);
 
@@ -311,12 +316,13 @@ export default function GroupDetailPage({ params }) {
 }
 
 function MemberCard({ member, index }) {
-  const userName = member.users?.raw_user_meta_data?.full_name ||
-                   member.users?.raw_user_meta_data?.name ||
+  const userName = member.users?.username ||
                    member.users?.email?.split('@')[0] ||
                    'User';
 
   const userEmail = member.users?.email || '';
+  const avatarUrl = member.users?.avatar_url;
+
   const joinedDate = new Date(member.joined_at).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -335,8 +341,16 @@ function MemberCard({ member, index }) {
 
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800/50 transition-colors">
-      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center text-white font-semibold text-lg flex-shrink-0`}>
-        {userName.charAt(0).toUpperCase()}
+      <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center text-white font-semibold text-lg flex-shrink-0 overflow-hidden`}>
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={userName}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          userName.charAt(0).toUpperCase()
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
