@@ -36,62 +36,46 @@ export default function GroupsPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Get groups where user is owner or member with member details
-    const { data: ownedGroups } = await supabase
+    // Get groups where user is owner or member with member count (simpler query)
+    const { data: ownedGroups, error: ownedError } = await supabase
       .from('groups')
       .select(`
         *,
-        group_members(
-          user_id,
-          users(id, username, avatar_url)
-        )
+        group_members(count)
       `)
       .eq('owner_id', session.user.id);
 
-    const { data: memberGroups } = await supabase
+    if (ownedError) {
+      console.error('Error loading owned groups:', ownedError);
+    }
+
+    const { data: memberGroups, error: memberError } = await supabase
       .from('group_members')
       .select(`
         group_id,
         groups(
           *,
-          group_members(
-            user_id,
-            users(id, username, avatar_url)
-          )
+          group_members(count)
         )
       `)
       .eq('user_id', session.user.id);
 
+    if (memberError) {
+      console.error('Error loading member groups:', memberError);
+    }
+
     const memberGroupsList = memberGroups?.map(m => m.groups) || [];
     const allGroups = [...(ownedGroups || []), ...memberGroupsList];
 
-    // Remove duplicates and add member info
+    // Remove duplicates and count members
     const uniqueGroups = Array.from(
       new Map(allGroups.map(g => [g.id, g])).values()
     ).map(group => ({
       ...group,
-      memberCount: (group.group_members?.length || 0) + 1, // +1 for owner
-      members: group.group_members?.map(m => m.users).filter(Boolean) || []
+      memberCount: (group.group_members?.[0]?.count || 0) + 1 // +1 for owner
     }));
 
-    // Fetch owner info for each group
-    const groupsWithOwners = await Promise.all(
-      uniqueGroups.map(async (group) => {
-        const { data: owner } = await supabase
-          .from('users')
-          .select('id, username, avatar_url')
-          .eq('id', group.owner_id)
-          .single();
-
-        return {
-          ...group,
-          owner,
-          allMembers: [owner, ...group.members].filter(Boolean)
-        };
-      })
-    );
-
-    setGroups(groupsWithOwners);
+    setGroups(uniqueGroups);
     setLoading(false);
   }
 
@@ -195,15 +179,48 @@ export default function GroupsPage() {
 }
 
 function GroupCard({ group, isOwner, onClick }) {
+  const [members, setMembers] = useState([]);
+  const supabase = supabaseBrowser();
+
+  useEffect(() => {
+    async function loadMembers() {
+      // Fetch owner
+      const { data: owner } = await supabase
+        .from('users')
+        .select('id, username, avatar_url')
+        .eq('id', group.owner_id)
+        .single();
+
+      // Fetch up to 2 additional members
+      const { data: groupMembers } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', group.id)
+        .limit(2);
+
+      if (groupMembers && groupMembers.length > 0) {
+        const { data: memberUsers } = await supabase
+          .from('users')
+          .select('id, username, avatar_url')
+          .in('id', groupMembers.map(m => m.user_id));
+
+        setMembers([owner, ...(memberUsers || [])].filter(Boolean));
+      } else {
+        setMembers(owner ? [owner] : []);
+      }
+    }
+
+    loadMembers();
+  }, [group.id, group.owner_id]);
+
   const formattedDate = new Date(group.created_at).toLocaleDateString('en-US', {
     month: 'numeric',
     day: 'numeric',
     year: 'numeric'
   });
 
-  // Get first 3 members to display
-  const displayMembers = (group.allMembers || []).slice(0, 3);
-  const remainingCount = Math.max(0, (group.memberCount || 0) - 3);
+  const displayMembers = members.slice(0, 3);
+  const remainingCount = Math.max(0, (group.memberCount || 0) - displayMembers.length);
 
   return (
     <div
