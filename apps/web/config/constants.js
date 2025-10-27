@@ -41,6 +41,7 @@ export const CONFIG = {
     { href: '/playlist', label: 'Playlist' },
     { href: '/library', label: 'Library' },
     { href: '/profile', label: 'Profile' },
+    { href: '/settings', label: 'Settings' },
   ],
   
   // Library Tabs (matching LibraryView.jsx)

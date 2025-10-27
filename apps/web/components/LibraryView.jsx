@@ -67,6 +67,38 @@ function Row({ item }) {
   );
 }
 
+function PlaylistRow({ playlist }) {
+  return (
+    <li className="group relative flex items-center gap-5 rounded-xl px-5 py-5 hover:bg-white/10 transition-all duration-300 border border-transparent hover:border-white/20 backdrop-blur-sm">
+      <div className="relative">
+        <img
+          src={playlist.cover}
+          width={64}
+          height={64}
+          className="h-16 w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
+          alt={`${playlist.name} cover`}
+        />
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors duration-300">
+          {playlist.name}
+        </div>
+        <div className="truncate text-base text-muted-foreground mt-1">
+          {playlist.description || 'No description'}
+        </div>
+        <div className="truncate text-sm text-muted-foreground/80 mt-1">
+          {playlist.tracks} tracks • by {playlist.owner}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
+        <ListMusic className="h-4 w-4" />
+        <span className="font-medium">{playlist.public ? 'Public' : 'Private'}</span>
+      </div>
+    </li>
+  );
+}
+
 // ---------------- component ----------------
 const TABS = [
   { key: 'recent', label: 'Recent History' },
@@ -88,6 +120,11 @@ export default function LibraryView() {
   const [moreLoading, setMoreLoading] = useState(false);
   const [recError, setRecError]     = useState(null);
   const [hasMore, setHasMore]       = useState(true); // we stop when Spotify returns empty
+
+  // Playlists
+  const [playlists, setPlaylists]   = useState([]);   // normalized playlists for UI
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const [playlistsError, setPlaylistsError] = useState(null);
 
   // --- load user identity based on provider ---
   useEffect(() => {
@@ -158,6 +195,42 @@ export default function LibraryView() {
     };
     
     console.log('[mapItem] Mapped item:', mapped);
+    return mapped;
+  }, []);
+
+  // --- helper: map Spotify playlist -> UI row ---
+  const mapPlaylist = useCallback((playlist) => {
+    console.log('[mapPlaylist] Raw Spotify playlist:', playlist);
+    
+    const mapped = {
+      id: playlist.id,
+      name: playlist.name,
+      description: playlist.description || '',
+      cover: playlist.images?.[0]?.url || '',
+      tracks: playlist.tracks?.total || 0,
+      owner: playlist.owner?.display_name || 'Unknown',
+      public: playlist.public || false,
+    };
+    
+    console.log('[mapPlaylist] Mapped playlist:', mapped);
+    return mapped;
+  }, []);
+
+  // --- helper: map YouTube playlist -> UI row ---
+  const mapYouTubePlaylist = useCallback((playlist) => {
+    console.log('[mapYouTubePlaylist] Raw YouTube playlist:', playlist);
+    
+    const mapped = {
+      id: playlist.id,
+      name: playlist.snippet?.title || 'Untitled Playlist',
+      description: playlist.snippet?.description || '',
+      cover: playlist.snippet?.thumbnails?.high?.url || playlist.snippet?.thumbnails?.medium?.url || playlist.snippet?.thumbnails?.default?.url || '',
+      tracks: playlist.contentDetails?.itemCount || 0,
+      owner: playlist.snippet?.channelTitle || 'Unknown',
+      public: playlist.snippet?.privacyStatus === 'public',
+    };
+    
+    console.log('[mapYouTubePlaylist] Mapped playlist:', mapped);
     return mapped;
   }, []);
 
@@ -239,17 +312,107 @@ export default function LibraryView() {
     }
   }, [recent, mapItem, provider]);
 
+  // --- load playlists (for both Spotify and YouTube) ---
+  const loadPlaylists = useCallback(async () => {
+    if (provider !== 'spotify' && provider !== 'google') return;
+    
+    try {
+      setLoadingPlaylists(true);
+      
+      if (provider === 'spotify') {
+        console.log('[LibraryView] Loading Spotify playlists...');
+        const res = await fetch('/api/spotify/me/playlists?limit=50', { cache: 'no-store' });
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          throw new Error(`HTTP ${res.status} ${body}`);
+        }
+        const json = await res.json();
+        console.log('[LibraryView] Raw Spotify playlists response:', json);
+        const items = (json.items || []).map(mapPlaylist);
+        setPlaylists(items);
+      } else if (provider === 'google') {
+        console.log('[LibraryView] Loading YouTube playlists...');
+        const res = await fetch('/api/youtube/youtube/v3/playlists?part=snippet,contentDetails&mine=true&maxResults=50', { cache: 'no-store' });
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          throw new Error(`HTTP ${res.status} ${body}`);
+        }
+        const json = await res.json();
+        console.log('[LibraryView] Raw YouTube playlists response:', json);
+        const items = (json.items || []).map(mapYouTubePlaylist);
+        setPlaylists(items);
+      }
+      
+      setPlaylistsError(null);
+    } catch (err) {
+      console.error('Failed to load playlists', err);
+      setPlaylistsError(String(err?.message || err));
+    } finally {
+      setLoadingPlaylists(false);
+    }
+  }, [provider, mapPlaylist, mapYouTubePlaylist]);
+
+  // --- load playlists when tab changes to saved ---
+  useEffect(() => {
+    if (tab === 'saved' && (provider === 'spotify' || provider === 'google') && playlists.length === 0 && !loadingPlaylists) {
+      loadPlaylists();
+    }
+  }, [tab, provider, playlists.length, loadingPlaylists, loadPlaylists]);
+
   const content = useMemo(() => {
     if (tab !== 'recent') {
       return (
-        <div className="rounded-2xl border border-border bg-card/60 p-6 shadow-xl backdrop-blur chroma-card text-white">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <ListMusic className="h-4 w-4 text-muted-foreground" />
-            <span>Saved Playlists</span>
+        <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-b from-black via-gray-900 to-purple-900 p-8 shadow-2xl backdrop-blur-sm mb-40 text-white">
+          {/* Gradient overlay for depth */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-purple-900/40 pointer-events-none" />
+          
+          <div className="relative mb-8 flex items-center gap-3">
+            <div className="p-2 bg-yellow-400/20 rounded-lg">
+              <ListMusic className="h-5 w-5 text-yellow-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-white">Your Playlists</h2>
+              <p className="text-sm text-muted-foreground">
+                {provider === 'google' ? 'Your saved YouTube playlists' : 'Your saved Spotify playlists'}
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            You don’t have any saved playlists yet.
-          </p>
+
+          {loadingPlaylists && (
+            <div className="relative flex items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-400"></div>
+              <span className="ml-4 text-base text-muted-foreground">Loading your playlists…</span>
+            </div>
+          )}
+
+          {playlistsError && (
+            <div className="relative p-6 bg-red-500/20 border border-red-500/30 rounded-xl backdrop-blur-sm">
+              <p className="text-base text-red-400">{playlistsError}</p>
+            </div>
+          )}
+
+          {!loadingPlaylists && !playlistsError && playlists.length === 0 && (
+            <div className="relative text-center py-16">
+              <ListMusic className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
+              {provider === 'google' ? (
+                <>
+                  <h3 className="text-xl font-semibold text-white mb-3">No playlists found</h3>
+                  <p className="text-base text-muted-foreground">Create some playlists on YouTube to see them here</p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-xl font-semibold text-white mb-3">No playlists found</h3>
+                  <p className="text-base text-muted-foreground">Create some playlists on Spotify to see them here</p>
+                </>
+              )}
+            </div>
+          )}
+
+          {playlists.length > 0 && (
+            <ul className="space-y-2">
+              {playlists.map((playlist) => <PlaylistRow key={playlist.id} playlist={playlist} />)}
+            </ul>
+          )}
         </div>
       );
     }
@@ -326,7 +489,7 @@ export default function LibraryView() {
         )}
       </div>
     );
-  }, [tab, recent, loadingRec, recError, hasMore, loadMore]);
+  }, [tab, recent, loadingRec, recError, hasMore, loadMore, playlists, loadingPlaylists, playlistsError, provider]);
 
   return (
     <section className="mx-auto max-w-6xl px-6 py-8">

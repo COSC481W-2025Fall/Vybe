@@ -53,13 +53,33 @@ export async function refreshAccessToken(refresh_token) {
 
 /** Return a valid YouTube access token; refresh & save if needed */
 export async function getValidAccessToken(sb, userId) {
+  console.log('[getValidAccessToken] Looking for tokens for user:', userId);
+
+  // First, try to get the current session to see if we have a valid token
+  const { data: { session }, error: sessionError } = await sb.auth.getSession();
+
+  if (sessionError) {
+    console.log('[getValidAccessToken] Session error:', sessionError);
+    throw new Error('No valid session');
+  }
+
+  // Check if we have a provider token from the current session
+  if (session?.provider_token) {
+    console.log('[getValidAccessToken] Using session provider token');
+    return session.provider_token;
+  }
+
+  // Fallback to stored tokens
   const { data: row, error } = await sb
     .from('youtube_tokens')
     .select('*')
     .eq('user_id', userId)
     .single();
 
+  console.log('[getValidAccessToken] Database query result:', { row, error });
+
   if (error || !row?.refresh_token) {
+    console.log('[getValidAccessToken] No valid tokens found:', { error, hasRefreshToken: !!row?.refresh_token });
     throw new Error('No YouTube tokens on file');
   }
 

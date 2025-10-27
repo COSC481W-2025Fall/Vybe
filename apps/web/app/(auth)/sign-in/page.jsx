@@ -9,7 +9,7 @@ export default function SignInPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'spotify',
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=/library%3Ffrom%3Dspotify`,
+        redirectTo: `${location.origin}/auth/callback?next=/library`,
         scopes: 'user-read-email user-read-private playlist-read-private user-read-recently-played',
       },
       queryParams: { show_dialog: 'true' },
@@ -21,12 +21,11 @@ export default function SignInPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=/library%3Ffrom%3Dgoogle`,
+        redirectTo: `${location.origin}/auth/callback?next=/library`,
         scopes: [
           'openid',
           'email',
           'profile',
-          // YouTube Data API scopes (read-only minimal)
           'https://www.googleapis.com/auth/youtube.readonly',
         ].join(' '),
       },

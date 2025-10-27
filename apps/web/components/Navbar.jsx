@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, Music2, Library, User as UserIcon, LogOut } from 'lucide-react';
+import { Home, Users, Music2, Library, User as UserIcon, LogOut, Settings } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import { useState } from 'react';
 
@@ -12,7 +12,8 @@ const links = CONFIG.NAV_LINKS.map(link => {
     'Groups': Users,
     'Playlist': Music2,
     'Library': Library,
-    'Profile': UserIcon
+    'Profile': UserIcon,
+    'Settings': Settings
   };
   return {
     ...link,

@@ -84,6 +84,49 @@ describe('LibraryView', () => {
         })
       }
 
+      if (url.includes('/api/spotify/me/playlists')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            items: [
+              {
+                id: 'playlist1',
+                name: 'My Test Playlist',
+                description: 'A test playlist',
+                images: [{ url: 'https://example.com/playlist-cover.jpg' }],
+                tracks: { total: 10 },
+                owner: { display_name: 'Test User' },
+                public: true
+              }
+            ]
+          })
+        })
+      }
+
+      if (url.includes('/api/youtube/youtube/v3/playlists')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            items: [
+              {
+                id: 'youtube-playlist1',
+                snippet: {
+                  title: 'My YouTube Playlist',
+                  description: 'A test YouTube playlist',
+                  thumbnails: {
+                    high: { url: 'https://example.com/youtube-playlist-cover.jpg' }
+                  },
+                  channelTitle: 'Test User'
+                },
+                contentDetails: {
+                  itemCount: 15
+                }
+              }
+            ]
+          })
+        })
+      }
+
       return Promise.resolve({
         ok: false,
         status: 404
@@ -199,6 +242,52 @@ describe('LibraryView', () => {
       expect(savedPlaylistsElements).toHaveLength(2) // Button and content span
       // The tab should now be active (have the active styling)
       expect(savedPlaylistsTab).toHaveClass('bg-white', 'text-black')
+    })
+  })
+
+  it('displays playlists when saved playlists tab is clicked', async () => {
+    render(<LibraryView />)
+
+    // Wait for component to load first
+    await waitFor(() => {
+      expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
+    })
+
+    const savedPlaylistsTab = screen.getByRole('button', { name: 'Saved Playlists' })
+    await userEvent.click(savedPlaylistsTab)
+
+    await waitFor(() => {
+      expect(screen.getByText('Your Playlists')).toBeInTheDocument()
+      expect(screen.getByText('My Test Playlist')).toBeInTheDocument()
+      expect(screen.getByText('A test playlist')).toBeInTheDocument()
+      expect(screen.getByText('10 tracks • by Test User')).toBeInTheDocument()
+    })
+  })
+
+  it('displays YouTube playlists when logged in with Google', async () => {
+    // Mock Google user
+    Object.defineProperty(window, 'location', {
+      value: {
+        search: '?from=google'
+      },
+      writable: true
+    });
+
+    render(<LibraryView />)
+
+    // Wait for component to load first
+    await waitFor(() => {
+      expect(screen.getByText(/Signed in as/)).toBeInTheDocument()
+    })
+
+    const savedPlaylistsTab = screen.getByRole('button', { name: 'Saved Playlists' })
+    await userEvent.click(savedPlaylistsTab)
+
+    await waitFor(() => {
+      expect(screen.getByText('Your Playlists')).toBeInTheDocument()
+      expect(screen.getByText('My YouTube Playlist')).toBeInTheDocument()
+      expect(screen.getByText('A test YouTube playlist')).toBeInTheDocument()
+      expect(screen.getByText('15 tracks • by Test User')).toBeInTheDocument()
     })
   })
 

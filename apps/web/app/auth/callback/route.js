@@ -20,11 +20,11 @@ export async function GET(request) {
       const userId = session.user.id;
       const provider = session.user?.app_metadata?.provider || null;
       const accessToken  = session.provider_token ?? null;
-      const refreshToken = session.provider_refresh_token ?? null;  // must be non-null to “upgrade”
+      const refreshToken = session.provider_refresh_token ?? null;
       const expiresIn    = session.provider_token_expires_in ?? 3600;
       const scope        = session.provider_scope ?? null;
 
-      // overwrite the row with the latest token info based on provider
+      // Store OAuth tokens in appropriate table based on provider
       if (provider === 'spotify') {
         await supabase.from('spotify_tokens').upsert({
           user_id: userId,
@@ -35,7 +35,15 @@ export async function GET(request) {
           token_type: 'Bearer',
         }, { onConflict: 'user_id' });
       } else if (provider === 'google') {
-        await supabase.from('youtube_tokens').upsert({
+        console.log('[callback] Storing Google tokens:', {
+          userId,
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          expiresIn,
+          scope
+        });
+
+        const { error: tokenError } = await supabase.from('youtube_tokens').upsert({
           user_id: userId,
           access_token: accessToken,
           refresh_token: refreshToken,
@@ -43,6 +51,12 @@ export async function GET(request) {
           scope,
           token_type: 'Bearer',
         }, { onConflict: 'user_id' });
+
+        if (tokenError) {
+          console.error('[callback] Error storing YouTube tokens:', tokenError);
+        } else {
+          console.log('[callback] Successfully stored YouTube tokens');
+        }
       }
     }
   }
