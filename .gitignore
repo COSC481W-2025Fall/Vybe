@@ -52,3 +52,6 @@ get-issues.ps1
 
 # Documentation
 docs/
+# Task Completion Reports
+TASK-1.*-COMPLETION.md
+PBI-59-ACCOUNT-SETTINGS-BREAKDOWN.md
