@@ -1,9 +1,23 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 
 export default function SignInPage() {
   const supabase = supabaseBrowser();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is already logged in
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/library');
+      }
+    }
+    checkAuth();
+  }, [router]);
 
   const signInWithSpotify = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -15,6 +29,22 @@ export default function SignInPage() {
       queryParams: { show_dialog: 'true' },
     });
     if (error) console.error('Spotify login error:', error.message);
+  };
+
+  const signInWithYouTube = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${location.origin}/auth/callback?next=/library`,
+        scopes: [
+          'openid',
+          'email',
+          'profile',
+          'https://www.googleapis.com/auth/youtube.readonly',
+        ].join(' '),
+      },
+    });
+    if (error) console.error('Google/YouTube login error:', error.message);
   };
 
   return (
@@ -30,6 +60,12 @@ export default function SignInPage() {
           className="rounded-md bg-primary px-4 py-2 text-primary-foreground bg-[#00A63E] text-amber-50 hover:bg-green-900"
         >
           Continue with Spotify
+        </button>
+        <button
+          onClick={signInWithYouTube}
+          className="rounded-md px-4 py-2 bg-white text-black hover:bg-gray-200"
+        >
+          Continue with YouTube
         </button>
         <div className="h-0.5 w-20 bg-[#6A6A6A]"></div>
       </div>

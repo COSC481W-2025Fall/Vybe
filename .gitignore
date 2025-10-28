@@ -29,8 +29,26 @@ secret.txt
 clean.txt
 bad.txt
 secret.txt
+venv/
+.venv/
+backend/.venv/
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.env
+
+# Coverage
+.coverage
+backend/htmlcov/
+backend/coverage.xml
 playwright-report/
+docs/
 
 .cursorignore
 sprint-1-assignee-breakdown.txt
 get-issues.ps1
+
+# Claude Code
+.claude/
