@@ -16,44 +16,46 @@ export async function GET(request) {
 
     // Get all accepted friends for the current user
     const { data: friendships, error: friendsError } = await supabase
-      .from('friends')
+      .from('friendships')
       .select(`
         id,
-        user1_id,
-        user2_id,
+        user_id,
+        friend_id,
         status,
         created_at
       `)
-      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
       .eq('status', 'accepted');
 
     if (friendsError) {
       console.error('Error fetching friends:', friendsError);
       return NextResponse.json({ error: 'Failed to fetch friends' }, { status: 500 });
     }
+    
+    console.log('Friendships found:', friendships);
 
     // Get unique friend IDs
-    const friendIds = [...new Set(friendships.map(f => f.user1_id === user.id ? f.user2_id : f.user1_id))];
+    const friendIds = [...new Set(friendships.map(f => f.user_id === user.id ? f.friend_id : f.user_id))];
 
-    // Fetch user details for friends
+    // Fetch user details from the public users table
     const friends = [];
     for (const friendId of friendIds) {
-      try {
-        const { data: friendData, error: userError } = await supabase.auth.admin.getUserById(friendId);
-        if (!userError && friendData?.user) {
-          const friendUser = friendData.user;
-          const friendship = friendships.find(f => f.user1_id === friendId || f.user2_id === friendId);
-          friends.push({
-            id: friendUser.id,
-            email: friendUser.email,
-            name: friendUser.user_metadata?.full_name || friendUser.email?.split('@')[0],
-            username: friendUser.user_metadata?.username || friendUser.email?.split('@')[0],
-            friendship_id: friendship?.id,
-            created_at: friendship?.created_at
-          });
-        }
-      } catch (err) {
-        console.error(`Error fetching user ${friendId}:`, err);
+      const { data: friendUser } = await supabase
+        .from('users')
+        .select('id, username, display_name')
+        .eq('id', friendId)
+        .single();
+      
+      if (friendUser) {
+        const friendship = friendships.find(f => f.user_id === friendId || f.friend_id === friendId);
+        friends.push({
+          id: friendUser.id,
+          email: '',
+          name: friendUser.display_name || friendUser.username,
+          username: friendUser.username,
+          friendship_id: friendship?.id,
+          created_at: friendship?.created_at
+        });
       }
     }
 
@@ -82,6 +84,8 @@ export async function POST(request) {
     const body = await request.json();
     const { friendId } = body;
 
+    console.log('POST /api/friends - friendId:', friendId);
+
     if (!friendId) {
       return NextResponse.json({ error: 'Friend ID is required' }, { status: 400 });
     }
@@ -90,43 +94,46 @@ export async function POST(request) {
       return NextResponse.json({ error: 'You cannot send a friend request to yourself' }, { status: 400 });
     }
 
-    // Check if user exists
-    const { data: friendUser, error: userError } = await supabase.auth.admin.getUserById(friendId);
+    // Check if user exists in the public users table (don't need admin for this)
+    const { data: friendUser, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', friendId)
+      .single();
+    
     if (userError || !friendUser) {
+      console.error('User not found in users table:', userError);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Ensure user1_id < user2_id for consistency
-    const user1Id = user.id < friendId ? user.id : friendId;
-    const user2Id = user.id < friendId ? friendId : user.id;
-
-    // Check if friendship already exists
-    const { data: existingFriendship } = await supabase
-      .from('friends')
+    // Check if friendship already exists (in either direction)
+    const { data: existingFriendships } = await supabase
+      .from('friendships')
       .select('id, status')
-      .eq('user1_id', user1Id)
-      .eq('user2_id', user2Id)
-      .single();
+      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+    // Filter to check if there's a friendship with the specific friend
+    const existingFriendship = existingFriendships?.find(f => 
+      (f.user_id === user.id && f.friend_id === friendId) || 
+      (f.user_id === friendId && f.friend_id === user.id)
+    );
 
     if (existingFriendship) {
       if (existingFriendship.status === 'accepted') {
         return NextResponse.json({ error: 'You are already friends' }, { status: 400 });
       } else if (existingFriendship.status === 'pending') {
-        return NextResponse.json({ error: 'Friend request already sent' }, { status: 400 });
+        return NextResponse.json({ error: 'Friend request already sent or pending' }, { status: 400 });
       }
     }
 
-    // Only the user with the smaller ID can send friend requests (to maintain order)
-    if (user1Id !== user.id) {
-      return NextResponse.json({ error: 'Friend request already exists from this user' }, { status: 400 });
-    }
-
-    // Create friend request
+    // Create friend request (user_id is sender, friend_id is receiver)
+    console.log('Creating friend request:', { user_id: user.id, friend_id: friendId });
+    
     const { data: friendship, error: friendshipError } = await supabase
-      .from('friends')
+      .from('friendships')
       .insert({
-        user1_id: user1Id,
-        user2_id: user2Id,
+        user_id: user.id,
+        friend_id: friendId,
         status: 'pending'
       })
       .select()
@@ -134,8 +141,24 @@ export async function POST(request) {
 
     if (friendshipError) {
       console.error('Error creating friend request:', friendshipError);
-      return NextResponse.json({ error: 'Failed to send friend request' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to send friend request', details: friendshipError }, { status: 500 });
     }
+
+    console.log('✅ Friend request created successfully in database:', {
+      id: friendship.id,
+      user_id: friendship.user_id,
+      friend_id: friendship.friend_id,
+      status: friendship.status
+    });
+
+    // Verify it was saved by querying it back
+    const { data: verify } = await supabase
+      .from('friendships')
+      .select('*')
+      .eq('id', friendship.id)
+      .single();
+    
+    console.log('🔍 Verified in database:', verify ? 'EXISTS' : 'NOT FOUND');
 
     return NextResponse.json({ 
       success: true, 

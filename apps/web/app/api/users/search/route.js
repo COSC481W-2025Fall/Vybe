@@ -17,53 +17,97 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
 
+    // If no query, return all users (for browsing)
     if (!query || query.trim().length === 0) {
-      return NextResponse.json({ error: 'Search query is required' }, { status: 400 });
+      const { data: allUsers, error: allUsersError } = await supabase
+        .from('users')
+        .select('id, username, display_name')
+        .neq('id', user.id)
+        .limit(50);
+      
+      if (allUsersError) {
+        console.error('Error fetching all users:', allUsersError);
+        return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+      }
+      
+      if (!allUsers || allUsers.length === 0) {
+        return NextResponse.json({ 
+          success: true, 
+          users: [] 
+        });
+      }
+      
+      // Get existing friendships
+      const { data: existingFriends } = await supabase
+        .from('friendships')
+        .select('user_id, friend_id, status')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+      
+      const users = allUsers.map(u => {
+        const friendship = existingFriends?.find(f => 
+          (f.user_id === user.id && f.friend_id === u.id) || 
+          (f.user_id === u.id && f.friend_id === user.id)
+        );
+        
+        return {
+          id: u.id,
+          email: u.email || '',
+          name: u.display_name || u.username || 'User',
+          username: u.username || '',
+          friendship_status: friendship?.status || null
+        };
+      });
+      
+      return NextResponse.json({ 
+        success: true, 
+        users 
+      });
     }
 
-    // Search for users by email or username
-    // Note: This is a simplified search. For production, you'd want more sophisticated search
-    const { data: allUsers, error: listError } = await supabase.auth.admin.listUsers();
+    // Search the public users table
+    const searchQuery = query.toLowerCase();
     
-    if (listError) {
-      console.error('Error listing users:', listError);
+    console.log('Searching for:', searchQuery);
+    
+    const { data: matchingUsers, error: searchError } = await supabase
+      .from('users')
+      .select('id, username, display_name')
+      .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+      .neq('id', user.id)
+      .limit(20);
+    
+    if (searchError) {
+      console.error('Error searching users:', searchError);
       return NextResponse.json({ error: 'Failed to search users' }, { status: 500 });
     }
+    
+    console.log('Found users:', matchingUsers);
 
-    // Filter users based on query
-    const searchQuery = query.toLowerCase();
-    const matchingUsers = allUsers.users
-      .filter(u => {
-        if (u.id === user.id) return false; // Don't show current user
-        
-        const email = (u.email || '').toLowerCase();
-        const username = (u.user_metadata?.username || '').toLowerCase();
-        const fullName = (u.user_metadata?.full_name || '').toLowerCase();
-        
-        return email.includes(searchQuery) || 
-               username.includes(searchQuery) || 
-               fullName.includes(searchQuery);
-      })
-      .slice(0, 20); // Limit to 20 results
+    if (!matchingUsers || matchingUsers.length === 0) {
+      return NextResponse.json({ 
+        success: true, 
+        users: [] 
+      });
+    }
 
     // Get existing friendships for these users to show status
     const userIds = matchingUsers.map(u => u.id);
     const { data: existingFriends } = await supabase
-      .from('friends')
-      .select('user1_id, user2_id, status')
-      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`);
+      .from('friendships')
+      .select('user_id, friend_id, status')
+      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
     const users = matchingUsers.map(u => {
       const friendship = existingFriends?.find(f => 
-        (f.user1_id === user.id && f.user2_id === u.id) || 
-        (f.user1_id === u.id && f.user2_id === user.id)
+        (f.user_id === user.id && f.friend_id === u.id) || 
+        (f.user_id === u.id && f.friend_id === user.id)
       );
 
       return {
         id: u.id,
-        email: u.email,
-        name: u.user_metadata?.full_name || u.email?.split('@')[0],
-        username: u.user_metadata?.username || u.email?.split('@')[0],
+        email: u.email || '',
+        name: u.display_name || u.username || 'User',
+        username: u.username || '',
         friendship_status: friendship?.status || null
       };
     });

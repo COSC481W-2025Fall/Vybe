@@ -16,9 +16,9 @@ export async function GET(request) {
 
     // Get pending friend requests (both sent and received)
     const { data: friendships, error: requestsError } = await supabase
-      .from('friends')
-      .select('id, user1_id, user2_id, status, created_at')
-      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+      .from('friendships')
+      .select('id, user_id, friend_id, status, created_at')
+      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
       .eq('status', 'pending');
 
     if (requestsError) {
@@ -30,30 +30,39 @@ export async function GET(request) {
     const sent = [];
     const received = [];
 
-    for (const friendship of friendships) {
-      const friendId = friendship.user1_id === user.id ? friendship.user2_id : friendship.user1_id;
+    // Get all unique friend IDs
+    const friendIds = [...new Set(friendships.map(f => f.user_id === user.id ? f.friend_id : f.user_id))];
+    
+    // Fetch user details from the public users table
+    for (const friendId of friendIds) {
+      const { data: friendUser } = await supabase
+        .from('users')
+        .select('id, username, display_name')
+        .eq('id', friendId)
+        .single();
       
-      try {
-        const { data: friendData, error: userError } = await supabase.auth.admin.getUserById(friendId);
-        if (!userError && friendData?.user) {
-          const friendUser = friendData.user;
+      if (friendUser) {
+        const friendship = friendships.find(f => 
+          (f.user_id === user.id && f.friend_id === friendId) || 
+          (f.user_id === friendId && f.friend_id === user.id)
+        );
+        
+        if (friendship) {
           const friendInfo = {
             id: friendUser.id,
-            email: friendUser.email,
-            name: friendUser.user_metadata?.full_name || friendUser.email?.split('@')[0],
-            username: friendUser.user_metadata?.username || friendUser.email?.split('@')[0],
+            email: '',
+            name: friendUser.display_name || friendUser.username,
+            username: friendUser.username,
             friendship_id: friendship.id,
             created_at: friendship.created_at
           };
 
-          if (friendship.user1_id === user.id) {
+          if (friendship.user_id === user.id) {
             sent.push(friendInfo);
           } else {
             received.push(friendInfo);
           }
         }
-      } catch (err) {
-        console.error(`Error fetching user ${friendId}:`, err);
       }
     }
 
@@ -93,8 +102,8 @@ export async function PATCH(request) {
 
     // Check if friendship exists and user is the recipient
     const { data: friendship, error: checkError } = await supabase
-      .from('friends')
-      .select('id, user1_id, user2_id, status')
+      .from('friendships')
+      .select('id, user_id, friend_id, status')
       .eq('id', friendshipId)
       .eq('status', 'pending')
       .single();
@@ -103,15 +112,15 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Friend request not found or already processed' }, { status: 404 });
     }
 
-    // Verify user is the recipient (user2_id)
-    if (friendship.user2_id !== user.id) {
+    // Verify user is the recipient (friend_id)
+    if (friendship.friend_id !== user.id) {
       return NextResponse.json({ error: 'Unauthorized to perform this action' }, { status: 403 });
     }
 
     if (action === 'accept') {
       // Update status to accepted
       const { error: updateError } = await supabase
-        .from('friends')
+        .from('friendships')
         .update({ 
           status: 'accepted',
           updated_at: new Date().toISOString()
@@ -131,7 +140,7 @@ export async function PATCH(request) {
     } else if (action === 'reject') {
       // Delete the friendship record
       const { error: deleteError } = await supabase
-        .from('friends')
+        .from('friendships')
         .delete()
         .eq('id', friendshipId);
 

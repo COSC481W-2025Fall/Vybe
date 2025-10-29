@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { Plus, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Users, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function GroupsPage() {
   const supabase = supabaseBrowser();
