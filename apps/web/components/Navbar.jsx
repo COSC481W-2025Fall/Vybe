@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, Users, Music2, Library, User as UserIcon, LogOut, Settings } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
+import VybeLogo from './common/VybeLogo';
 import { useState } from 'react';
 
 const links = CONFIG.NAV_LINKS.map(link => {
@@ -28,10 +29,10 @@ function NavPill({ href, label, Icon, active }) {
       href={href}
       aria-current={active ? 'page' : undefined}
       className={[
-        'group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition',
+        'group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition nav-item backdrop-blur-sm border',
         active
-          ? 'bg-white text-black shadow-sm'
-          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+          ? 'bg-white text-black shadow-md border-white/20'
+          : 'text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border-white/15',
       ].join(' ')}
     >
       <Icon className={`h-4 w-4 ${active ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
@@ -72,14 +73,19 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-12 max-w-6xl items-center gap-6 px-4">
-        {/* brand */}
-        <Link href="/" className="text-xl font-extrabold">
-          <span className="text-yellow-400">Vybe</span>
-        </Link>
+    <nav className="sticky top-0 z-50 w-full border-b border-transparent bg-black/40 backdrop-blur-md">
+      <div className="mx-auto flex h-12 max-w-6xl items-center px-4">
+        {/* left: brand (separate, no glass) */}
+        <div className="shrink-0">
+          <Link href="/" aria-label="Go to home" className="inline-block">
+            <VybeLogo />
+          </Link>
+        </div>
 
-        {/* links */}
+        {/* spacer left of center */}
+        <div className="flex-1" />
+
+        {/* center: nav links */}
         <div className="flex items-center gap-2">
           {links.map(({ href, label, Icon }) => {
             const active =
@@ -96,14 +102,14 @@ export default function Navbar() {
           })}
         </div>
 
-        {/* spacer for right-aligned actions */}
-        <div className="ml-auto" />
+        {/* spacer right of center */}
+        <div className="flex-1" />
         
         {/* Sign out button */}
         <button
           onClick={handleSignOut}
           disabled={isSigningOut}
-          className="group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition text-muted-foreground hover:text-red-400 hover:bg-red-50/10 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition nav-item backdrop-blur-sm border border-white/10 text-white/70 hover:text-red-400 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="Sign out"
           title="Sign out"
         >

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share, MoreHorizontal, Users, Plus, TrendingUp, ChevronRight, Music, AlertCircle } from "lucide-react";
-import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
@@ -11,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Alert, AlertDescription } from "./ui/alert";
 import { useGroups } from "../hooks/useGroups";
 import { useSocial } from "../hooks/useSocial";
-import { GroupCard } from "./shared/GroupCard";
+import FullGroupCard from "./shared/FullGroupCard";
 import { LoadingState } from "./shared/LoadingState";
 import { EmptyState } from "./shared/EmptyState";
 import { TextField, TextareaField, SwitchField } from "./shared/FormField";
@@ -60,18 +59,18 @@ export function HomePage({ onNavigate } = {}) {
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="flex items-center space-x-2">
-              <Users className="h-6 w-6" />
+            <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
+              <Users className="h-5 w-5" />
               <span>My Groups</span>
             </h2>
-            <p className="text-muted-foreground">Your most active music groups</p>
+            <p className="text-sm text-gray-400">Your most active music groups</p>
           </div>
           <Dialog open={createGroupDialog.isOpen} onOpenChange={createGroupDialog.setIsOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="flex items-center space-x-2">
+          <DialogTrigger asChild>
+              <button type="button" className="flex items-center space-x-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
                 <Plus className="h-4 w-4" />
                 <span>Create Group</span>
-              </Button>
+              </button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -111,12 +110,12 @@ export function HomePage({ onNavigate } = {}) {
                   onCheckedChange={setIsPublic}
                 />
                 <div className="flex justify-between">
-                  <Button type="submit" disabled={groupsLoading}>
+                  <button type="submit" disabled={groupsLoading} className="px-6 py-2 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {groupsLoading ? "Creating..." : "Create Group"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={createGroupDialog.close}>
+                  </button>
+                  <button type="button" onClick={createGroupDialog.close} className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
                     Cancel
-                  </Button>
+                  </button>
                 </div>
               </form>
             </DialogContent>
@@ -130,18 +129,24 @@ export function HomePage({ onNavigate } = {}) {
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groupsLoading ? (
             <LoadingState count={3} />
           ) : groups.length > 0 ? (
             groups.map((group) => (
-              <GroupCard
+              <FullGroupCard
                 key={group.id}
-                name={group.name}
-                description={group.description}
-                memberCount={group.memberCount}
-                songCount={group.songCount}
-                createdAt={group.createdAt}
+                group={{
+                  id: group.id,
+                  name: group.name,
+                  description: group.description,
+                  created_at: group.createdAt || group.created_at,
+                  memberCount: group.memberCount,
+                  playlist_songs: [],
+                  join_code: group.join_code,
+                  owner_id: group.owner_id,
+                }}
+                isOwner={false}
                 onClick={() => onNavigate?.('groups', { groupId: group.id })}
               />
             ))
@@ -151,10 +156,10 @@ export function HomePage({ onNavigate } = {}) {
               title="No groups yet"
               description="Create your first group to start sharing music with friends"
               action={
-                <Button onClick={createGroupDialog.open}>
+                <button type="button" onClick={createGroupDialog.open} className="px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Your First Group
-                </Button>
+                </button>
               }
             />
           )}
@@ -165,13 +170,13 @@ export function HomePage({ onNavigate } = {}) {
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2>Friends' Song of the Day</h2>
-            <p className="text-muted-foreground">See what your friends are currently vibing to</p>
+            <h2 className="text-xl font-semibold text-white">Friends' Song of the Day</h2>
+            <p className="text-sm text-gray-400">See what your friends are currently vibing to</p>
           </div>
-          <Button size="sm" onClick={shareSongDialog.open}>
+          <button type="button" onClick={shareSongDialog.open} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
             <Plus className="h-4 w-4 mr-2" />
             Share Song
-          </Button>
+          </button>
         </div>
         
         {socialError && (
@@ -244,12 +249,12 @@ export function HomePage({ onNavigate } = {}) {
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2>Communities</h2>
-            <p className="text-muted-foreground">Discover music communities and connect with like-minded listeners</p>
+            <h2 className="text-xl font-semibold text-white">Communities</h2>
+            <p className="text-sm text-gray-400">Discover music communities and connect with like-minded listeners</p>
           </div>
-          <Button variant="outline" size="sm" onClick={communitiesDialog.open}>
+          <button type="button" onClick={communitiesDialog.open} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
             Browse All
-          </Button>
+          </button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

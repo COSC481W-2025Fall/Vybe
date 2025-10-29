@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Users, Plus } from 'lucide-react';
+import FullGroupCard from '@/components/shared/FullGroupCard';
 
 export default function GroupsPage() {
   const supabase = supabaseBrowser();
@@ -86,14 +87,14 @@ export default function GroupsPage() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between gap-12">
             <div>
-              <h1 className="text-4xl font-bold mb-2">My Groups</h1>
-              <p className="text-gray-400 text-lg">Manage your music groups and playlists</p>
+              <h1 className="page-title mb-1">My Groups</h1>
+              <p className="section-subtitle">Manage your music groups and playlists</p>
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0">
               <button
                 onClick={() => setShowJoinModal(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors border border-gray-700"
+                className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20"
               >
                 <Users className="h-5 w-5" />
                 Join Group
@@ -125,7 +126,7 @@ export default function GroupsPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowJoinModal(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20"
               >
                 <Users className="h-5 w-5" />
                 Join Group
@@ -142,7 +143,7 @@ export default function GroupsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groups.map((group) => (
-              <GroupCard
+              <FullGroupCard
                 key={group.id}
                 group={group}
                 isOwner={group.owner_id === user?.id}
@@ -174,125 +175,6 @@ export default function GroupsPage() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function GroupCard({ group, isOwner, onClick }) {
-  const [members, setMembers] = useState([]);
-  const supabase = supabaseBrowser();
-
-  useEffect(() => {
-    async function loadMembers() {
-      // Fetch owner
-      const { data: owner } = await supabase
-        .from('users')
-        .select('id, username, profile_picture_url')
-        .eq('id', group.owner_id)
-        .single();
-
-      // Fetch up to 2 additional members
-      const { data: groupMembers } = await supabase
-        .from('group_members')
-        .select('user_id')
-        .eq('group_id', group.id)
-        .limit(2);
-
-      if (groupMembers && groupMembers.length > 0) {
-        const { data: memberUsers } = await supabase
-          .from('users')
-          .select('id, username, profile_picture_url')
-          .in('id', groupMembers.map(m => m.user_id));
-
-        setMembers([owner, ...(memberUsers || [])].filter(Boolean));
-      } else {
-        setMembers(owner ? [owner] : []);
-      }
-    }
-
-    loadMembers();
-  }, [group.id, group.owner_id]);
-
-  const formattedDate = new Date(group.created_at).toLocaleDateString('en-US', {
-    month: 'numeric',
-    day: 'numeric',
-    year: 'numeric'
-  });
-
-  const displayMembers = members.slice(0, 3);
-  const remainingCount = Math.max(0, (group.memberCount || 0) - displayMembers.length);
-
-  return (
-    <div
-      onClick={onClick}
-      className="relative p-6 rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm hover:border-gray-600 transition-all cursor-pointer"
-    >
-      {/* Header with title and badge */}
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="text-2xl font-bold text-white">{group.name}</h3>
-        {isOwner ? (
-          <span className="px-3 py-1 bg-purple-600/20 text-purple-400 rounded-full text-xs font-medium border border-purple-500/30">
-            Owner
-          </span>
-        ) : (
-          <span className="px-3 py-1 bg-gray-700/50 text-gray-300 rounded-full text-xs font-medium">
-            Public
-          </span>
-        )}
-      </div>
-
-      {/* Description */}
-      <p className="text-gray-400 text-sm mb-6">
-        {group.description || 'No description'}
-      </p>
-
-      {/* Stats */}
-      <div className="flex items-center gap-6 mb-6 text-sm text-gray-400">
-        <span>{group.memberCount || 1} members</span>
-        <span>{group.playlist_songs?.length || 0} songs</span>
-        <span className="flex items-center gap-1">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Created {formattedDate}
-        </span>
-      </div>
-
-      {/* Bottom section with avatars and join code */}
-      <div className="flex items-center justify-between">
-        {/* Member avatars */}
-        <div className="flex -space-x-2">
-          {displayMembers.map((member, index) => (
-            <div
-              key={member?.id || index}
-              className="w-8 h-8 rounded-full border-2 border-gray-900 overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500"
-              title={member?.username || 'Member'}
-            >
-              {member?.profile_picture_url ? (
-                <img
-                  src={member.profile_picture_url}
-                  alt={member.username || 'Member'}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white text-xs font-semibold">
-                  {member?.username?.[0]?.toUpperCase() || 'M'}
-                </div>
-              )}
-            </div>
-          ))}
-          {remainingCount > 0 && (
-            <div className="w-8 h-8 rounded-full bg-gray-700 border-2 border-gray-900 flex items-center justify-center text-white text-xs">
-              +{remainingCount}
-            </div>
-          )}
-        </div>
-
-        {/* Join code badge */}
-        <div className="px-3 py-1.5 bg-gray-700/50 rounded-lg text-gray-300 text-sm font-mono font-semibold">
-          {group.join_code || 'GENERATING...'}
-        </div>
-      </div>
     </div>
   );
 }

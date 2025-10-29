@@ -42,12 +42,12 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
+    <section className="mx-auto px-6 py-8 text-white">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Settings</h1>
+        <h1 className="page-title mb-6">Settings</h1>
 
         {user && (
-          <div className="mb-8 p-4 bg-gray-900 rounded-lg">
+          <div className="mb-6 glass-card rounded-2xl p-6 transition-colors hover:bg-white/5">
             <h2 className="text-xl font-semibold mb-2">Account</h2>
             <p className="text-gray-400">Email: {user.email}</p>
             <p className="text-gray-400 capitalize">Logged in with: {provider}</p>
@@ -63,7 +63,7 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <h2 className="text-2xl font-semibold">About Your Login</h2>
 
-          <div className="p-6 bg-gray-900 rounded-lg border border-gray-800">
+          <div className="glass-card rounded-2xl p-6 transition-colors hover:bg-white/5">
             <p className="text-gray-300">
               You're logged in using <span className="text-white font-semibold capitalize">{provider}</span>.
             </p>
@@ -73,7 +73,7 @@ export default function SettingsPage() {
           </div>
 
           {provider === 'google' && (
-            <div className="p-4 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+            <div className="glass-card rounded-2xl p-4 border border-blue-500/40 transition-colors hover:bg-white/5">
               <p className="text-sm text-blue-200">
                 With YouTube (Google) login, you have access to your YouTube playlists and history.
               </p>
@@ -81,7 +81,7 @@ export default function SettingsPage() {
           )}
 
           {provider === 'spotify' && (
-            <div className="p-4 bg-green-900/30 border border-green-500/50 rounded-lg">
+            <div className="glass-card rounded-2xl p-4 border border-green-500/40 transition-colors hover:bg-white/5">
               <p className="text-sm text-green-200">
                 With Spotify login, you have access to your Spotify playlists and recently played tracks.
               </p>
@@ -89,6 +89,6 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

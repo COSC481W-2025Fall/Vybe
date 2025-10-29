@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Users, Heart, MoreVertical, Plus, ChevronDown } from 'lucide-react';
+import { Users, Heart, MoreVertical, Plus } from 'lucide-react';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
@@ -276,11 +277,11 @@ export default function GroupDetailPage({ params }) {
     <div className="min-h-screen text-white">
       {/* Header */}
       <div className="border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2">{group?.name}</h1>
-              <p className="text-gray-400 text-lg">{group?.description || 'No description'}</p>
+              <h1 className="page-title mb-1">{group?.name}</h1>
+              <p className="section-subtitle">{group?.description || 'No description'}</p>
             </div>
             <button
               onClick={() => setShowAddPlaylistModal(true)}
@@ -294,11 +295,11 @@ export default function GroupDetailPage({ params }) {
       </div>
 
       {/* Main Content */}
-      <div className="w-full max-w-4xl mx-auto px-6 py-8">
+      <div className="w-full max-w-6xl mx-auto px-6 py-8">
         <div className="w-full">
           {/* Playlist Songs */}
           <div className="w-full">
-            <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+            <div className="glass-card rounded-2xl p-6">
               {/* Playlist Selector */}
               {playlists.length > 0 ? (
                 <>
@@ -307,30 +308,33 @@ export default function GroupDetailPage({ params }) {
                       Select Playlist
                     </label>
                     <div className="relative">
-                      <select
-                        value={selectedPlaylist || 'all'}
-                        onChange={(e) => setSelectedPlaylist(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer hover:bg-gray-750 transition-colors pr-10"
-                      >
-                        <option value="all">
-                          All Playlists • {Object.values(actualTrackCounts).reduce((sum, count) => sum + count, 0)} tracks
-                        </option>
-                        {playlists.map((playlist) => (
-                          <option key={playlist.id} value={playlist.id}>
-                            {playlist.name} • {actualTrackCounts[playlist.id] ?? playlist.track_count ?? 0} tracks
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                      <Select value={selectedPlaylist || 'all'} onValueChange={setSelectedPlaylist}>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder="Select a playlist"
+                            aria-label="playlist-select"
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="min-w-[240px]">
+                          <SelectItem value="all">
+                            All Playlists • {Object.values(actualTrackCounts).reduce((sum, count) => sum + count, 0)} tracks
+                          </SelectItem>
+                          {playlists.map((playlist) => (
+                            <SelectItem key={playlist.id} value={String(playlist.id)}>
+                              {playlist.name} • {actualTrackCounts[playlist.id] ?? playlist.track_count ?? 0} tracks
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
                   {/* Playlist Header */}
                   <div className="mb-6">
-                    <h2 className="text-3xl font-bold mb-2">
+                    <h2 className="section-title mb-1">
                       {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
                     </h2>
-                    <p className="text-gray-400">
+                    <p className="section-subtitle">
                       {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
                     </p>
                   </div>
@@ -359,7 +363,7 @@ export default function GroupDetailPage({ params }) {
                   {playlistSongs.length > 20 && !showAllSongs && (
                     <button
                       onClick={() => setShowAllSongs(true)}
-                      className="w-full mt-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-colors"
+                      className="w-full mt-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/15"
                     >
                       View All {playlistSongs.length} Tracks
                     </button>
@@ -371,7 +375,7 @@ export default function GroupDetailPage({ params }) {
                         setShowAllSongs(false);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className="w-full mt-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-colors"
+                      className="w-full mt-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/15"
                     >
                       Show Less
                     </button>
@@ -380,7 +384,7 @@ export default function GroupDetailPage({ params }) {
               ) : (
                 <div className="text-center py-20">
                   <Users className="h-16 w-16 text-gray-600 mb-4 mx-auto" />
-                  <h3 className="text-xl font-semibold mb-2">No playlists yet</h3>
+                  <h3 className="section-title mb-2">No playlists yet</h3>
                   <p className="text-gray-400 mb-6">Add a playlist from YouTube or Spotify to get started</p>
                   <button
                     onClick={() => setShowAddPlaylistModal(true)}

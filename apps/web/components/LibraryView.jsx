@@ -384,11 +384,10 @@ export default function LibraryView() {
     // Show "connect account" message if no provider
     if (!provider) {
       return (
-        <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-b from-black via-gray-900 to-purple-900 p-8 shadow-2xl backdrop-blur-sm mb-40 text-white">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-purple-900/40 pointer-events-none" />
+        <div className="glass-card rounded-2xl p-8 shadow-2xl mb-40 text-white">
           <div className="relative text-center py-16">
             <ListMusic className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
-            <h3 className="text-xl font-semibold text-white mb-3">No Music Account Connected</h3>
+            <h3 className="section-title mb-3">No Music Account Connected</h3>
             <p className="text-base text-muted-foreground mb-6">
               Connect your Spotify or YouTube account in Settings to view your library
             </p>
@@ -405,17 +404,15 @@ export default function LibraryView() {
 
     if (tab !== 'recent') {
       return (
-        <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-b from-black via-gray-900 to-purple-900 p-8 shadow-2xl backdrop-blur-sm mb-40 text-white">
-          {/* Gradient overlay for depth */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-purple-900/40 pointer-events-none" />
+        <div className="glass-card rounded-2xl p-8 shadow-2xl mb-40 text-white">
 
           <div className="relative mb-8 flex items-center gap-3">
             <div className="p-2 bg-yellow-400/20 rounded-lg">
               <ListMusic className="h-5 w-5 text-yellow-400" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-white">Your Playlists</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="section-title">Your Playlists</h2>
+              <p className="section-subtitle">
                 {provider === 'google' ? 'Your saved YouTube playlists' : 'Your saved Spotify playlists'}
               </p>
             </div>
@@ -439,12 +436,12 @@ export default function LibraryView() {
               <ListMusic className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
               {provider === 'google' ? (
                 <>
-                  <h3 className="text-xl font-semibold text-white mb-3">No playlists found</h3>
+                  <h3 className="section-title mb-3">No playlists found</h3>
                   <p className="text-base text-muted-foreground">Create some playlists on YouTube to see them here</p>
                 </>
               ) : (
                 <>
-                  <h3 className="text-xl font-semibold text-white mb-3">No playlists found</h3>
+                  <h3 className="section-title mb-3">No playlists found</h3>
                   <p className="text-base text-muted-foreground">Create some playlists on Spotify to see them here</p>
                 </>
               )}
@@ -461,17 +458,15 @@ export default function LibraryView() {
     }
 
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-b from-black via-gray-900 to-purple-900 p-8 shadow-2xl backdrop-blur-sm mb-40 text-white">
-        {/* Gradient overlay for depth */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-purple-900/40 pointer-events-none" />
+      <div className="glass-card rounded-2xl p-8 shadow-2xl mb-40 text-white">
         
         <div className="relative mb-8 flex items-center gap-3">
           <div className="p-2 bg-yellow-400/20 rounded-lg">
             <Clock className="h-5 w-5 text-yellow-400" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-white">Recent Listening History</h2>
-            <p className="text-sm text-muted-foreground">Your latest musical journey</p>
+            <h2 className="section-title">Recent Listening History</h2>
+            <p className="section-subtitle">Your latest musical journey</p>
           </div>
         </div>
 
@@ -492,12 +487,12 @@ export default function LibraryView() {
             <Clock className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
             {provider === 'google' ? (
               <>
-                <h3 className="text-xl font-semibold text-white mb-3">No recent play history</h3>
+                <h3 className="section-title mb-3">No recent play history</h3>
                 <p className="text-base text-muted-foreground">YouTube doesn't provide access to your watch history through our API</p>
               </>
             ) : (
               <>
-                <h3 className="text-xl font-semibold text-white mb-3">No recent plays yet</h3>
+                <h3 className="section-title mb-3">No recent plays yet</h3>
                 <p className="text-base text-muted-foreground">Start listening to music to see your history here</p>
               </>
             )}
@@ -537,10 +532,8 @@ export default function LibraryView() {
   return (
     <section className="mx-auto max-w-6xl px-6 py-8">
       <header className="mb-6">
-        <h1 className="text-xl font-semibold text-white">Your Library</h1>
-        <p className="text-sm text-muted-foreground text-white/80">
-          Your listening history and saved playlists
-        </p>
+        <h1 className="page-title">Your Library</h1>
+        <p className="section-subtitle">Your listening history and saved playlists</p>
 
           {/* User identity */}
           <div className="mt-3 flex items-center gap-3">
