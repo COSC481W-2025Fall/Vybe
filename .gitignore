@@ -15,40 +15,89 @@ yarn-error.log*
 
 # env
 .env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # misc
 .DS_Store
 .vercel/
 *.tsbuildinfo
-# test files
-clean.txt
-bad.txt
-secret.txt
+Thumbs.db
+Desktop.ini
 
 # test files
 clean.txt
 bad.txt
 secret.txt
+
+# Python
 venv/
 .venv/
 backend/.venv/
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# pytest
 .pytest_cache/
 .coverage
 htmlcov/
 .mypy_cache/
-.env
-
-# Coverage
+.pytest_cache/
 .coverage
 backend/htmlcov/
 backend/coverage.xml
+
+# Playwright
 playwright-report/
+test-results/
+playwright/.cache/
+
+# docs (if you want to ignore extracted wireframes)
 docs/
 
+# Cursor/IDE
 .cursorignore
-sprint-1-assignee-breakdown.txt
-get-issues.ps1
-
-# Claude Code
 .claude/
+
+# Scripts and temporary files
+get-issues.ps1
+update-*.ps1
+issue_*_update.json
+*.ps1
+
+# Sprint/assignee files (if temporary)
+sprint-*-assignee-breakdown.txt
+*-assignee-breakdown.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Build outputs
+dist/
+*.tsbuildinfo

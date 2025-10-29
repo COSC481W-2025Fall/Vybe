@@ -154,5 +154,21 @@ main {
     0%, 100% { background-position: 0% 50%, 0% 50%, 0% 50%, 0% 50%, 0% 0%; }
     50%     { background-position: 100% 40%, 20% 80%, 80% 20%, 0% 60%, 0% 100%; }
   }
+
+  /* Glassmorphism card effect */
+  .glass-card {
+    background: rgba(17, 24, 39, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-card:hover {
+    background: rgba(31, 41, 55, 0.7);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
 }
 

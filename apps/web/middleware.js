@@ -5,7 +5,6 @@ import { CONFIG } from './config/constants.js'
 
 // Paths that are always public (exclude '/sign-in' so we can handle it explicitly)
 const PUBLIC = new Set([
-  '/',              // landing
   '/auth/callback', // Supabase OAuth will hit this
   '/favicon.ico',
   '/api/health',
@@ -17,7 +16,7 @@ export async function middleware(req) {
   // Skip CORS preflights quickly
   if (req.method === 'OPTIONS') return NextResponse.next()
 
-  // Public routes
+  // Public routes - allow without auth
   if (PUBLIC.has(pathname)) return NextResponse.next()
 
   // Create a response up front so auth-helpers can refresh cookies if needed
@@ -37,17 +36,17 @@ export async function middleware(req) {
     return NextResponse.redirect(url)
   }
 
-  // If authenticated and visiting '/sign-in' → bounce to next or '/library'
+  // If authenticated and visiting '/sign-in' → bounce to next or home page
   if (pathname === '/sign-in') {
     const url = req.nextUrl.clone()
     const nextParam = req.nextUrl.searchParams.get('next')
     if (nextParam) {
-      // next may contain path + query (e.g., /library?from=google)
+      // next may contain path + query (e.g., /groups/123)
       const dest = new URL(nextParam, req.nextUrl.origin)
       url.pathname = dest.pathname
       url.search = dest.search
     } else {
-      url.pathname = '/library'
+      url.pathname = '/' // Redirect to home instead of library
       url.search = ''
     }
     return NextResponse.redirect(url)

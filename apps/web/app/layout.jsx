@@ -2,9 +2,7 @@ import './globals.css';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import Navbar from '@/components/Navbar';
-
-
-import { supabaseServer } from '@/lib/supabase/server';
+import { Toaster } from '@/components/ui/sonner';
 
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
@@ -20,6 +18,7 @@ export default async function RootLayout({ children }) {
       <body>
         {user && <Navbar />}
         <main className="flex justify-center">{children}</main>
+        <Toaster />
       </body>
     </html>
   );
