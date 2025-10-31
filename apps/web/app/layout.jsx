@@ -2,7 +2,7 @@ import './globals.css';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import Navbar from '@/components/Navbar';
-
+import ClientProviders from '@/components/ClientProviders';
 
 import { supabaseServer } from '@/lib/supabase/server';
 
@@ -18,8 +18,10 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        {user && <Navbar />}
-        <main className="flex justify-center">{children}</main>
+        <ClientProviders>
+          {user && <Navbar />}
+          <main className="flex justify-center">{children}</main>
+        </ClientProviders>
       </body>
     </html>
   );

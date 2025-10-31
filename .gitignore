@@ -53,5 +53,7 @@ get-issues.ps1
 # Documentation
 docs/
 # Task Completion Reports
-TASK-1.*-COMPLETION.md
+TASK-*.md
 PBI-59-ACCOUNT-SETTINGS-BREAKDOWN.md
+# Supabase Setup Guides
+SUPABASE_*.md
