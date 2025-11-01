@@ -39,20 +39,22 @@ export async function GET() {
       .eq('user_id', user.id)
       .single();
 
-    if (privacyError && privacyError.code !== 'PGRST116') {
-      // If table doesn't exist or other error, return defaults
-      console.error('[privacy API] Error fetching privacy settings:', privacyError);
-      
-      // Return default settings if no record exists
-      if (privacyError.code === 'PGRST116') {
+    // Handle case where table doesn't exist yet or no record found
+    if (privacyError) {
+      // PGRST116 = no rows returned (table exists but no record)
+      // 42P01 = relation does not exist (table doesn't exist)
+      // P0001 = other errors
+      if (privacyError.code === 'PGRST116' || privacyError.code === '42P01') {
+        // Table doesn't exist yet or no record exists - return defaults
+        console.log('[privacy API] No privacy settings found, returning defaults');
         const defaults = getDefaultPrivacySettings();
         return NextResponse.json(defaults);
       }
       
-      return NextResponse.json(
-        { error: 'Failed to fetch privacy settings' },
-        { status: 500 }
-      );
+      // Other errors - log but still return defaults to allow UI to work
+      console.error('[privacy API] Error fetching privacy settings:', privacyError);
+      const defaults = getDefaultPrivacySettings();
+      return NextResponse.json(defaults);
     }
 
     // If no settings exist, return defaults
