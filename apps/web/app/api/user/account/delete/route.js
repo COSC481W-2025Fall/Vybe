@@ -7,6 +7,11 @@ import {
   deleteAccount,
   checkAccountAge,
 } from '@/lib/services/accountDeletion';
+import {
+  sanitizeRequestBody,
+  createErrorResponse,
+  checkRateLimit,
+} from '@/lib/validation/serverValidation';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,19 +51,55 @@ export async function POST(request) {
       );
     }
 
-    // Parse request body
+    // Rate limiting (strict for account deletion)
+    const rateLimitKey = user.id || 'anonymous';
+    const rateLimit = checkRateLimit(rateLimitKey, {
+      limit: 5, // 5 deletion attempts per hour
+      windowMs: 60 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      const resetSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+      return NextResponse.json(
+        createErrorResponse(
+          'Rate limit exceeded',
+          429,
+          {
+            message: `Too many deletion requests. Please try again in ${Math.ceil(resetSeconds / 60)} minutes.`,
+            retryAfter: resetSeconds,
+          }
+        ),
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(resetSeconds),
+            'X-RateLimit-Limit': '5',
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+            'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
+          },
+        }
+      );
+    }
+
+    // Parse and sanitize request body
     let body;
     try {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
+        createErrorResponse('Invalid JSON in request body', 400),
         { status: 400 }
       );
     }
 
+    // Sanitize input (preserve password field as it's needed for verification)
+    const sanitizedBody = sanitizeRequestBody(body, {
+      deep: true,
+      preserveUrls: false,
+    });
+
     // Validate deletion request
-    const validation = validateDeletionRequest(user, body);
+    const validation = validateDeletionRequest(user, sanitizedBody);
     if (!validation.valid) {
       const status = validation.hoursRemaining !== undefined ? 403 : 400;
       return NextResponse.json(

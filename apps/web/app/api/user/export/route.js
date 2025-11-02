@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import {
+  createErrorResponse,
+  checkRateLimit,
+} from '@/lib/validation/serverValidation';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,10 +38,35 @@ export async function GET(request) {
 
     const userId = user.id;
 
-    // Rate limiting: Check last export time (simple in-memory check for now)
-    // In production, store in database or use Redis
-    // For now, we'll implement a basic version that checks a simple tracking mechanism
-    // TODO: Implement proper rate limiting with database storage
+    // Rate limiting: 1 export per 24 hours
+    const rateLimitKey = user.id || 'anonymous';
+    const rateLimit = checkRateLimit(rateLimitKey, {
+      limit: 1, // 1 export per 24 hours
+      windowMs: 24 * 60 * 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      const resetHours = Math.ceil((rateLimit.resetAt - Date.now()) / (60 * 60 * 1000));
+      return NextResponse.json(
+        createErrorResponse(
+          'Rate limit exceeded',
+          429,
+          {
+            message: `Data export is limited to once per 24 hours. Please try again in ${resetHours} hours.`,
+            retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+          }
+        ),
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+            'X-RateLimit-Limit': '1',
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+            'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
+          },
+        }
+      );
+    }
 
     // Collect all user data
     const exportData = {

@@ -60,17 +60,38 @@ const bioSchema = z
  * - Optional field
  * - Must be valid URL format if provided
  * - Can be empty string or null
+ * - Also accepts File objects for uploads
  * - Validates URL format using Zod's built-in URL validator
  */
 const profilePictureUrlSchema = z
-  .string({
-    invalid_type_error: 'Profile picture URL must be a string',
-  })
-  .url('Invalid profile picture URL format')
+  .union([
+    z.string({
+      invalid_type_error: 'Profile picture must be a URL string or File object',
+    }).url('Invalid profile picture URL format'),
+    z.instanceof(File, {
+      message: 'Profile picture must be a valid image file',
+    }).refine((file) => {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      return validTypes.includes(file.type);
+    }, 'Profile picture must be a JPEG, PNG, WebP, or GIF image')
+    .refine((file) => {
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      return file.size <= maxSize;
+    }, 'Profile picture must be smaller than 5MB'),
+    z.literal(''),
+    z.null(),
+  ])
   .optional()
-  .or(z.literal(''))
-  .nullable()
-  .transform((val) => (val === '' ? null : val));
+  .transform((val) => {
+    // If empty string, return null
+    if (val === '') return null;
+    // If File object, return as-is (will be handled by upload component)
+    if (val instanceof File) return val;
+    // If URL string, return as-is
+    return val;
+  });
 
 /**
  * Profile form validation schema
@@ -112,5 +133,11 @@ export const profileSchema = z.object({
  *   profile_picture_url: 'https://...',
  * };
  * ```
+ */
+
+/**
+ * Export TypeScript-compatible type
+ * Note: This is a JSDoc typedef for JavaScript projects
+ * For TypeScript projects, use: `type ProfileFormData = z.infer<typeof profileSchema>;`
  */
 

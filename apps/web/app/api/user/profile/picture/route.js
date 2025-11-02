@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import {
+  createErrorResponse,
+  checkRateLimit,
+  sanitizeString,
+} from '@/lib/validation/serverValidation';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,13 +36,43 @@ export async function POST(request) {
       );
     }
 
+    // Rate limiting
+    const rateLimitKey = user.id || 'anonymous';
+    const rateLimit = checkRateLimit(rateLimitKey, {
+      limit: 20, // 20 uploads per minute
+      windowMs: 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      const resetSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+      return NextResponse.json(
+        createErrorResponse(
+          'Rate limit exceeded',
+          429,
+          {
+            message: `Too many upload requests. Please try again in ${resetSeconds} seconds.`,
+            retryAfter: resetSeconds,
+          }
+        ),
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(resetSeconds),
+            'X-RateLimit-Limit': '20',
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+            'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
+          },
+        }
+      );
+    }
+
     // Get file from form data
     const formData = await request.formData();
     const file = formData.get('file');
     
     if (!file || !(file instanceof File)) {
       return NextResponse.json(
-        { error: 'No file provided' },
+        createErrorResponse('No file provided', 400),
         { status: 400 }
       );
     }
@@ -46,7 +81,7 @@ export async function POST(request) {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only JPEG, PNG, and WebP are allowed' },
+        createErrorResponse('Invalid file type. Only JPEG, PNG, and WebP are allowed', 400),
         { status: 400 }
       );
     }
@@ -55,14 +90,19 @@ export async function POST(request) {
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File size exceeds 5MB limit' },
+        createErrorResponse('File size exceeds 5MB limit', 400),
         { status: 400 }
       );
     }
 
+    // Sanitize file name
+    const sanitizedName = sanitizeString(file.name);
+
     // Generate file path: {user_id}/profile-picture.{ext}
-    const fileExt = file.name.split('.').pop() || 'jpg';
-    const fileName = `${user.id}/profile-picture.${fileExt}`;
+    const fileExt = sanitizedName.split('.').pop() || 'jpg';
+    // Ensure file extension is safe (only allow alphanumeric)
+    const safeExt = fileExt.replace(/[^a-zA-Z0-9]/g, '');
+    const fileName = `${user.id}/profile-picture.${safeExt}`;
     const filePath = `profile-pictures/${fileName}`;
 
     // Convert File to ArrayBuffer for Supabase Storage
@@ -134,8 +174,38 @@ export async function DELETE() {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        createErrorResponse('Unauthorized', 401),
         { status: 401 }
+      );
+    }
+
+    // Rate limiting
+    const rateLimitKey = user.id || 'anonymous';
+    const rateLimit = checkRateLimit(rateLimitKey, {
+      limit: 10, // 10 deletes per minute
+      windowMs: 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      const resetSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+      return NextResponse.json(
+        createErrorResponse(
+          'Rate limit exceeded',
+          429,
+          {
+            message: `Too many delete requests. Please try again in ${resetSeconds} seconds.`,
+            retryAfter: resetSeconds,
+          }
+        ),
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(resetSeconds),
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+            'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
+          },
+        }
       );
     }
 

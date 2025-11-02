@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { User, Shield, Bell, Settings as SettingsIcon, Save, AlertCircle } from 'lucide-react';
 import SettingsNav from '@/components/SettingsNav';
 import SettingsSyncIndicator from '@/components/SettingsSyncIndicator';
+import SettingsConflictDialog from '@/components/SettingsConflictDialog';
+import useSettingsStore from '@/store/settingsStore';
 
 // Context for managing unsaved changes across settings pages
 const SettingsContext = createContext(null);
@@ -51,6 +53,91 @@ export default function SettingsPageWrapper({ children }) {
   const [isSaving, setIsSaving] = useState(false);
   const [formSubmitHandler, setFormSubmitHandler] = useState(null);
   const [formResetHandler, setFormResetHandler] = useState(null);
+  
+  // Conflict dialog state
+  const [conflictDialog, setConflictDialog] = useState({
+    isOpen: false,
+    type: null,
+    localData: null,
+    remoteData: null,
+  });
+  
+  const conflicts = useSettingsStore((state) => state.conflicts);
+
+  // Listen for conflict detection events
+  useEffect(() => {
+    const handleConflictDetected = (event) => {
+      const { type, localData, remoteData } = event.detail;
+      setConflictDialog({
+        isOpen: true,
+        type,
+        localData,
+        remoteData,
+      });
+    };
+
+    window.addEventListener('settings-conflict-detected', handleConflictDetected);
+
+    // Also check store for pending conflicts
+    if (conflicts) {
+      Object.entries(conflicts).forEach(([type, conflict]) => {
+        if (conflict.needsResolution && !conflictDialog.isOpen) {
+          setConflictDialog({
+            isOpen: true,
+            type,
+            localData: conflict.local,
+            remoteData: conflict.remote,
+          });
+        }
+      });
+    }
+
+    return () => {
+      window.removeEventListener('settings-conflict-detected', handleConflictDetected);
+    };
+  }, [conflicts, conflictDialog.isOpen]);
+
+  // Handle conflict resolution
+  const handleConflictResolve = (resolvedData, choice) => {
+    const { type } = conflictDialog;
+    
+    // Update store with resolved data
+    const store = useSettingsStore.getState();
+    switch (type) {
+      case 'profile':
+        store.setProfile(resolvedData, { optimistic: false });
+        break;
+      case 'privacy':
+        store.setPrivacy(resolvedData, { optimistic: false });
+        break;
+      case 'notifications':
+        store.setNotifications(resolvedData, { optimistic: false });
+        break;
+    }
+
+    // Clear conflict from store
+    useSettingsStore.setState((state) => {
+      const newConflicts = { ...state.conflicts };
+      delete newConflicts[type];
+      return { conflicts: newConflicts };
+    });
+
+    setConflictDialog({
+      isOpen: false,
+      type: null,
+      localData: null,
+      remoteData: null,
+    });
+  };
+
+  const handleConflictClose = () => {
+    setConflictDialog({
+      isOpen: false,
+      type: null,
+      localData: null,
+      remoteData: null,
+    });
+  };
 
   // Handle save changes
   const handleSaveChanges = async () => {
@@ -204,6 +291,16 @@ export default function SettingsPageWrapper({ children }) {
           </main>
         </div>
       </div>
+
+      {/* Conflict Dialog */}
+      <SettingsConflictDialog
+        isOpen={conflictDialog.isOpen}
+        onClose={handleConflictClose}
+        type={conflictDialog.type}
+        localData={conflictDialog.localData}
+        remoteData={conflictDialog.remoteData}
+        onResolve={handleConflictResolve}
+      />
     </div>
     </SettingsContext.Provider>
   );

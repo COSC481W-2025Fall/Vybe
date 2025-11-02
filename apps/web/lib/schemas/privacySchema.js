@@ -142,43 +142,60 @@ export const privacySchema = z.object({
 })
 .refine(
   /**
-   * Validate allowed privacy combinations:
-   * - If profile is private, it's logical that playlists could also be private
-   * - If profile is private and searchable is false, that's consistent
-   * - If profile is private, listening activity should probably be hidden
-   * 
-   * This is a soft validation - we allow any combination but provide guidance
+   * Prevent invalid privacy combinations:
+   * - If profile is private and searchable is true, this is inconsistent
+   *   (users can find you in search but can't view your profile)
+   * - If profile is private and activity_feed_visible is true, this is inconsistent
+   *   (activity feed shows but profile is hidden)
    */
   (data) => {
-    // If profile is private, we don't enforce anything, but these are recommended:
-    // - Playlist visibility can be anything (no restriction)
-    // - Listening activity can be hidden (recommended but not required)
-    // - Searchable should be false (recommended but not required)
+    // Invalid: Private profile but searchable
+    if (data.profile_visibility === 'private' && data.searchable === true) {
+      return false;
+    }
     
-    // This refinement allows all combinations but could be extended to warn
-    // about potentially inconsistent settings
+    // Invalid: Private profile but activity feed visible
+    if (data.profile_visibility === 'private' && data.activity_feed_visible === true) {
+      return false;
+    }
     
-    return true; // Allow all combinations for now
+    return true;
   },
   {
-    message: 'Privacy settings combination may be inconsistent',
+    message: 'Invalid privacy combination: Private profiles cannot be searchable or have visible activity feeds',
+    path: ['profile_visibility'], // Attach error to profile_visibility field
   }
 )
 .refine(
   /**
-   * Additional validation: If profile is private, it makes sense that
-   * searchable should be false (though not strictly required)
+   * Additional validation: Ensure searchable matches profile visibility
    */
   (data) => {
-    // Warning: If profile is private but searchable is true, users might
-    // be confused why they can't see the profile even though it appears in search.
-    // We allow this but could show a warning.
-    
-    return true; // Allow for now, could be made stricter
+    // If searchable is true, profile must be public or friends (not private)
+    if (data.searchable === true && data.profile_visibility === 'private') {
+      return false;
+    }
+    return true;
   },
   {
-    message: 'If your profile is private, you may want to disable appearing in search results',
+    message: 'If your profile is private, you cannot appear in search results',
     path: ['searchable'], // Attach error to searchable field
+  }
+)
+.refine(
+  /**
+   * Additional validation: Ensure activity feed visibility matches profile visibility
+   */
+  (data) => {
+    // If activity feed is visible, profile cannot be private
+    if (data.activity_feed_visible === true && data.profile_visibility === 'private') {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'If your profile is private, your activity feed cannot be visible',
+    path: ['activity_feed_visible'], // Attach error to activity_feed_visible field
   }
 );
 
@@ -210,6 +227,14 @@ export const privacyPartialSchema = privacySchema.partial();
  *   activity_feed_visible: true,
  * };
  * ```
+ */
+
+/**
+ * Export TypeScript-compatible types
+ * Note: These are JSDoc typedefs for JavaScript projects
+ * For TypeScript projects, use:
+ *   type PrivacyFormData = z.infer<typeof privacySchema>;
+ *   type PrivacyPartialFormData = z.infer<typeof privacyPartialSchema>;
  */
 
 /**

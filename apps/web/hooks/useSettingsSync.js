@@ -329,15 +329,23 @@ export function useSettingsSync(options = {}) {
         return;
     }
 
+    // Import conflict resolution utilities
+    const {
+      resolveConflict,
+      ConflictResolutionStrategy,
+    } = await import('@/lib/utils/settingsConflictResolver');
+
     if (conflictResolution === 'remote') {
       // Last write wins (remote)
-      updateStoreWithRemoteData(type, remoteData);
+      const resolution = resolveConflict(type, localData, remoteData, ConflictResolutionStrategy.REMOTE);
+      updateStoreWithRemoteData(type, resolution.resolved);
       
       if (showNotifications) {
         showConflictResolvedNotification(type, 'remote');
       }
     } else if (conflictResolution === 'local') {
       // Keep local changes
+      const resolution = resolveConflict(type, localData, remoteData, ConflictResolutionStrategy.LOCAL);
       // Don't update store, but mark conflict
       useSettingsStore.setState((state) => ({
         conflicts: {
@@ -346,6 +354,7 @@ export function useSettingsSync(options = {}) {
             local: localData,
             remote: remoteData,
             detectedAt: new Date().toISOString(),
+            resolution: 'local',
           },
         },
       }));
@@ -353,8 +362,8 @@ export function useSettingsSync(options = {}) {
       if (showNotifications) {
         showConflictNotification(type);
       }
-    } else if (conflictResolution === 'prompt') {
-      // Show conflict notification (UI should prompt user)
+    } else if (conflictResolution === 'prompt' || conflictResolution === 'user_choice') {
+      // Show conflict dialog for user to choose
       useSettingsStore.setState((state) => ({
         conflicts: {
           ...state.conflicts,
@@ -362,12 +371,63 @@ export function useSettingsSync(options = {}) {
             local: localData,
             remote: remoteData,
             detectedAt: new Date().toISOString(),
+            needsResolution: true,
           },
         },
       }));
       
+      // Dispatch event to show conflict dialog
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('settings-conflict-detected', {
+          detail: {
+            type,
+            localData,
+            remoteData,
+          },
+        }));
+      }
+      
       if (showNotifications) {
         showConflictPromptNotification(type);
+      }
+    } else if (conflictResolution === 'merge') {
+      // Try to merge non-conflicting changes
+      const resolution = resolveConflict(type, localData, remoteData, ConflictResolutionStrategy.MERGE);
+      
+      if (resolution.requiresUserInput) {
+        // Has conflicts that need user input
+        useSettingsStore.setState((state) => ({
+          conflicts: {
+            ...state.conflicts,
+            [type]: {
+              local: localData,
+              remote: remoteData,
+              detectedAt: new Date().toISOString(),
+              needsResolution: true,
+              remainingConflicts: resolution.conflicts,
+            },
+          },
+        }));
+        
+        // Dispatch event to show conflict dialog
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('settings-conflict-detected', {
+            detail: {
+              type,
+              localData,
+              remoteData,
+              mergedData: resolution.resolved,
+              remainingConflicts: resolution.conflicts,
+            },
+          }));
+        }
+      } else {
+        // No conflicts, can auto-merge
+        updateStoreWithRemoteData(type, resolution.resolved);
+        
+        if (showNotifications) {
+          showConflictResolvedNotification(type, 'merged');
+        }
       }
     }
   };

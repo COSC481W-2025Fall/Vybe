@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { notificationSchema, notificationPartialSchema, getDefaultNotificationPreferences } from '@/lib/schemas/notificationSchema';
+import {
+  validateRequest,
+  formatValidationErrors,
+  createErrorResponse,
+  logValidationFailure,
+  checkRateLimit,
+} from '@/lib/validation/serverValidation';
 
 export const dynamic = 'force-dynamic';
 
@@ -146,13 +153,43 @@ export async function PUT(request) {
       );
     }
 
+    // Rate limiting
+    const rateLimitKey = user.id || 'anonymous';
+    const rateLimit = checkRateLimit(rateLimitKey, {
+      limit: 10, // 10 updates per minute
+      windowMs: 60 * 1000,
+    });
+
+    if (!rateLimit.allowed) {
+      const resetSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+      return NextResponse.json(
+        createErrorResponse(
+          'Rate limit exceeded',
+          429,
+          {
+            message: `Too many requests. Please try again in ${resetSeconds} seconds.`,
+            retryAfter: resetSeconds,
+          }
+        ),
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(resetSeconds),
+            'X-RateLimit-Limit': '10',
+            'X-RateLimit-Remaining': String(rateLimit.remaining),
+            'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
+          },
+        }
+      );
+    }
+
     // Parse and validate request body
     let body;
     try {
       body = await request.json();
     } catch {
       return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
+        createErrorResponse('Invalid JSON in request body', 400),
         { status: 400 }
       );
     }
@@ -161,20 +198,17 @@ export async function PUT(request) {
     body.security_alerts_inapp = true;
     body.security_alerts_email = true;
 
-    // Validate input against schema (use partial schema to allow partial updates)
-    const validationResult = notificationPartialSchema.safeParse(body);
+    // Validate and sanitize input (use partial schema to allow partial updates)
+    const validationResult = validateRequest(body, notificationPartialSchema, {
+      endpoint: '/api/user/notifications',
+      userId: user.id,
+      sanitize: true,
+      logErrors: true,
+    });
+
     if (!validationResult.success) {
-      // Format validation errors for client
-      const errors = validationResult.error.errors.map(err => ({
-        field: err.path.join('.'),
-        message: err.message,
-      }));
-      
       return NextResponse.json(
-        { 
-          error: 'Validation failed',
-          details: errors,
-        },
+        validationResult.errors,
         { status: 400 }
       );
     }

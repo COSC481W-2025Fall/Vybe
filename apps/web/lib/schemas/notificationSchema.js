@@ -192,6 +192,14 @@ export const notificationPartialSchema = notificationSchema.partial();
  */
 
 /**
+ * Export TypeScript-compatible types
+ * Note: These are JSDoc typedefs for JavaScript projects
+ * For TypeScript projects, use:
+ *   type NotificationFormData = z.infer<typeof notificationSchema>;
+ *   type NotificationPartialFormData = z.infer<typeof notificationPartialSchema>;
+ */
+
+/**
  * Helper function to get default notification preferences
  * @returns {NotificationFormData} Default notification preferences
  */
