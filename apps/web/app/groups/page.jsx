@@ -89,6 +89,16 @@ export default function GroupsPage() {
             <div>
               <h1 className="page-title mb-1">My Groups</h1>
               <p className="section-subtitle">Manage your music groups and playlists</p>
+              {/* Group count */}
+              <p className="text-sm text-gray-400 mt-1">
+                {loading ? 'Loading...' : (() => {
+                  if (groups.length === 1) {
+                    return '1 group';
+                  } else {
+                    return `${groups.length} groups`;
+                  }
+                })()}
+              </p>
             </div>
 
             <div className="flex items-center gap-3 flex-shrink-0">

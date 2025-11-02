@@ -14,7 +14,6 @@ import { SongDetailsDialog } from "./shared/SongDetailsDialog";
 import { CommunitiesDialog } from "./shared/CommunitiesDialog";
 import { ShareSongDialog } from "./shared/ShareSongDialog";
 import { toast } from "sonner";
-
 /**
  * HomePage component - Main dashboard view for authenticated users
  * Displays groups, friends' songs, and music communities
@@ -27,6 +26,10 @@ export function HomePage({ onNavigate } = {}) {
   const createGroupDialog = useDialog();
   const communitiesDialog = useDialog();
   const shareSongDialog = useDialog();
+  // Added dialogue hook and state (delete this comment later)
+  const communityDetailDialog = useDialog();
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
+
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
   const [isPublic, setIsPublic] = useState(true);
@@ -105,15 +108,15 @@ export function HomePage({ onNavigate } = {}) {
                   onCheckedChange={setIsPublic}
                 />
                 <div className="flex justify-between">
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={groupsLoading}
                     className="px-6 py-2 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {groupsLoading ? "Creating..." : "Create Group"}
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={createGroupDialog.close}
                     className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20"
                   >
@@ -124,7 +127,7 @@ export function HomePage({ onNavigate } = {}) {
             </DialogContent>
           </Dialog>
         </div>
-        
+
         {groupsError && (
           <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-sm">
             <AlertCircle className="h-4 w-4 inline mr-2" />
@@ -153,7 +156,7 @@ export function HomePage({ onNavigate } = {}) {
               title="No groups yet"
               description="Create your first group to start sharing music with friends"
               action={
-                <button 
+                <button
                   onClick={createGroupDialog.open}
                   className="px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors"
                 >
@@ -173,7 +176,7 @@ export function HomePage({ onNavigate } = {}) {
             <h2 className="text-2xl font-bold text-white mb-1">Friends' Song of the Day</h2>
             <p className="text-gray-400 text-sm">See what your friends are currently vibing to</p>
           </div>
-          <button 
+          <button
             onClick={shareSongDialog.open}
             className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors"
           >
@@ -181,7 +184,7 @@ export function HomePage({ onNavigate } = {}) {
             Share Song
           </button>
         </div>
-        
+
         {socialError && (
           <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-sm">
             <AlertCircle className="h-4 w-4 inline mr-2" />
@@ -206,7 +209,7 @@ export function HomePage({ onNavigate } = {}) {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 w-full">
               {friendsSongsOfTheDay.map((friend) => (
                 <button
-                  key={friend.id} 
+                  key={friend.id}
                   type="button"
                   className="flex flex-col items-center space-y-3 cursor-pointer group bg-transparent border-none p-0 focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg"
                   onClick={() => {
@@ -235,7 +238,7 @@ export function HomePage({ onNavigate } = {}) {
                       <Music className="h-3.5 w-3.5 text-gray-900" />
                     </div>
                   </div>
-                  
+
                   <div className="text-center w-full">
                     <p className="text-sm font-semibold text-white mb-1.5">{friend.shared_by?.split(' ')[0] || 'Friend'}</p>
                     <p className="text-xs font-medium text-white mb-0.5 leading-tight">{friend.title || 'Untitled'}</p>
@@ -269,21 +272,25 @@ export function HomePage({ onNavigate } = {}) {
             </h2>
             <p className="text-gray-400 text-sm">Discover new music communities</p>
           </div>
-          <button 
+          <button
             onClick={communitiesDialog.open}
             className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20"
           >
             Browse All
           </button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {communities.map((community) => (
             <button
-              key={community.id} 
+              key={community.id}
               type="button"
               className="glass-card rounded-xl p-6 hover:bg-white/5 transition-colors cursor-pointer text-left w-full focus:outline-none focus:ring-2 focus:ring-white/20"
-              onClick={() => toast.success(`Joined ${community.name}`)}
+              //onClick={() => toast.success(`Joined ${community.name}`)}
+              onClick={() => {
+                setSelectedCommunity(community);
+                communityDetailDialog.open();
+              }}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
@@ -297,10 +304,19 @@ export function HomePage({ onNavigate } = {}) {
                   </span>
                 )}
               </div>
-              <div className="flex items-center justify-between">
+              {/* <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-400">{community.member_count.toLocaleString()} members</span>
                 <ChevronRight className="h-4 w-4 text-gray-400" />
+              </div> */}
+
+              <div className="flex flex-col gap-1">
+                <span className="text-sm text-gray-400">{community.member_count.toLocaleString()} members</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">{community.group_count?.toLocaleString() || 0} groups</span>
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                </div>
               </div>
+              
             </button>
           ))}
         </div>
@@ -320,6 +336,22 @@ export function HomePage({ onNavigate } = {}) {
         onOpenChange={communitiesDialog.setIsOpen}
         communities={communities}
       />
+
+      {/* For now, added 3 empty pop ups to the trending communities button */}
+      <Dialog open={communityDetailDialog.isOpen} onOpenChange={communityDetailDialog.setIsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedCommunity?.name || 'Community'}</DialogTitle>
+            <DialogDescription>
+              {/* Leave blank for now */}
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            {/* Leave blank for now */}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ShareSongDialog
         open={shareSongDialog.isOpen}
         onOpenChange={shareSongDialog.setIsOpen}

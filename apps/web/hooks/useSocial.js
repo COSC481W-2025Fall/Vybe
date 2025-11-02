@@ -37,19 +37,25 @@ export function useSocial() {
           id: 'comm-1',
           name: 'Indie Discoveries',
           description: 'Finding hidden gems in indie music',
-          member_count: 1240
+          member_count: 1240,
+          //Mock group count
+          group_count: 45
         },
         {
           id: 'comm-2',
           name: 'Jazz Lounge',
           description: 'Classic and modern jazz appreciation',
-          member_count: 892
+          member_count: 892,
+          //Mock group count
+          group_count: 32
         },
         {
           id: 'comm-3',
           name: 'Electronic Pulse',
           description: 'Latest electronic and dance tracks',
-          member_count: 2156
+          member_count: 2156,
+          //Mock group count
+          group_count: 78
         }
       ]);
     } catch (err) {
