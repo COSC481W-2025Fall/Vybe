@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { User, Shield, Bell, Settings as SettingsIcon, Save, AlertCircle } from 'lucide-react';
 import SettingsNav from '@/components/SettingsNav';
+import SettingsSyncIndicator from '@/components/SettingsSyncIndicator';
 
 // Context for managing unsaved changes across settings pages
 const SettingsContext = createContext(null);
@@ -114,11 +115,16 @@ export default function SettingsPageWrapper({ children }) {
                 Manage your account settings and preferences
               </p>
             </div>
-            {/* Mobile menu button */}
-            <SettingsNav
-              sections={SETTINGS_SECTIONS}
-              variant="mobile"
-            />
+            <div className="flex items-center gap-4">
+              {/* Settings Sync Indicator */}
+              <SettingsSyncIndicator />
+              
+              {/* Mobile menu button */}
+              <SettingsNav
+                sections={SETTINGS_SECTIONS}
+                variant="mobile"
+              />
+            </div>
           </div>
         </div>
       </div>

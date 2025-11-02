@@ -1,9 +1,15 @@
 'use client';
 
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { getSettingsQueryOptions, invalidateOnUpdate } from '@/lib/cache/settingsCache';
 
 /**
  * Fetch user notification preferences
+ * 
+ * Uses optimized cache settings:
+ * - 5 minute stale time
+ * - Fallback to stale cache if API fails
+ * - Background refetch on window focus
  * 
  * @returns {Object} Query object with notification preferences, loading, and error states
  */
@@ -18,7 +24,7 @@ export function useNotificationPreferences() {
       }
       return await response.json();
     },
-    staleTime: 60 * 1000, // 1 minute
+    ...getSettingsQueryOptions(),
   });
 }
 
@@ -85,8 +91,8 @@ export function useNotificationPreferencesUpdate() {
       // Update cache with server response
       queryClient.setQueryData(['notificationPreferences'], data);
       
-      // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['notificationPreferences'] });
+      // Invalidate cache on explicit update
+      invalidateOnUpdate(queryClient, 'notifications');
       
       // Show success notification
       if (typeof window !== 'undefined') {
