@@ -1,92 +1,78 @@
-﻿import { headers } from "next/headers";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+﻿export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export default async function RecsPage({ params }) {
-  const h = headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
-  const url = `${proto}://${host}/api/recs/${encodeURIComponent(params.userId)}`;
+  const base = (process.env.FASTAPI_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+  const url = `${base}/recs/${encodeURIComponent(params.userId)}`;
 
-  const res = await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } });
+  const res = await fetch(url, {
+    cache: 'no-store',
+    headers: { Accept: 'application/json' },
+  });
+
   if (!res.ok) {
-    const text = await res.text();
-    return (
-      <div className="min-h-screen px-6 py-8 flex items-center justify-center">
-        <div className="w-full max-w-2xl rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-md p-6 shadow-sm">
-          <h1 className="text-2xl font-medium text-gray-700 dark:text-gray-300">
-            Friend Recommendations
-          </h1>
-          <p className="mt-2 text-red-600 dark:text-red-400">
-            Failed to load recommendations.
-          </p>
-          <pre className="mt-3 text-xs text-gray-800 dark:text-gray-300 bg-black/5 dark:bg-white/5 p-3 rounded-md overflow-x-auto whitespace-pre-wrap">
-            {text}
-          </pre>
-        </div>
-      </div>
-    );
+    const body = await res.text().catch(() => '');
+    throw new Error(`Backend ${url} -> HTTP ${res.status}. Body: ${body.slice(0,200)}`);
+  }
+
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Expected JSON from ${url} but got "${ct}". Body: ${body.slice(0,200)}`);
   }
 
   const data = await res.json();
   const recs = Array.isArray(data)
     ? data
     : Array.isArray(data?.recommendations)
-    ? data.recommendations
-    : [];
-  const userId = data?.user_id ?? params.userId;
-
-  if (!recs.length) {
-    return (
-      <div className="min-h-screen px-6 py-8 flex items-center justify-center">
-        <div className="w-full max-w-md text-center rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-md p-8 shadow-sm">
-          <h1 className="text-2xl font-medium text-gray-700 dark:text-gray-300">
-            Friend Recommendations
-          </h1>
-          <p className="mt-2 text-gray-700 dark:text-gray-300">
-            No friend-based tracks yet.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const spotifyUrl = (trackId) => `https://open.spotify.com/track/${trackId}`;
+      ? data.recommendations
+      : [];
 
   return (
-    <div className="min-h-screen px-6 py-8">
-      <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-medium text-gray-700 dark:text-gray-300">
+    <main className="min-h-screen bg-black">
+      <div className="mx-auto max-w-3xl p-6 text-gray-100">
+        <h1 className="text-3xl font-extrabold tracking-tight text-gray-100 mb-6">
           Friend Recommendations
         </h1>
 
-        <ul className="mt-6 space-y-4">
-          {recs.map((r) => (
-            <li
-              key={r.track_id}
-              className="rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-md p-5 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <a
-                className="font-medium underline underline-offset-2 decoration-2 text-violet-700 hover:text-violet-900 dark:text-violet-300 dark:hover:text-violet-200"
-                href={spotifyUrl(r.track_id)}
-                target="_blank"
-                rel="noreferrer"
+        {recs.length === 0 ? (
+          <p className="text-gray-400">No recommendations found.</p>
+        ) : (
+          <ul className="space-y-4">
+            {recs.map((r, idx) => (
+              <li
+                key={r.track_id ?? idx}
+                className="rounded-2xl border border-neutral-800 bg-neutral-900/80 hover:bg-neutral-900 transition-colors shadow-sm p-4"
               >
-                {r.track_id}
-              </a>
-              <div className="mt-1 text-sm text-gray-800 dark:text-gray-200">
-                Score: {Number(r.score).toFixed(2)} • Plays: {r.play_count}
-              </div>
-              {Array.isArray(r.contributing_friends) && r.contributing_friends.length ? (
-                <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  From: {r.contributing_friends.join(", ")}
+                <div className="font-semibold text-gray-100 break-all">
+                  {r.track_name ?? r.track_id}
                 </div>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+
+                <div className="text-sm text-gray-400 mt-1">
+                  score: {r.score} • plays: {r.play_count}
+                </div>
+
+                {r.track_id && (
+                  <a
+                    className="underline text-sm text-gray-200 hover:text-white mt-2 inline-block"
+                    href={`https://open.spotify.com/track/${r.track_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open in Spotify
+                  </a>
+                )}
+
+                {Array.isArray(r.contributing_friends) && r.contributing_friends.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-2">
+                    friends: {r.contributing_friends.join(', ')}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-    </div>
+    </main>
   );
 }
