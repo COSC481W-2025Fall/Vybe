@@ -10,24 +10,16 @@
  * - Validation logging
  */
 
+import { removeDangerousChars } from '../utils/sanitization.js';
+
 /**
  * Sanitize string input to prevent XSS attacks
+ * Uses the hardened removeDangerousChars function for consistent security
  * @param {string} input - String to sanitize
  * @returns {string} Sanitized string
  */
 export function sanitizeString(input) {
-  if (typeof input !== 'string') {
-    return String(input);
-  }
-
-  // Remove potentially dangerous characters
-  return input
-    .replace(/[<>]/g, '') // Remove < and >
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/data:/gi, '') // Remove data: protocol
-    .replace(/vbscript:/gi, '') // Remove vbscript: protocol
-    .replace(/on\w+=/gi, '') // Remove event handlers (onclick=, onload=, etc.)
-    .trim();
+  return removeDangerousChars(input);
 }
 
 /**
