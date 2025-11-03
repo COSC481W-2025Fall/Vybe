@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export default defineConfig({
   plugins: [react()],
@@ -12,23 +16,10 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/tests/e2e/**'],
     // Suppress act warnings for cleaner test output
     silent: false,
-    // Add coverage if needed
-    // coverage: {
-    //   provider: 'v8',
-    //   reporter: ['text', 'json', 'html'],
-    //   exclude: ['node_modules/', 'tests/', '**/*.test.*', '**/*.spec.*']
-    // }
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './'),
+      '@': path.resolve(__dirname, '.'),
     },
   },
-  css: {
-    postcss: './postcss.config.mjs',
-  },
-  // Use ESM for better compatibility
-  esbuild: {
-    target: 'node14'
-  }
 })
