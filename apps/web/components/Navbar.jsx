@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, Users, Music2, Library, User as UserIcon, LogOut, Settings } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import { useState } from 'react';
+import ThemeToggle from './ThemeToggle';
 
 const links = CONFIG.NAV_LINKS.map(link => {
   const iconMap = {
@@ -30,7 +31,7 @@ function NavPill({ href, label, Icon, active }) {
       className={[
         'group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition',
         active
-          ? 'bg-white text-black shadow-sm'
+          ? 'bg-foreground text-background shadow-sm dark:bg-accent dark:text-accent-foreground'
           : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
       ].join(' ')}
     >
@@ -98,6 +99,9 @@ export default function Navbar() {
 
         {/* spacer for right-aligned actions */}
         <div className="ml-auto" />
+        
+        {/* Theme toggle */}
+        <ThemeToggle />
         
         {/* Sign out button */}
         <button

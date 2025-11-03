@@ -266,25 +266,25 @@ export default function GroupDetailPage({ params }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen text-white flex items-center justify-center">
-        <p className="text-gray-400">Loading group...</p>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <p className="text-muted-foreground">Loading group...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="border-b border-gray-800">
+      <div className="border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold mb-2">{group?.name}</h1>
-              <p className="text-gray-400 text-lg">{group?.description || 'No description'}</p>
+              <p className="text-muted-foreground text-lg">{group?.description || 'No description'}</p>
             </div>
             <button
               onClick={() => setShowAddPlaylistModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-foreground hover:bg-foreground/90 text-background rounded-lg font-medium transition-colors"
             >
               <Plus className="h-5 w-5" />
               Add Playlist
@@ -298,19 +298,19 @@ export default function GroupDetailPage({ params }) {
         <div className="w-full">
           {/* Playlist Songs */}
           <div className="w-full">
-            <div className="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+            <div className="bg-muted border border-border rounded-2xl p-6">
               {/* Playlist Selector */}
               {playlists.length > 0 ? (
                 <>
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
                       Select Playlist
                     </label>
                     <div className="relative">
                       <select
                         value={selectedPlaylist || 'all'}
                         onChange={(e) => setSelectedPlaylist(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white appearance-none cursor-pointer hover:bg-gray-750 transition-colors pr-10"
+                        className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground appearance-none cursor-pointer hover:bg-accent/50 transition-colors pr-10"
                       >
                         <option value="all">
                           All Playlists • {Object.values(actualTrackCounts).reduce((sum, count) => sum + count, 0)} tracks
@@ -321,7 +321,7 @@ export default function GroupDetailPage({ params }) {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                     </div>
                   </div>
 
@@ -330,7 +330,7 @@ export default function GroupDetailPage({ params }) {
                     <h2 className="text-3xl font-bold mb-2">
                       {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
                     </h2>
-                    <p className="text-gray-400">
+                    <p className="text-muted-foreground">
                       {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
                     </p>
                   </div>
@@ -350,28 +350,28 @@ export default function GroupDetailPage({ params }) {
                         />
                       ))
                     ) : (
-                      <div className="text-center py-12 text-gray-400">
+                      <div className="text-center py-12 text-muted-foreground">
                         <p>No songs in this playlist</p>
                       </div>
                     )}
                   </div>
 
                   {playlistSongs.length > 20 && !showAllSongs && (
-                    <button
-                      onClick={() => setShowAllSongs(true)}
-                      className="w-full mt-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-colors"
-                    >
+                  <button
+                    onClick={() => setShowAllSongs(true)}
+                    className="w-full mt-6 py-3 bg-accent hover:bg-accent/80 rounded-lg font-medium transition-colors"
+                  >
                       View All {playlistSongs.length} Tracks
                     </button>
                   )}
 
                   {showAllSongs && playlistSongs.length > 20 && (
-                    <button
-                      onClick={() => {
+                  <button
+                    onClick={() => {
                         setShowAllSongs(false);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className="w-full mt-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-colors"
+                    className="w-full mt-6 py-3 bg-accent hover:bg-accent/80 rounded-lg font-medium transition-colors"
                     >
                       Show Less
                     </button>
@@ -379,12 +379,12 @@ export default function GroupDetailPage({ params }) {
                 </>
               ) : (
                 <div className="text-center py-20">
-                  <Users className="h-16 w-16 text-gray-600 mb-4 mx-auto" />
-                  <h3 className="text-xl font-semibold mb-2">No playlists yet</h3>
-                  <p className="text-gray-400 mb-6">Add a playlist from YouTube or Spotify to get started</p>
+                  <Users className="h-16 w-16 text-muted-foreground mb-4 mx-auto" />
+                  <h3 className="text-xl font-semibold mb-2 text-foreground">No playlists yet</h3>
+                  <p className="text-muted-foreground mb-6">Add a playlist from YouTube or Spotify to get started</p>
                   <button
                     onClick={() => setShowAddPlaylistModal(true)}
-                    className="px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors"
+                    className="px-6 py-3 bg-foreground hover:bg-foreground/90 text-background rounded-lg font-medium transition-colors"
                   >
                     Add Playlist
                   </button>
@@ -675,8 +675,8 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg max-w-md w-full p-6 border border-gray-800">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-50 p-4">
+      <div className="bg-background rounded-lg max-w-md w-full p-6 border border-border">
         <h2 className="text-2xl font-bold mb-4">
           {userExistingPlaylist ? 'Replace Your Playlist' : 'Add Playlist'}
         </h2>
@@ -693,7 +693,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
         <form onSubmit={handleAddPlaylist}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Platform
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -705,8 +705,8 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                   platform === 'youtube'
                     ? 'bg-red-600 text-white'
                     : hasYoutube
-                    ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                    : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    ? 'bg-accent text-foreground hover:bg-accent/80'
+                    : 'bg-accent text-muted-foreground cursor-not-allowed'
                 }`}
               >
                 YouTube {!hasYoutube && '(Not Connected)'}
@@ -719,8 +719,8 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                   platform === 'spotify'
                     ? 'bg-green-600 text-white'
                     : hasSpotify
-                    ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                    : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    ? 'bg-accent text-foreground hover:bg-accent/80'
+                    : 'bg-accent text-muted-foreground cursor-not-allowed'
                 }`}
               >
                 Spotify {!hasSpotify && '(Not Connected)'}
@@ -729,15 +729,15 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
               Select Playlist
             </label>
             {fetchingPlaylists ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 Loading playlists...
               </div>
             ) : playlists.length > 0 ? (
-              <div className="max-h-64 overflow-y-auto bg-gray-800 border border-gray-700 rounded-md">
+              <div className="max-h-64 overflow-y-auto bg-muted border border-border rounded-md">
                 {playlists.map((playlist) => {
                   const playlistName = platform === 'spotify'
                     ? playlist.name
@@ -754,8 +754,8 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                       key={playlist.id}
                       type="button"
                       onClick={() => setSelectedPlaylistId(playlist.id)}
-                      className={`w-full flex items-center gap-3 p-3 hover:bg-gray-700 transition-colors ${
-                        selectedPlaylistId === playlist.id ? 'bg-gray-700' : ''
+                      className={`w-full flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors ${
+                        selectedPlaylistId === playlist.id ? 'bg-accent/50' : ''
                       }`}
                     >
                       {playlistImage && (
@@ -766,9 +766,9 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                         />
                       )}
                       <div className="flex-1 text-left">
-                        <p className="text-white font-medium truncate">{playlistName}</p>
+                        <p className="text-foreground font-medium truncate">{playlistName}</p>
                         {trackCount !== null && (
-                          <p className="text-sm text-gray-400">{trackCount} tracks</p>
+                          <p className="text-sm text-muted-foreground">{trackCount} tracks</p>
                         )}
                       </div>
                       {selectedPlaylistId === playlist.id && (
@@ -783,14 +783,14 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 No playlists found
               </div>
             )}
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded text-red-400 text-sm">
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/40 rounded text-red-600 dark:text-red-400 text-sm">
               {error}
             </div>
           )}
@@ -799,14 +799,14 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+              className="flex-1 px-4 py-2 bg-accent hover:bg-accent/80 rounded-md transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !selectedPlaylistId}
-              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-md transition-colors"
+              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-accent disabled:cursor-not-allowed rounded-md transition-colors"
             >
               {loading
                 ? (userExistingPlaylist ? 'Replacing...' : 'Adding...')

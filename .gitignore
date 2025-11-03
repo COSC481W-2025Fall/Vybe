@@ -52,3 +52,5 @@ get-issues.ps1
 
 # Claude Code
 .claude/
+.env.local
+.env*.local

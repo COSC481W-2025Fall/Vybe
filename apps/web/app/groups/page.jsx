@@ -80,9 +80,9 @@ export default function GroupsPage() {
   }
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="border-b border-gray-800">
+      <div className="border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between gap-12">
             <div>
@@ -93,7 +93,7 @@ export default function GroupsPage() {
             <div className="flex items-center gap-3 flex-shrink-0">
               <button
                 onClick={() => setShowJoinModal(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors border border-gray-700"
+                className="flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent/80 text-foreground rounded-lg font-medium transition-colors border border-border"
               >
                 <Users className="h-5 w-5" />
                 Join Group
@@ -101,7 +101,7 @@ export default function GroupsPage() {
 
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors"
+                className="flex items-center gap-2 px-6 py-3 bg-foreground hover:bg-foreground/90 text-background rounded-lg font-medium transition-colors"
               >
                 <Plus className="h-5 w-5" />
                 Create Group
@@ -115,24 +115,24 @@ export default function GroupsPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <p className="text-gray-400">Loading groups...</p>
+            <p className="text-muted-foreground">Loading groups...</p>
           </div>
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Users className="h-16 w-16 text-gray-600 mb-4" />
-            <h2 className="text-2xl font-semibold mb-2">No groups yet</h2>
-            <p className="text-gray-400 mb-6">Create a group or join one with a code to get started</p>
+            <Users className="h-16 w-16 text-muted-foreground mb-4" />
+            <h2 className="text-2xl font-semibold mb-2 text-foreground">No groups yet</h2>
+            <p className="text-muted-foreground mb-6">Create a group or join one with a code to get started</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowJoinModal(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                className="flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent/80 text-foreground rounded-lg font-medium transition-colors"
               >
                 <Users className="h-5 w-5" />
                 Join Group
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors"
+                className="flex items-center gap-2 px-6 py-3 bg-foreground hover:bg-foreground/90 text-background rounded-lg font-medium transition-colors"
               >
                 <Plus className="h-5 w-5" />
                 Create Group
@@ -225,11 +225,11 @@ function GroupCard({ group, isOwner, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="relative p-6 rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm hover:border-gray-600 transition-all cursor-pointer"
+      className="relative p-6 rounded-2xl border border-border bg-muted backdrop-blur-sm hover:bg-accent/50 transition-all cursor-pointer"
     >
       {/* Header with title and badge */}
       <div className="flex items-start justify-between mb-3">
-        <h3 className="text-2xl font-bold text-white">{group.name}</h3>
+        <h3 className="text-2xl font-bold text-foreground">{group.name}</h3>
         {isOwner ? (
           <span className="px-3 py-1 bg-purple-600/20 text-purple-400 rounded-full text-xs font-medium border border-purple-500/30">
             Owner
@@ -242,12 +242,12 @@ function GroupCard({ group, isOwner, onClick }) {
       </div>
 
       {/* Description */}
-      <p className="text-gray-400 text-sm mb-6">
+      <p className="text-muted-foreground text-sm mb-6">
         {group.description || 'No description'}
       </p>
 
       {/* Stats */}
-      <div className="flex items-center gap-6 mb-6 text-sm text-gray-400">
+      <div className="flex items-center gap-6 mb-6 text-sm text-muted-foreground">
         <span>{group.memberCount || 1} members</span>
         <span>{group.playlist_songs?.length || 0} songs</span>
         <span className="flex items-center gap-1">
@@ -265,7 +265,7 @@ function GroupCard({ group, isOwner, onClick }) {
           {displayMembers.map((member, index) => (
             <div
               key={member?.id || index}
-              className="w-8 h-8 rounded-full border-2 border-gray-900 overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500"
+              className="w-8 h-8 rounded-full border-2 border-background overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500"
               title={member?.username || 'Member'}
             >
               {member?.profile_picture_url ? (
@@ -275,21 +275,21 @@ function GroupCard({ group, isOwner, onClick }) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-white text-xs font-semibold">
+                <div className="w-full h-full flex items-center justify-center text-foreground text-xs font-semibold">
                   {member?.username?.[0]?.toUpperCase() || 'M'}
                 </div>
               )}
             </div>
           ))}
           {remainingCount > 0 && (
-            <div className="w-8 h-8 rounded-full bg-gray-700 border-2 border-gray-900 flex items-center justify-center text-white text-xs">
+            <div className="w-8 h-8 rounded-full bg-accent border-2 border-background flex items-center justify-center text-foreground text-xs">
               +{remainingCount}
             </div>
           )}
         </div>
 
         {/* Join code badge */}
-        <div className="px-3 py-1.5 bg-gray-700/50 rounded-lg text-gray-300 text-sm font-mono font-semibold">
+        <div className="px-3 py-1.5 bg-accent rounded-lg text-foreground text-sm font-mono font-semibold">
           {group.join_code || 'GENERATING...'}
         </div>
       </div>
