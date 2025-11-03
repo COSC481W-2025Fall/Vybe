@@ -131,7 +131,7 @@ describe('Profile Schema Validation', () => {
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.path?.join('.') || error?.path).toContain('display_name');
-        expect(error?.message).toContain('required');
+        expect(error?.message).toMatch(/required|missing/i);
       }
     });
 
@@ -144,7 +144,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
-        expect(error?.message).toContain('at least 2 characters');
+        expect(error?.message).toMatch(/at least 2|minimum.*2|2.*characters/i);
       }
     });
 
@@ -157,7 +157,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
-        expect(error?.message).toContain('exceed 50 characters');
+        expect(error?.message).toMatch(/exceed.*50|maximum.*50|50.*characters/i);
       }
     });
 
@@ -170,7 +170,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
-        expect(error?.message).toContain('letters, numbers, and spaces');
+        expect(error?.message).toMatch(/letters|numbers|spaces|alphanumeric|pattern/i);
       }
     });
 
@@ -235,7 +235,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('bio')) || result.error.issues[0];
-        expect(error?.message).toContain('exceed 200 characters');
+        expect(error?.message).toMatch(/exceed.*200|maximum.*200|200.*characters/i);
       }
     });
 

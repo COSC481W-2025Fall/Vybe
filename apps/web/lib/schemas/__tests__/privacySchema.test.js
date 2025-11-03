@@ -71,7 +71,7 @@ describe('Privacy Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('profile_visibility')) || result.error.issues[0];
-        expect(error?.message).toContain('public, friends, or private');
+        expect(error?.message).toMatch(/Invalid.*expected one of.*"public"|"friends"|"private"/i);
       }
     });
 

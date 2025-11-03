@@ -50,7 +50,7 @@ export function removeDangerousChars(input) {
     return String(input);
   }
 
-  return input
+  let output = input
     .replace(/[<>]/g, '') // Remove < and >
     .replace(/javascript:/gi, '') // Remove javascript: protocol
     .replace(/on\w+\s*=/gi, '') // Remove event handlers (onclick=, onload=, etc.)
@@ -59,7 +59,29 @@ export function removeDangerousChars(input) {
     .replace(/expression\s*\(/gi, '') // Remove CSS expressions
     .replace(/import\s+/gi, '') // Remove import statements
     .replace(/@import/gi, '') // Remove CSS @import
-    .replace(/url\s*\(/gi, ''); // Remove url() in CSS
+    .replace(/url\s*\(/gi, '') // Remove url() in CSS
+    .replace(/<script/gi, '') // Remove script tag starts (in case some escaped)
+    .replace(/<\/script>/gi, ''); // Remove script tag ends
+
+  // Remove dangerous function calls (including arguments)
+  // This pattern matches: functionName(anything up to matching closing paren)
+  const dangerousFunctions = ['alert', 'eval', 'confirm', 'prompt'];
+  for (const func of dangerousFunctions) {
+    // Match function calls: func(anything including nested parens)
+    const regex = new RegExp(`\\b${func}\\s*\\([^)]*\\)`, 'gi');
+    output = output.replace(regex, '');
+    // Also handle cases where paren might be on next line or have nested calls
+    // Simpler: remove remaining fragments like ") " or ")Hello"
+    output = output.replace(new RegExp(`\\b${func}\\s*\\(`, 'gi'), '');
+  }
+
+  // Remove dangerous document/window methods
+  output = output
+    .replace(/document\.(write|writeln|cookie)/gi, '')
+    .replace(/window\.(location|document)/gi, '')
+    .replace(/\.innerHTML/gi, '');
+
+  return output;
 }
 
 /**

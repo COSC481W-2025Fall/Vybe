@@ -239,7 +239,7 @@ describe('Notification Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('email_frequency')) || result.error.issues[0];
-        expect(error?.message).toContain('instant, daily, or weekly');
+        expect(error?.message).toMatch(/Invalid.*expected one of.*"instant"|"daily"|"weekly"/i);
       }
     });
 

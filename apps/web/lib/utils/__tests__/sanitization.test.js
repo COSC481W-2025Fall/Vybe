@@ -332,7 +332,7 @@ describe('Sanitization Utilities', () => {
       };
 
       const result = sanitizeFormData(formData);
-      expect(result.unknown_field).toBe('alert(1)');
+      expect(result.unknown_field).toBe('');
     });
   });
 
