@@ -53,7 +53,8 @@ jobs:
         working-directory: ./backend
         run: pytest
 
-  # Deployment Protection - Block Vercel if tests fail
+  # Deployment Protection - Block deployment if tests fail
+  # Note: CodeQL analysis runs separately and will block merging if security issues are found
   deployment-protection:
     name: Deployment Protection
     runs-on: ubuntu-latest
@@ -65,4 +66,5 @@ jobs:
         run: |
           echo "❌ Tests failed - deployment should be blocked"
           echo "Please fix failing tests before deploying"
+          echo "CodeQL analysis runs separately and will also block merging if security issues are found"
           exit 1
