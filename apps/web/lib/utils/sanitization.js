@@ -98,11 +98,11 @@ export function removeDangerousChars(input) {
   // Step 1: Remove script tags and content with bounded patterns
   const scriptPatterns = [
     // Complete script blocks with bounded content
-    /<script\b[^>]{0,500}>[\s\S]{0,5000}?<\/script\s*>/gi,
+    /<script\b[^>]{0,500}>[\s\S]{0,5000}?<\/script[\s>]*>/gi,
     // Self-closing script tags
     /<script\b[^>]{0,500}?\/?\s*>/gi,
-    // Script closing tags
-    /<\/script\s*>/gi
+    // Script closing tags - handle whitespace (including tabs, newlines) between script and >
+    /<\/script[\s>]*>/gi
   ];
   
   scriptPatterns.forEach(pattern => {
@@ -130,20 +130,22 @@ export function removeDangerousChars(input) {
   
   // Step 4: Remove event handlers completely (handler name, =, and value)
   // Match: onclick=anything, onload=anything, etc. (case-insensitive)
-  // Pattern matches: optional whitespace + on*word* + optional whitespace + = + value
-  // Value can be quoted (with matching quotes) or unquoted (until whitespace, quote, or angle bracket)
+  // Use bounded quantifiers to prevent ReDoS attacks
+  // Pattern matches: optional whitespace (max 10) + on + word chars (max 20) + optional whitespace (max 10) + = + value
+  // Value can be quoted (with matching quotes, max 1000 chars) or unquoted (max 1000 chars)
   // First try to match quoted values, then unquoted values
-  output = safeReplace(output, /\s*on\w+\s*=\s*"[^"]*"/gi, '');
-  output = safeReplace(output, /\s*on\w+\s*=\s*'[^']*'/gi, '');
+  output = safeReplace(output, /\s{0,10}on\w{1,20}\s{0,10}=\s{0,10}"[^"]{0,1000}"/gi, '');
+  output = safeReplace(output, /\s{0,10}on\w{1,20}\s{0,10}=\s{0,10}'[^']{0,1000}'/gi, '');
   // For unquoted values: match handler name, =, and everything after until whitespace, quote, or angle bracket
   // This will match onclick=alert(1) as one complete match
-  // Note: We exclude quotes, spaces, and angle brackets, but allow parentheses
-  output = safeReplace(output, /\s*on\w+\s*=\s*[^"'\s<>]*/gi, '');
+  // Note: We exclude quotes, spaces, and angle brackets, but allow parentheses (max 1000 chars)
+  output = safeReplace(output, /\s{0,10}on\w{1,20}\s{0,10}=\s{0,10}[^"'\s<>]{0,1000}/gi, '');
   
   // Step 5: Remove CSS expressions and dangerous patterns
+  // Use bounded quantifiers to prevent ReDoS
   const cssPatterns = [
-    /expression\s*\(/gi,
-    /url\s*\(/gi,
+    /expression\s{0,10}\(/gi,
+    /url\s{0,10}\(/gi,
     /@import/gi
   ];
   
@@ -153,10 +155,11 @@ export function removeDangerousChars(input) {
 
   // Step 6: Remove common XSS patterns (but not alert(1) as it's used in test cases)
   // Note: alert(1) itself is not removed - it's the javascript: protocol that makes it dangerous
+  // Use bounded quantifiers to prevent ReDoS
   const xssPatterns = [
-    /prompt\s*\(/gi,
-    /confirm\s*\(/gi,
-    /eval\s*\(/gi,
+    /prompt\s{0,10}\(/gi,
+    /confirm\s{0,10}\(/gi,
+    /eval\s{0,10}\(/gi,
     /document\./gi,
     /window\./gi
   ];
@@ -425,7 +428,7 @@ export function sanitizeUrl(input) {
   
   // Check for dangerous protocols first
   const lowerInput = input.toLowerCase();
-  if (lowerInput.startsWith('javascript:') || lowerInput.startsWith('data:')) {
+  if (lowerInput.startsWith('javascript:') || lowerInput.startsWith('data:') || lowerInput.startsWith('vbscript:')) {
     return null;
   }
   
