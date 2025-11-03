@@ -26,15 +26,33 @@ export function stripHtmlTags(input) {
     return String(input);
   }
 
+  let output = input;
+
+  // First, remove script tags and their entire content (including nested scripts)
+  // This handles <script>...</script> and removes everything between the tags
+  output = output.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  
+  // Also remove script tags without closing tags (self-closing or malformed)
+  output = output.replace(/<script[^>]*>/gi, '');
+  output = output.replace(/<\/script>/gi, '');
+
+  // Remove style tags and their content (can contain CSS-based XSS)
+  output = output.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  output = output.replace(/<style[^>]*>/gi, '');
+
+  // Remove iframe, embed, object tags and their content (can be used for XSS)
+  output = output.replace(/<(iframe|embed|object)[^>]*>[\s\S]*?<\/\1>/gi, '');
+  output = output.replace(/<(iframe|embed|object)[^>]*>/gi, '');
+
   // Remove HTML tags using regex (applied repeatedly in case of nested/malformed tags)
   // This regex matches < followed by any characters until >
   // The non-greedy ? ensures we match the shortest possible tag
-  let output = input;
   let previous;
   do {
     previous = output;
     output = output.replace(/<[^>]*>/g, '');
   } while (output !== previous);
+
   return output;
 }
 
@@ -50,36 +68,79 @@ export function removeDangerousChars(input) {
     return String(input);
   }
 
-  let output = input
-    .replace(/[<>]/g, '') // Remove < and >
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+\s*=/gi, '') // Remove event handlers (onclick=, onload=, etc.)
-    .replace(/data:/gi, '') // Remove data: protocol (can be dangerous)
-    .replace(/vbscript:/gi, '') // Remove vbscript: protocol
-    .replace(/expression\s*\(/gi, '') // Remove CSS expressions
-    .replace(/import\s+/gi, '') // Remove import statements
-    .replace(/@import/gi, '') // Remove CSS @import
-    .replace(/url\s*\(/gi, '') // Remove url() in CSS
-    .replace(/<script/gi, '') // Remove script tag starts (in case some escaped)
-    .replace(/<\/script>/gi, ''); // Remove script tag ends
+  let output = input;
 
-  // Remove dangerous function calls (including arguments)
-  // This pattern matches: functionName(anything up to matching closing paren)
-  const dangerousFunctions = ['alert', 'eval', 'confirm', 'prompt'];
+  // Remove < and > characters first (prevent tag injection)
+  output = output.replace(/[<>]/g, '');
+
+  // Remove dangerous protocols completely (including content after colon)
+  // javascript:alert(1) -> '' (remove everything from javascript: to end or next space)
+  output = output.replace(/javascript:[^\s]*/gi, '');
+  output = output.replace(/data:text\/html[^\s]*/gi, ''); // Remove data:text/html URLs
+  output = output.replace(/data:image\/svg\+xml[^\s]*/gi, ''); // Remove data:image/svg+xml (XSS vector)
+  output = output.replace(/data:[^\s]*/gi, ''); // Remove any other data: URLs
+  output = output.replace(/vbscript:[^\s]*/gi, '');
+  output = output.replace(/file:[^\s]*/gi, '');
+
+  // Remove event handlers (onclick=, onload=, etc.) and their values
+  // onclick=alert(1) -> '' (remove the entire attribute)
+  output = output.replace(/on\w+\s*=\s*[^\s]*/gi, '');
+
+  // Remove dangerous CSS expressions
+  output = output.replace(/expression\s*\([^)]*\)/gi, '');
+  
+  // Remove import statements
+  output = output.replace(/import\s+[^\s]+/gi, '');
+  output = output.replace(/@import\s+[^;]+/gi, '');
+  
+  // Remove url() in CSS (can contain javascript:)
+  output = output.replace(/url\s*\([^)]*\)/gi, '');
+
+  // Remove script tag remnants (in case some escaped the HTML stripping)
+  output = output.replace(/<script/gi, '');
+  output = output.replace(/<\/script>/gi, '');
+  output = output.replace(/script>/gi, '');
+
+  // Remove dangerous function calls with their arguments
+  // Handle function calls like alert(1), alert('x'), eval(code), etc.
+  const dangerousFunctions = ['alert', 'eval', 'confirm', 'prompt', 'Function', 'setTimeout', 'setInterval'];
+  
   for (const func of dangerousFunctions) {
-    // Match function calls: func(anything including nested parens)
-    const regex = new RegExp(`\\b${func}\\s*\\([^)]*\\)`, 'gi');
-    output = output.replace(regex, '');
-    // Also handle cases where paren might be on next line or have nested calls
-    // Simpler: remove remaining fragments like ") " or ")Hello"
+    // First pass: remove complete function calls func(...)
+    // This handles simple cases like alert(1), alert('x'), eval(code)
+    // We'll apply multiple passes to handle nested cases
+    let changed = true;
+    let iterations = 0;
+    while (changed && iterations < 10) { // Prevent infinite loops
+      const before = output;
+      // Match: func( followed by content until matching closing paren
+      // This regex handles up to 3 levels of nesting
+      const funcRegex = new RegExp(`\\b${func}\\s*\\([^()]*(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\)[^()]*)*\\)`, 'gi');
+      output = output.replace(funcRegex, '');
+      changed = (before !== output);
+      iterations++;
+    }
+    
+    // Remove any remaining fragments: func( without closing paren
     output = output.replace(new RegExp(`\\b${func}\\s*\\(`, 'gi'), '');
   }
+  
+  // Clean up orphaned closing parens that might be left from removed function calls
+  // Only remove if they're followed by a digit or letter (likely part of removed function call)
+  output = output.replace(/\s*\)\s*(?=\d|\w)/g, '');
 
-  // Remove dangerous document/window methods
+  // Remove dangerous document/window methods and properties
   output = output
-    .replace(/document\.(write|writeln|cookie)/gi, '')
-    .replace(/window\.(location|document)/gi, '')
-    .replace(/\.innerHTML/gi, '');
+    .replace(/document\.(write|writeln|cookie|location)/gi, '')
+    .replace(/window\.(location|document|eval|parent|top)/gi, '')
+    .replace(/\.innerHTML/gi, '')
+    .replace(/\.outerHTML/gi, '')
+    .replace(/\.insertAdjacentHTML/gi, '');
+
+  // Remove common XSS payloads
+  output = output.replace(/<img[^>]*src[^>]*>/gi, '');
+  output = output.replace(/<svg[^>]*onload[^>]*>/gi, '');
+  output = output.replace(/onerror\s*=/gi, '');
 
   return output;
 }
