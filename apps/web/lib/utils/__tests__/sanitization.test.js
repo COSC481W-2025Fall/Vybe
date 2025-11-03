@@ -56,8 +56,9 @@ describe('Sanitization Utilities', () => {
     });
 
     it('should remove event handlers', () => {
-      expect(removeDangerousChars('onclick=alert(1)')).toBe('alert(1)');
-      expect(removeDangerousChars('onload=evil()')).toBe('evil()');
+      // Event handlers are completely removed (handler name, =, and value) for security
+      expect(removeDangerousChars('onclick=alert(1)')).toBe('');
+      expect(removeDangerousChars('onload=evil()')).toBe('');
     });
 
     it('should remove data: protocol', () => {
@@ -66,7 +67,8 @@ describe('Sanitization Utilities', () => {
 
     it('should handle case-insensitive removal', () => {
       expect(removeDangerousChars('JAVASCRIPT:alert(1)')).toBe('alert(1)');
-      expect(removeDangerousChars('ONCLICK=evil()')).toBe('evil()');
+      // Event handlers are completely removed (handler name, =, and value) for security
+      expect(removeDangerousChars('ONCLICK=evil()')).toBe('');
     });
   });
 
