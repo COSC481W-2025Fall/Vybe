@@ -21,6 +21,27 @@
  */
 
 /**
+ * Repeatedly applies a pattern replacement until the string stabilizes.
+ * This ensures multi-character sanitization is complete for any input.
+ * @param {string} str
+ * @param {RegExp} pattern
+ * @param {string} replacement
+ * @returns {string}
+ */
+function replaceAllCompletely(str, pattern, replacement) {
+  let prev;
+  let out = str;
+  let iterations = 0;
+  const maxIterations = 20; // Prevent infinite loops
+  do {
+    prev = out;
+    out = out.replace(pattern, replacement);
+    iterations++;
+  } while (prev !== out && iterations < maxIterations);
+  return out;
+}
+
+/**
  * Check if DOMParser is available (browser environment)
  * @returns {boolean} True if DOMParser is available
  */
@@ -220,16 +241,16 @@ export function removeDangerousChars(input) {
     while (scriptSanitizeChanged && scriptSanitizeIterations < maxScriptSanitizeIterations) {
       const scriptSanitizeBefore = output;
       // Remove complete script blocks with content (bounded to prevent ReDoS)
-      output = output.replace(/<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\b[^>]{0,1000}?>/gi, '');
+      output = replaceAllCompletely(output, /<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\b[^>]{0,1000}?>/gi, '');
       // Remove self-closing or partially malformed opening script tags
-      output = output.replace(/<\s*script\b[^>]{0,1000}?\s*\/?\s*>/gi, '');
-      output = output.replace(/<\s*script[\s\S]{0,1000}?\/?\s*>/gi, '');
+      output = replaceAllCompletely(output, /<\s*script\b[^>]{0,1000}?\s*\/?\s*>/gi, '');
+      output = replaceAllCompletely(output, /<\s*script[\s\S]{0,1000}?\/?\s*>/gi, '');
       // Remove any remaining closing script tags (malformed or not)
-      output = output.replace(/<\/\s*script\s*>/gi, '');
-      output = output.replace(/<\/\s*script[\s\S]{0,1000}?>/gi, '');
+      output = replaceAllCompletely(output, /<\/\s*script\s*>/gi, '');
+      output = replaceAllCompletely(output, /<\/\s*script[\s\S]{0,1000}?>/gi, '');
       // Final pass: Remove any residual literal '<script' and '</script'
-      output = output.replace(/<script/gi, '');
-      output = output.replace(/<\/script/gi, '');
+      output = replaceAllCompletely(output, /<script/gi, '');
+      output = replaceAllCompletely(output, /<\/script/gi, '');
       scriptSanitizeChanged = output !== scriptSanitizeBefore;
       scriptSanitizeIterations += 1;
     }
