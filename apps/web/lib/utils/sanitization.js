@@ -219,7 +219,7 @@ export function removeDangerousChars(input) {
     while (scriptChanged && scriptIterations < maxScriptIterations) {
       const scriptBefore = output;
       // Remove complete script blocks with content (bounded to prevent ReDoS)
-      output = output.replace(/<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\s*>/gi, '');
+      output = output.replace(/<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\b[^>]{0,1000}?>/gi, '');
       // Remove self-closing or unclosed opening script tags
       output = output.replace(/<\s*script\b[^>]{0,1000}?\s*\/?\s*>/gi, '');
       // Remove any remaining closing script tags
