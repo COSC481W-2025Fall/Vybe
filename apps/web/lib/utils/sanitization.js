@@ -210,27 +210,27 @@ export function removeDangerousChars(input) {
   // This ensures complete removal and prevents reintroduction of malicious code
   while (changed && iterations < maxIterations) {
     const before = output;
-    
-    // --- STEP 1: Remove script tags iteratively until all are gone ---
-    // CRITICAL: Script tags must be completely removed with their content
-    // Handles: <script>, <script >, </script\t>, <script\n>, <script/>, etc.
-    // Pattern bounded to prevent ReDoS: [\s\S]{0,10000}? and [^>]{0,1000}?
-    // Apply multiple times to handle nested or malformed tags
-    
-    // Remove complete script blocks with content (bounded to prevent ReDoS)
-    // This pattern matches: <script...>...content...</script>
-    output = output.replace(/<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\s*>/gi, '');
-    
-    // Remove self-closing or unclosed opening script tags
-    output = output.replace(/<\s*script\b[^>]{0,1000}?\s*\/?\s*>/gi, '');
-    
-    // Remove any remaining closing script tags
-    output = output.replace(/<\/\s*script\s*>/gi, '');
-    
-    // Remove script tags with whitespace/newline variants (iterative cleanup)
-    output = output.replace(/<\s*script[\s\S]{0,1000}?\/?\s*>/gi, '');
-    output = output.replace(/<\/\s*script[\s\S]{0,1000}?>/gi, '');
-    
+
+    // --- STEP 1: Remove script tags iteratively until absolutely none remain ---
+    // CRITICAL: Repeat all variants until stabilized (no more <script remnants)
+    let scriptChanged = true;
+    let scriptIterations = 0;
+    const maxScriptIterations = 20; // Extra safety for badly malformed input
+    while (scriptChanged && scriptIterations < maxScriptIterations) {
+      const scriptBefore = output;
+      // Remove complete script blocks with content (bounded to prevent ReDoS)
+      output = output.replace(/<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\s*>/gi, '');
+      // Remove self-closing or unclosed opening script tags
+      output = output.replace(/<\s*script\b[^>]{0,1000}?\s*\/?\s*>/gi, '');
+      // Remove any remaining closing script tags
+      output = output.replace(/<\/\s*script\s*>/gi, '');
+      // Remove script tags with whitespace/newline variants (iterative cleanup)
+      output = output.replace(/<\s*script[\s\S]{0,1000}?\/?\s*>/gi, '');
+      output = output.replace(/<\/\s*script[\s\S]{0,1000}?>/gi, '');
+      scriptChanged = output !== scriptBefore;
+      scriptIterations += 1;
+    }
+
     // --- STEP 2: Remove dangerous protocols (word boundary ensures complete match) ---
     // Remove protocol prefix only, keep the rest (for test compatibility)
     // Pattern: \b ensures we match complete protocol names, not partial words
