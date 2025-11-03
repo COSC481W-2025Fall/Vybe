@@ -3,7 +3,7 @@
 
 import { Search, Music, X, Clock } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { getUserProvider } from '@/lib/getUserProvider';
+import { supabaseBrowser } from '@/lib/supabase/client';
 
 export default function SongSearchModal({ onClose, onSelectSong }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,8 +16,43 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
   // Detect which provider the user is using
   useEffect(() => {
     async function detectProvider() {
-      const userProvider = await getUserProvider();
-      setProvider(userProvider || 'spotify'); // Default to spotify
+      try {
+        const supabase = supabaseBrowser();
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          console.log('[SongSearchModal] No session');
+          setProvider('spotify'); // Default
+          return;
+        }
+
+        const identities = session.user.identities || [];
+        const hasGoogle = identities.some(id => id.provider === 'google');
+        const hasSpotify = identities.some(id => id.provider === 'spotify');
+
+        console.log('[SongSearchModal] Identities:', { hasGoogle, hasSpotify });
+
+        // Determine provider based on identities
+        let detectedProvider = 'spotify'; // default
+
+        if (hasGoogle && !hasSpotify) {
+          detectedProvider = 'google';
+        } else if (hasSpotify && !hasGoogle) {
+          detectedProvider = 'spotify';
+        } else if (hasGoogle && hasSpotify) {
+          // Both linked - use most recently updated
+          const sortedIdentities = [...identities].sort((a, b) => {
+            return new Date(b.updated_at) - new Date(a.updated_at);
+          });
+          detectedProvider = sortedIdentities[0]?.provider;
+        }
+
+        console.log('[SongSearchModal] Using provider:', detectedProvider);
+        setProvider(detectedProvider);
+      } catch (error) {
+        console.error('[SongSearchModal] Error detecting provider:', error);
+        setProvider('spotify'); // Default on error
+      }
     }
     detectProvider();
   }, []);
