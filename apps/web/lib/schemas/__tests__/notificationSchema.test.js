@@ -239,7 +239,7 @@ describe('Notification Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('email_frequency')) || result.error.issues[0];
-        expect(error?.message).toMatch(/Invalid.*expected one of.*"instant"|"daily"|"weekly"/i);
+        expect(error?.message).toMatch(/Invalid enum value.*Expected.*"instant".*"daily".*"weekly"|Email frequency must be one of.*instant.*daily.*weekly|Invalid.*expected one of/i);
       }
     });
 

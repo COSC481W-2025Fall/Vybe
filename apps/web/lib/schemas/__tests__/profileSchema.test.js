@@ -131,7 +131,7 @@ describe('Profile Schema Validation', () => {
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.path?.join('.') || error?.path).toContain('display_name');
-        expect(error?.message).toMatch(/required|missing/i);
+        expect(error?.message).toMatch(/Display name is required|required/i);
       }
     });
 
@@ -144,7 +144,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
-        expect(error?.message).toMatch(/at least 2|minimum.*2|2.*characters/i);
+        expect(error?.message).toMatch(/Display name must be at least 2 characters|must contain at least 2 character/i);
       }
     });
 
@@ -157,7 +157,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
-        expect(error?.message).toMatch(/exceed.*50|maximum.*50|50.*characters/i);
+        expect(error?.message).toMatch(/Display name must not exceed 50 characters|must contain at most 50 character/i);
       }
     });
 
@@ -170,7 +170,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
-        expect(error?.message).toMatch(/letters|numbers|spaces|alphanumeric|pattern/i);
+        expect(error?.message).toMatch(/Display name can only contain letters, numbers, and spaces|Invalid/i);
       }
     });
 
@@ -192,7 +192,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
-        expect(error?.message).toContain('string');
+        expect(error?.message).toMatch(/Display name must be a string|Expected string/i);
       }
     });
 
@@ -235,7 +235,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('bio')) || result.error.issues[0];
-        expect(error?.message).toMatch(/exceed.*200|maximum.*200|200.*characters/i);
+        expect(error?.message).toMatch(/Bio must not exceed 200 characters|must contain at most 200 character/i);
       }
     });
 
@@ -249,7 +249,7 @@ describe('Profile Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('bio')) || result.error.issues[0];
-        expect(error?.message).toContain('string');
+        expect(error?.message).toMatch(/Bio must be a string|Expected string/i);
       }
     });
   });

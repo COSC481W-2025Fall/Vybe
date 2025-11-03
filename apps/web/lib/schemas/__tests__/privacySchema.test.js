@@ -71,7 +71,7 @@ describe('Privacy Schema Validation', () => {
       expect(result.success).toBe(false);
       if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('profile_visibility')) || result.error.issues[0];
-        expect(error?.message).toMatch(/Invalid.*expected one of.*"public"|"friends"|"private"/i);
+        expect(error?.message).toMatch(/Invalid enum value.*Expected.*"public".*"friends".*"private"|Visibility level must be one of.*public.*friends.*private|Invalid.*expected one of/i);
       }
     });
 
@@ -88,6 +88,10 @@ describe('Privacy Schema Validation', () => {
 
       const result = privacySchema.safeParse(invalidData);
       expect(result.success).toBe(false);
+      if (!result.success && result.error?.issues) {
+        const error = result.error.issues.find(e => e.path?.includes('playlist_visibility')) || result.error.issues[0];
+        expect(error?.message).toMatch(/Invalid enum value.*Expected.*"public".*"friends".*"private"|Visibility level must be one of.*public.*friends.*private|Invalid.*expected one of/i);
+      }
     });
 
     it('should fail validation when song_of_day_visibility is invalid', () => {
@@ -103,6 +107,10 @@ describe('Privacy Schema Validation', () => {
 
       const result = privacySchema.safeParse(invalidData);
       expect(result.success).toBe(false);
+      if (!result.success && result.error?.issues) {
+        const error = result.error.issues.find(e => e.path?.includes('song_of_day_visibility')) || result.error.issues[0];
+        expect(error?.message).toMatch(/Invalid enum value.*Expected.*"public".*"friends".*"private"|Visibility level must be one of.*public.*friends.*private|Invalid.*expected one of/i);
+      }
     });
 
     it('should fail validation when friend_request_setting is invalid', () => {
@@ -118,6 +126,10 @@ describe('Privacy Schema Validation', () => {
 
       const result = privacySchema.safeParse(invalidData);
       expect(result.success).toBe(false);
+      if (!result.success && result.error?.issues) {
+        const error = result.error.issues.find(e => e.path?.includes('friend_request_setting')) || result.error.issues[0];
+        expect(error?.message).toMatch(/Invalid enum value.*Expected.*"everyone".*"friends_of_friends".*"nobody"|Friend request setting must be one of.*everyone.*friends_of_friends.*nobody|Invalid.*expected one of/i);
+      }
     });
   });
 
@@ -190,6 +202,10 @@ describe('Privacy Schema Validation', () => {
 
       const result = privacySchema.safeParse(invalidData);
       expect(result.success).toBe(false);
+      if (!result.success && result.error?.issues) {
+        const error = result.error.issues.find(e => e.path?.includes('friend_request_setting')) || result.error.issues[0];
+        expect(error?.message).toMatch(/Invalid enum value.*Expected.*"everyone".*"friends_of_friends".*"nobody"|Friend request setting must be one of.*everyone.*friends_of_friends.*nobody|Invalid.*expected one of/i);
+      }
     });
   });
 
