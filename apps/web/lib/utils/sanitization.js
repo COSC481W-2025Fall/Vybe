@@ -98,11 +98,12 @@ export function removeDangerousChars(input) {
   // Step 1: Remove script tags and content with bounded patterns
   const scriptPatterns = [
     // Complete script blocks with bounded content
-    /<script\b[^>]{0,500}>[\s\S]{0,5000}?<\/script[\s>]*>/gi,
+    /<script\b[^>]{0,500}>[\s\S]{0,5000}?<\/script[^>]{0,500}>/gi,
     // Self-closing script tags
     /<script\b[^>]{0,500}?\/?\s*>/gi,
-    // Script closing tags - handle whitespace (including tabs, newlines) between script and >
-    /<\/script[\s>]*>/gi
+    // Script closing tags - match any characters (including attributes) between script and >
+    // Browsers accept </script foo="bar"> as valid, so we need to match [^>]* not just whitespace
+    /<\/script[^>]{0,500}>/gi
   ];
   
   scriptPatterns.forEach(pattern => {
