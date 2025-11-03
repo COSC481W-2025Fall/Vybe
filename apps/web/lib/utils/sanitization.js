@@ -90,7 +90,11 @@ export function removeDangerousChars(input) {
 
   // Remove event handlers - only remove the handler part, keep the value
   // onclick=alert(1) -> alert(1) (remove only "onclick=")
-  output = output.replace(/on\w+\s*=\s*/gi, '');
+  let prevEventHandlerOutput;
+  do {
+    prevEventHandlerOutput = output;
+    output = output.replace(/on\w+\s*=\s*/gi, '');
+  } while (output !== prevEventHandlerOutput);
 
   // Remove dangerous CSS expressions
   output = output.replace(/expression\s*\(/gi, '');
