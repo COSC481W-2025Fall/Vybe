@@ -240,8 +240,10 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
 async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
   // Extract playlist ID from URL
   const playlistId = extractSpotifyPlaylistId(playlistUrl);
-  if (!playlistId) {
-    throw new Error('Invalid Spotify playlist URL');
+
+  // Validate playlist ID against Spotify spec (typically 22 chars, base62)
+  if (!playlistId || !isValidSpotifyPlaylistId(playlistId)) {
+    throw new Error('Invalid Spotify playlist URL or ID');
   }
 
   // Get Spotify access token
@@ -318,6 +320,12 @@ function extractYouTubePlaylistId(url) {
 function extractSpotifyPlaylistId(url) {
   const match = url.match(/playlist\/([a-zA-Z0-9]+)/);
   return match ? match[1] : null;
+}
+
+// Validate Spotify playlist ID (base62, usually length 22)
+function isValidSpotifyPlaylistId(id) {
+  // Spotify playlist IDs are 22 characters, base62: [A-Za-z0-9]
+  return typeof id === "string" && /^[A-Za-z0-9]{22}$/.test(id);
 }
 
 function parseYouTubeDuration(duration) {
