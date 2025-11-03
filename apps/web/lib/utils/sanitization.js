@@ -81,9 +81,11 @@ export function removeDangerousChars(input) {
   // First remove data: prefix
   output = output.replace(/data:/gi, '');
   
-  // Remove script tags that might be in the content
+  // Remove script tags that might be in the content (including any attributes)
   output = output.replace(/<script[^>]*>/gi, '');
   output = output.replace(/<\/script>/gi, '');
+  // Also remove any remaining script> fragments
+  output = output.replace(/script>/gi, '');
   
   output = output.replace(/vbscript:/gi, '');
   output = output.replace(/file:/gi, '');
