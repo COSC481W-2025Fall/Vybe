@@ -23,7 +23,7 @@ export default function SignInPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'spotify',
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=/library`,
+        redirectTo: `${location.origin}/auth/callback?next=/library&provider=spotify`,
         scopes: 'user-read-email user-read-private playlist-read-private user-read-recently-played',
       },
       queryParams: { show_dialog: 'true' },
@@ -35,7 +35,7 @@ export default function SignInPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=/library`,
+        redirectTo: `${location.origin}/auth/callback?next=/library&provider=google`,
         scopes: [
           'openid',
           'email',

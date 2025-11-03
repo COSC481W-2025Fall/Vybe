@@ -1,0 +1,124 @@
+// app/api/users/search/route.js
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+export async function GET(request) {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // Get the current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q');
+
+    // If no query, return all users (for browsing)
+    if (!query || query.trim().length === 0) {
+      const { data: allUsers, error: allUsersError } = await supabase
+        .from('users')
+        .select('id, username, display_name')
+        .neq('id', user.id)
+        .limit(50);
+
+      if (allUsersError) {
+        console.error('Error fetching all users:', allUsersError);
+        return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+      }
+
+      if (!allUsers || allUsers.length === 0) {
+        return NextResponse.json({
+          success: true,
+          users: []
+        });
+      }
+
+      // Get existing friendships
+      const { data: existingFriends } = await supabase
+        .from('friendships')
+        .select('user_id, friend_id, status')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+      const users = allUsers.map(u => {
+        const friendship = existingFriends?.find(f =>
+          (f.user_id === user.id && f.friend_id === u.id) ||
+          (f.user_id === u.id && f.friend_id === user.id)
+        );
+
+        return {
+          id: u.id,
+          email: u.email || '',
+          name: u.display_name || u.username || 'User',
+          username: u.username || '',
+          friendship_status: friendship?.status || null
+        };
+      });
+
+      return NextResponse.json({
+        success: true,
+        users
+      });
+    }
+
+    // Search the public users table
+    const searchQuery = query.toLowerCase();
+
+    console.log('Searching for:', searchQuery);
+
+    const { data: matchingUsers, error: searchError } = await supabase
+      .from('users')
+      .select('id, username, display_name')
+      .or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`)
+      .neq('id', user.id)
+      .limit(20);
+
+    if (searchError) {
+      console.error('Error searching users:', searchError);
+      return NextResponse.json({ error: 'Failed to search users' }, { status: 500 });
+    }
+
+    console.log('Found users:', matchingUsers);
+
+    if (!matchingUsers || matchingUsers.length === 0) {
+      return NextResponse.json({
+        success: true,
+        users: []
+      });
+    }
+
+    // Get existing friendships for these users to show status
+    const userIds = matchingUsers.map(u => u.id);
+    const { data: existingFriends } = await supabase
+      .from('friendships')
+      .select('user_id, friend_id, status')
+      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+    const users = matchingUsers.map(u => {
+      const friendship = existingFriends?.find(f =>
+        (f.user_id === user.id && f.friend_id === u.id) ||
+        (f.user_id === u.id && f.friend_id === user.id)
+      );
+
+      return {
+        id: u.id,
+        email: u.email || '',
+        name: u.display_name || u.username || 'User',
+        username: u.username || '',
+        friendship_status: friendship?.status || null
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      users
+    });
+
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

@@ -71,13 +71,19 @@ function PlaylistRow({ playlist }) {
   return (
     <li className="group relative flex items-center gap-5 rounded-xl px-5 py-5 hover:bg-white/10 transition-all duration-300 border border-transparent hover:border-white/20 backdrop-blur-sm">
       <div className="relative">
-        <img
-          src={playlist.cover}
-          width={64}
-          height={64}
-          className="h-16 w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
-          alt={`${playlist.name} cover`}
-        />
+        {playlist.cover ? (
+          <img
+            src={playlist.cover}
+            width={64}
+            height={64}
+            className="h-16 w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
+            alt={`${playlist.name} cover`}
+          />
+        ) : (
+          <div className="h-16 w-16 rounded-xl bg-white/10 flex items-center justify-center">
+            <ListMusic className="h-8 w-8 text-white/40" />
+          </div>
+        )}
         <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
       <div className="min-w-0 flex-1">
@@ -138,31 +144,54 @@ export default function LibraryView() {
           throw new Error('No authenticated user');
         }
 
-        // Check URL parameter first (takes priority)
+        // Check which provider they used to sign in
         const urlParams = new URLSearchParams(window.location.search);
         const fromParam = urlParams.get('from');
-        const userProvider = user.app_metadata?.provider;
 
-        // Check which tokens the user has to determine provider
-        let detectedProvider = null;
-        const { data: spotifyToken } = await sb.from('spotify_tokens').select('user_id').eq('user_id', user.id).single();
-        const { data: youtubeToken } = await sb.from('youtube_tokens').select('user_id').eq('user_id', user.id).single();
+        // Get last_used_provider from database (saved during auth callback)
+        const { data: userData } = await sb
+          .from('users')
+          .select('last_used_provider')
+          .eq('id', user.id)
+          .maybeSingle();
 
-        if (spotifyToken) {
-          detectedProvider = 'spotify';
-        } else if (youtubeToken) {
-          detectedProvider = 'google';
+        const lastUsedProvider = userData?.last_used_provider;
+
+        // Check user's linked identities to see which providers they have
+        const identities = user.identities || [];
+        const hasGoogle = identities.some(id => id.provider === 'google');
+        const hasSpotify = identities.some(id => id.provider === 'spotify');
+
+        console.log('[LibraryView] URL from parameter:', fromParam);
+        console.log('[LibraryView] Last used provider from DB:', lastUsedProvider);
+        console.log('[LibraryView] User identities:', identities.map(i => i.provider));
+        console.log('[LibraryView] Has Google:', hasGoogle, 'Has Spotify:', hasSpotify);
+
+        // Priority: URL parameter (just logged in) > DB saved preference
+        let finalProvider = null;
+
+        if (fromParam === 'google' || fromParam === 'spotify') {
+          // They just logged in with this provider - HIGHEST PRIORITY
+          finalProvider = fromParam;
+          console.log('[LibraryView] Using URL parameter:', finalProvider);
+        } else if (lastUsedProvider === 'google' || lastUsedProvider === 'spotify') {
+          // Use saved preference from database
+          finalProvider = lastUsedProvider;
+          console.log('[LibraryView] Using last_used_provider from DB:', finalProvider);
+        } else if (hasSpotify && !hasGoogle) {
+          // Only Spotify is linked
+          finalProvider = 'spotify';
+          console.log('[LibraryView] Only Spotify linked');
+        } else if (hasGoogle && !hasSpotify) {
+          // Only Google is linked
+          finalProvider = 'google';
+          console.log('[LibraryView] Only Google linked');
+        } else {
+          // Both are linked but no preference saved - default to Spotify
+          finalProvider = 'spotify';
+          console.log('[LibraryView] Both providers linked, defaulting to Spotify');
         }
 
-        // Prioritize URL parameter > detected tokens > user metadata
-        const finalProvider = fromParam === 'google' ? 'google' :
-                             fromParam === 'spotify' ? 'spotify' :
-                             detectedProvider ||
-                             (userProvider === 'google' ? 'google' : null) ||
-                             (userProvider === 'spotify' ? 'spotify' : null);
-
-        console.log('[LibraryView] User provider:', userProvider);
-        console.log('[LibraryView] Detected provider from tokens:', detectedProvider);
         console.log('[LibraryView] Final provider:', finalProvider);
         setProvider(finalProvider);
 

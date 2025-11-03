@@ -190,42 +190,86 @@ export default function GroupDetailPage({ params }) {
         return;
       }
 
-      const { data: allSongs } = await supabase
-        .from('playlist_songs')
-        .select(`
-          *,
-          song_likes (
-            user_id
-          ),
-          group_playlists!inner (
-            id,
-            name,
-            platform
-          )
-        `)
-        .in('playlist_id', playlistIds)
-        .order('created_at', { ascending: true });
+      // Fetch songs in batches to bypass the 1000 row limit
+      let allSongs = [];
+      let rangeStart = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
+      while (hasMore) {
+        const { data: batch, error: songsError } = await supabase
+          .from('playlist_songs')
+          .select(`
+            *,
+            song_likes (
+              user_id
+            ),
+            group_playlists!inner (
+              id,
+              name,
+              platform
+            )
+          `)
+          .in('playlist_id', playlistIds)
+          .order('created_at', { ascending: true })
+          .range(rangeStart, rangeStart + batchSize - 1);
+
+        if (songsError) {
+          console.error('[Groups] Error loading songs:', songsError);
+          break;
+        }
+
+        if (batch && batch.length > 0) {
+          allSongs = [...allSongs, ...batch];
+          rangeStart += batchSize;
+          hasMore = batch.length === batchSize; // Continue if we got a full batch
+        } else {
+          hasMore = false;
+        }
+      }
+
+      console.log('[Groups] Loaded songs count:', allSongs?.length);
       songs = allSongs;
     } else {
-      // Get songs from specific playlist
-      const { data: playlistSongs } = await supabase
-        .from('playlist_songs')
-        .select(`
-          *,
-          song_likes (
-            user_id
-          ),
-          group_playlists!inner (
-            id,
-            name,
-            platform
-          )
-        `)
-        .eq('playlist_id', playlistId)
-        .order('position', { ascending: true });
+      // Get songs from specific playlist - also use batching
+      let allPlaylistSongs = [];
+      let rangeStart = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      songs = playlistSongs;
+      while (hasMore) {
+        const { data: batch, error: playlistError } = await supabase
+          .from('playlist_songs')
+          .select(`
+            *,
+            song_likes (
+              user_id
+            ),
+            group_playlists!inner (
+              id,
+              name,
+              platform
+            )
+          `)
+          .eq('playlist_id', playlistId)
+          .order('position', { ascending: true })
+          .range(rangeStart, rangeStart + batchSize - 1);
+
+        if (playlistError) {
+          console.error('[Groups] Error loading playlist songs:', playlistError);
+          break;
+        }
+
+        if (batch && batch.length > 0) {
+          allPlaylistSongs = [...allPlaylistSongs, ...batch];
+          rangeStart += batchSize;
+          hasMore = batch.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      songs = allPlaylistSongs;
     }
 
     // Transform songs to include liked status and playlist info
@@ -540,8 +584,15 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Check provider from user metadata
-    const provider = session.user?.app_metadata?.provider;
+    // Get the provider from database (set during login)
+    const { data: userData } = await supabase
+      .from('users')
+      .select('last_used_provider')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    const provider = userData?.last_used_provider;
+    console.log('[Groups] User provider:', provider);
 
     if (provider === 'spotify') {
       setHasSpotify(true);
@@ -554,9 +605,45 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
       setPlatform('youtube');
       fetchYoutubePlaylists();
     } else {
-      // Fallback - try both APIs
-      setHasSpotify(false);
-      setHasYoutube(false);
+      // Fallback - check identities
+      const identities = session.user.identities || [];
+      const hasGoogle = identities.some(id => id.provider === 'google');
+      const hasSpotifyIdentity = identities.some(id => id.provider === 'spotify');
+
+      console.log('[Groups] Fallback - checking identities. Google:', hasGoogle, 'Spotify:', hasSpotifyIdentity);
+
+      // Set both if both exist, but prioritize the most recent one
+      if (hasGoogle && hasSpotifyIdentity) {
+        // Both are connected - check which was most recently used
+        const sortedIdentities = [...identities].sort((a, b) => {
+          return new Date(b.updated_at) - new Date(a.updated_at);
+        });
+        const mostRecent = sortedIdentities[0]?.provider;
+
+        if (mostRecent === 'google') {
+          setHasYoutube(true);
+          setHasSpotify(true);
+          setPlatform('youtube');
+          fetchYoutubePlaylists();
+        } else {
+          setHasSpotify(true);
+          setHasYoutube(true);
+          setPlatform('spotify');
+          fetchSpotifyPlaylists();
+        }
+      } else if (hasSpotifyIdentity) {
+        setHasSpotify(true);
+        setHasYoutube(false);
+        setPlatform('spotify');
+        fetchSpotifyPlaylists();
+      } else if (hasGoogle) {
+        setHasYoutube(true);
+        setHasSpotify(false);
+        setPlatform('youtube');
+        fetchYoutubePlaylists();
+      } else {
+        console.log('[Groups] No identities found');
+      }
     }
   }
 
