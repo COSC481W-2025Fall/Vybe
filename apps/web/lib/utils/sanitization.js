@@ -70,6 +70,11 @@ export function removeDangerousChars(input) {
 
   let output = input;
 
+  // Remove script tags FIRST (before removing angle brackets)
+  // This ensures <script> is fully removed before we strip < and >
+  output = output.replace(/<script[^>]*>/gi, '');
+  output = output.replace(/<\/script>/gi, '');
+  
   // Remove < and > characters (prevent tag injection)
   output = output.replace(/[<>]/g, '');
 
@@ -77,15 +82,8 @@ export function removeDangerousChars(input) {
   // javascript:alert(1) -> alert(1) (remove only "javascript:")
   output = output.replace(/javascript:/gi, '');
   
-  // data:text/html,<script> -> text/html, (remove "data:" and "<script>")
-  // First remove data: prefix
+  // data:text/html,<script> -> text/html, (remove "data:" prefix)
   output = output.replace(/data:/gi, '');
-  
-  // Remove script tags that might be in the content (including any attributes)
-  output = output.replace(/<script[^>]*>/gi, '');
-  output = output.replace(/<\/script>/gi, '');
-  // Also remove any remaining script> fragments
-  output = output.replace(/script>/gi, '');
   
   output = output.replace(/vbscript:/gi, '');
   output = output.replace(/file:/gi, '');
