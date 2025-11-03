@@ -90,6 +90,7 @@ export function removeDangerousChars(input) {
   // Remove event handlers - only remove the handler part, keep the value
   // onclick=alert(1) -> alert(1) (remove only "onclick=")
   // onerror=alert(1) -> alert(1) (remove only "onerror=")
+  // Added word boundary \b to ensure we match complete event handler names
   output = output.replace(/\bon\w+\s*=\s*/gi, '');
 
   // Remove < and > characters (prevent tag injection) - do this AFTER removing script tags
