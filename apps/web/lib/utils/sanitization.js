@@ -26,10 +26,16 @@ export function stripHtmlTags(input) {
     return String(input);
   }
 
-  // Remove HTML tags using regex
+  // Remove HTML tags using regex (applied repeatedly in case of nested/malformed tags)
   // This regex matches < followed by any characters until >
   // The non-greedy ? ensures we match the shortest possible tag
-  return input.replace(/<[^>]*>/g, '');
+  let output = input;
+  let previous;
+  do {
+    previous = output;
+    output = output.replace(/<[^>]*>/g, '');
+  } while (output !== previous);
+  return output;
 }
 
 /**
