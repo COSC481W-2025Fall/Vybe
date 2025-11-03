@@ -254,9 +254,8 @@ export function removeDangerousChars(input) {
     while (handlerChanged && handlerIterations < 10) {
       const handlerBefore = output;
       // Remove event handler: onclick=, onload=, etc. (bounded pattern)
-      output = output.replace(/\bon\w{1,50}\s*=\s*/gi, '');
-      // Also handle with quotes: onclick=", onload=', etc.
-      output = output.replace(/\bon\w{1,50}\s*=\s*["']/gi, '');
+      // Remove event handler attributes including their values (quoted or unquoted)
+      output = output.replace(/\s*on\w{1,50}\s*=\s*(['"]).*?\1|\s*on\w{1,50}\s*=\s*[^ >]*/gi, '');
       handlerChanged = (output !== handlerBefore);
       handlerIterations++;
     }
