@@ -117,7 +117,7 @@ describe('Notification Schema Validation', () => {
 
       const result = notificationSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => 
           e.path?.includes('security_alerts_inapp') || 
           e.message?.includes('Security alerts must always be enabled')
@@ -150,7 +150,7 @@ describe('Notification Schema Validation', () => {
 
       const result = notificationSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => 
           e.path?.includes('security_alerts_email') || 
           e.message?.includes('Security alerts must always be enabled')
@@ -237,7 +237,7 @@ describe('Notification Schema Validation', () => {
 
       const result = notificationSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('email_frequency')) || result.error.issues[0];
         expect(error?.message).toContain('instant, daily, or weekly');
       }

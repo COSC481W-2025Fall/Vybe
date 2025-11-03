@@ -142,7 +142,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.message).toContain('at least 2 characters');
       }
@@ -155,7 +155,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.message).toContain('exceed 50 characters');
       }
@@ -168,7 +168,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.message).toContain('letters, numbers, and spaces');
       }
@@ -190,7 +190,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.message).toContain('string');
       }
@@ -233,7 +233,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('bio')) || result.error.issues[0];
         expect(error?.message).toContain('exceed 200 characters');
       }
@@ -247,7 +247,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('bio')) || result.error.issues[0];
         expect(error?.message).toContain('string');
       }
@@ -263,7 +263,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('profile_picture_url')) || result.error.issues[0];
         expect(error?.message).toContain('URL');
       }
@@ -279,7 +279,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('profile_picture_url')) || result.error.issues[0];
         expect(error?.message).toContain('JPEG, PNG, WebP, or GIF');
       }
@@ -296,7 +296,7 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success && result.error?.errors) {
+      if (!result.success && result.error?.issues) {
         const error = result.error.issues.find(e => e.path?.includes('profile_picture_url')) || result.error.issues[0];
         expect(error?.message).toContain('smaller than 5MB');
       }
