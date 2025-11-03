@@ -354,19 +354,9 @@ export function removeDangerousChars(input) {
     // Pattern bounded to prevent ReDoS: \bon\w{1,50}\s*=\s*
     // Complete multi-character sanitization: removes handler declaration AND its value
     // Iterate until no more matches found (prevents reintroduction)
-    let handlerChanged = true;
-    let handlerIterations = 0;
-    const maxHandlerIterations = 5; // Strict limit to prevent polynomial complexity
-    while (handlerChanged && handlerIterations < maxHandlerIterations) {
-      const handlerBefore = output;
-      // Remove event handler completely: onclick=value, onload="value", etc. (bounded pattern)
-      // Complete removal prevents HTML attribute injection vulnerabilities
-      // Pattern matches: handler name, =, and value (quoted or unquoted, bounded to 1000 chars)
-      output = output.replace(/\s*on\w{1,50}\s*=\s*(['"]).*?\1/gi, ''); // Remove quoted handlers completely
-      output = output.replace(/\s*on\w{1,50}\s*=\s*[^ >]{0,1000}/gi, ''); // Remove unquoted handlers completely (bounded to prevent ReDoS)
-      handlerChanged = (output !== handlerBefore);
-      handlerIterations++;
-    }
+    // Remove event handlers completely (multi-character sanitization: run until stable)
+    output = replaceAllCompletely(output, /\s*on\w{1,50}\s*=\s*(['"]).*?\1/gi, '');
+    output = replaceAllCompletely(output, /\s*on\w{1,50}\s*=\s*[^ >]{0,1000}/gi, '');
 
     // --- STEP 4: Remove CSS/DOM injection patterns (bounded, iterative) ---
     // These patterns can be reintroduced, so iterate until stable
