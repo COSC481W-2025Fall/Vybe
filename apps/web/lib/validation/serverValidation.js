@@ -24,6 +24,8 @@ export function sanitizeString(input) {
   return input
     .replace(/[<>]/g, '') // Remove < and >
     .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/data:/gi, '') // Remove data: protocol
+    .replace(/vbscript:/gi, '') // Remove vbscript: protocol
     .replace(/on\w+=/gi, '') // Remove event handlers (onclick=, onload=, etc.)
     .trim();
 }
