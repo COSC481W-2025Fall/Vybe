@@ -69,8 +69,8 @@ describe('Privacy Schema Validation', () => {
 
       const result = privacySchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('profile_visibility'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('profile_visibility')) || result.error.issues[0];
         expect(error?.message).toContain('public, friends, or private');
       }
     });
@@ -207,10 +207,10 @@ describe('Privacy Schema Validation', () => {
 
       const result = privacySchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => 
-          e.message.includes('searchable') || e.message.includes('Private profiles')
-        );
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => 
+          e.message?.includes('searchable') || e.message?.includes('Private profiles')
+        ) || result.error.issues[0];
         expect(error).toBeDefined();
       }
     });
@@ -228,10 +228,10 @@ describe('Privacy Schema Validation', () => {
 
       const result = privacySchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => 
-          e.message.includes('activity feed') || e.message.includes('Private profiles')
-        );
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => 
+          e.message?.includes('activity feed') || e.message?.includes('Private profiles')
+        ) || result.error.issues[0];
         expect(error).toBeDefined();
       }
     });

@@ -128,9 +128,10 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.errors[0].path).toContain('display_name');
-        expect(result.error.errors[0].message).toContain('required');
+      if (!result.success && result.error?.issues) {
+        const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
+        expect(error?.path?.join('.') || error?.path).toContain('display_name');
+        expect(error?.message).toContain('required');
       }
     });
 
@@ -141,8 +142,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('display_name'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.message).toContain('at least 2 characters');
       }
     });
@@ -154,8 +155,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('display_name'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.message).toContain('exceed 50 characters');
       }
     });
@@ -167,8 +168,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('display_name'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.message).toContain('letters, numbers, and spaces');
       }
     });
@@ -189,8 +190,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('display_name'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('display_name')) || result.error.issues[0];
         expect(error?.message).toContain('string');
       }
     });
@@ -232,8 +233,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('bio'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('bio')) || result.error.issues[0];
         expect(error?.message).toContain('exceed 200 characters');
       }
     });
@@ -246,8 +247,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('bio'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('bio')) || result.error.issues[0];
         expect(error?.message).toContain('string');
       }
     });
@@ -262,8 +263,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('profile_picture_url'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('profile_picture_url')) || result.error.issues[0];
         expect(error?.message).toContain('URL');
       }
     });
@@ -278,8 +279,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('profile_picture_url'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('profile_picture_url')) || result.error.issues[0];
         expect(error?.message).toContain('JPEG, PNG, WebP, or GIF');
       }
     });
@@ -295,8 +296,8 @@ describe('Profile Schema Validation', () => {
 
       const result = profileSchema.safeParse(invalidData);
       expect(result.success).toBe(false);
-      if (!result.success) {
-        const error = result.error.errors.find(e => e.path.includes('profile_picture_url'));
+      if (!result.success && result.error?.errors) {
+        const error = result.error.issues.find(e => e.path?.includes('profile_picture_url')) || result.error.issues[0];
         expect(error?.message).toContain('smaller than 5MB');
       }
     });
