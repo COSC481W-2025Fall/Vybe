@@ -11,6 +11,7 @@
  * - DOMParser-based stripping when available (with regex fallback)
  * - No duplicate escaping passes or overlapping regex rules
  * - All dangerous HTML characters are properly escaped
+ * - Input length limits prevent ReDoS attacks on polynomial regex patterns
  * - Maintains backward compatibility with existing tests
  * 
  * Security Notes:
@@ -18,26 +19,49 @@
  * - Dangerous protocols are stripped (javascript:, data:, vbscript:, file:)
  * - Event handlers are removed from attribute contexts
  * - All HTML entities are properly escaped to prevent injection
+ * - Maximum input length enforced to prevent ReDoS attacks
  */
+
+/**
+ * Maximum input length for sanitization (prevents ReDoS attacks on polynomial regex)
+ * Inputs longer than this will be truncated before processing
+ */
+const MAX_INPUT_LENGTH = 100000; // 100KB
 
 /**
  * Repeatedly applies a pattern replacement until the string stabilizes.
  * This ensures multi-character sanitization is complete for any input.
- * @param {string} str
- * @param {RegExp} pattern
- * @param {string} replacement
- * @returns {string}
+ * Input length is validated to prevent ReDoS attacks on polynomial regex patterns.
+ * 
+ * @param {string} str - String to process (will be truncated if too long)
+ * @param {RegExp} pattern - Regex pattern to apply
+ * @param {string} replacement - Replacement string
+ * @returns {string} Processed string
  */
 function replaceAllCompletely(str, pattern, replacement) {
+  // Prevent ReDoS: truncate extremely long inputs before regex processing
+  if (str.length > MAX_INPUT_LENGTH) {
+    str = str.substring(0, MAX_INPUT_LENGTH);
+  }
+  
   let prev;
   let out = str;
   let iterations = 0;
   const maxIterations = 20; // Prevent infinite loops
+  
   do {
     prev = out;
     out = out.replace(pattern, replacement);
     iterations++;
+    
+    // Additional safety: prevent excessive processing even with bounded patterns
+    // If string grows unexpectedly, truncate
+    if (out.length > MAX_INPUT_LENGTH * 2) {
+      out = out.substring(0, MAX_INPUT_LENGTH);
+      break;
+    }
   } while (prev !== out && iterations < maxIterations);
+  
   return out;
 }
 
@@ -84,6 +108,11 @@ function stripHtmlTagsWithDOMParser(input) {
 function stripHtmlTagsRegex(input) {
   if (typeof input !== 'string') {
     return String(input);
+  }
+
+  // Prevent ReDoS: truncate extremely long inputs before regex processing
+  if (input.length > MAX_INPUT_LENGTH) {
+    input = input.substring(0, MAX_INPUT_LENGTH);
   }
 
   let output = input;
@@ -164,6 +193,11 @@ export function stripHtmlTags(input) {
     return String(input);
   }
 
+  // Prevent ReDoS: truncate extremely long inputs before regex processing
+  if (input.length > MAX_INPUT_LENGTH) {
+    input = input.substring(0, MAX_INPUT_LENGTH);
+  }
+
   // Always use regex for consistent behavior and CodeQL compliance
   // DOMParser can have different behavior across environments
   // The regex implementation is CodeQL-compliant with bounded patterns
@@ -210,6 +244,7 @@ function escapeHtmlChars(input) {
  * CodeQL Compliance:
  * - Iterative replacement until stable (no matches remain)
  * - Bounded regex patterns prevent catastrophic backtracking (ReDoS)
+ * - Input length limits prevent ReDoS attacks on polynomial regex patterns
  * - Complete multi-character sanitization of all dangerous patterns
  * - Handles all malformed tag variants with whitespace/newlines
  * - Complete removal prevents pattern reintroduction
@@ -220,6 +255,12 @@ function escapeHtmlChars(input) {
 export function removeDangerousChars(input) {
   if (typeof input !== 'string') {
     return String(input);
+  }
+
+  // Prevent ReDoS: truncate extremely long inputs before regex processing
+  // This limits the computational complexity even with polynomial regex patterns
+  if (input.length > MAX_INPUT_LENGTH) {
+    input = input.substring(0, MAX_INPUT_LENGTH);
   }
 
   let output = input;
