@@ -46,12 +46,16 @@ const displayNameSchema = z
  * - Can be empty string or null
  */
 const bioSchema = z
-  .string({
+  .union([
+    z.string({
+      invalid_type_error: 'Bio must be a string',
+    }).max(200, { message: 'Bio must not exceed 200 characters' }),
+    z.literal(''),
+    z.null(),
+  ], {
     invalid_type_error: 'Bio must be a string',
   })
-  .max(200, { message: 'Bio must not exceed 200 characters' })
   .optional()
-  .nullable()
   .transform((val) => {
     // Transform empty string, null, or undefined to undefined
     if (val === '' || val === null || val === undefined) {
@@ -123,6 +127,16 @@ export const profileSchema = z.object({
 }, {
   required_error: 'Profile data is required',
   invalid_type_error: 'Profile data must be an object',
+}).superRefine((data, ctx) => {
+  // Ensure display_name is present and not empty
+  // This catches cases where display_name is missing from the object
+  if (!data.display_name || data.display_name.trim() === '') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['display_name'],
+      message: 'Display name is required',
+    });
+  }
 });
 
 /**
