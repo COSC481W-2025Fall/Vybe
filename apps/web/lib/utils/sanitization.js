@@ -231,7 +231,13 @@ export function removeDangerousChars(input) {
       scriptIterations += 1;
     }
     // Final pass: Remove any residual literal '<script' substrings, in case any overlaps remain.
-    output = output.replace(/<script/gi, '');
+    // Repeat until none remain (fixes incomplete multi-character sanitization)
+    let scriptResidualChanged = true;
+    while (scriptResidualChanged) {
+      const beforeResidual = output;
+      output = output.replace(/<script/gi, '');
+      scriptResidualChanged = output !== beforeResidual;
+    }
 
     // --- STEP 2: Remove dangerous protocols (word boundary ensures complete match) ---
     // Remove protocol prefix only, keep the rest (for test compatibility)
