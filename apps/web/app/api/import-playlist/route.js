@@ -240,7 +240,8 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
 async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
   // Extract playlist ID from URL
   const playlistId = extractSpotifyPlaylistId(playlistUrl);
-  if (!playlistId) {
+  // Validate that playlistId is exactly 22 alphanumeric characters (Spotify format)
+  if (!playlistId || !/^[a-zA-Z0-9]{22}$/.test(playlistId)) {
     throw new Error('Invalid Spotify playlist URL');
   }
 
