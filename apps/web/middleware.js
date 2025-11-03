@@ -43,10 +43,31 @@ export async function middleware(req) {
     const url = req.nextUrl.clone()
     const nextParam = req.nextUrl.searchParams.get('next')
     if (nextParam) {
-      // next may contain path + query (e.g., /library?from=google)
-      const dest = new URL(nextParam, req.nextUrl.origin)
-      url.pathname = dest.pathname
-      url.search = dest.search
+      // Validate that nextParam is a relative path (prevents open redirect)
+      // Must start with / and not contain protocol schemes (http://, https://, //)
+      if (nextParam.startsWith('/') && !nextParam.match(/^\/\/|^https?:\/\//i)) {
+        try {
+          // Parse as relative URL to safely extract pathname and search
+          const dest = new URL(nextParam, req.nextUrl.origin)
+          // Double-check the origin matches (prevents protocol-relative URLs)
+          if (dest.origin === req.nextUrl.origin) {
+            url.pathname = dest.pathname
+            url.search = dest.search
+          } else {
+            // If origin doesn't match, fallback to default
+            url.pathname = '/library'
+            url.search = ''
+          }
+        } catch {
+          // If URL parsing fails, fallback to default
+          url.pathname = '/library'
+          url.search = ''
+        }
+      } else {
+        // Invalid redirect path, use default
+        url.pathname = '/library'
+        url.search = ''
+      }
     } else {
       url.pathname = '/library'
       url.search = ''
