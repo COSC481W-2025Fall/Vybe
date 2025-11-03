@@ -183,11 +183,15 @@ function escapeHtmlChars(input) {
  * Remove dangerous characters from a string
  * Removes characters that could be used for XSS or injection attacks
  * 
+ * Security: Uses iterative replacement until stable to prevent reintroduction
+ * of malicious patterns after partial sanitization.
+ * 
  * CodeQL Compliance:
- * - Bounded regex patterns prevent catastrophic backtracking
+ * - Iterative replacement until stable (no matches remain)
+ * - Bounded regex patterns prevent catastrophic backtracking (ReDoS)
+ * - Complete multi-character sanitization of all dangerous patterns
  * - Handles all malformed tag variants with whitespace/newlines
- * - Complete escaping of all remaining dangerous characters
- * - No duplicate processing or overlapping rules
+ * - Complete removal prevents pattern reintroduction
  * 
  * @param {string} input - String to sanitize
  * @returns {string} String with dangerous characters removed
@@ -198,49 +202,95 @@ export function removeDangerousChars(input) {
   }
 
   let output = input;
+  let changed = true;
+  let iterations = 0;
+  const maxIterations = 20; // Safety limit to prevent infinite loops
 
-  // --- STEP 1: Remove script tags with bounded patterns (prevent ReDoS) ---
-  // Handles: <script>, <script >, </script\t>, <script\n>, <script/>, etc.
-  // Bounded to prevent catastrophic backtracking: [\s\S]{0,10000}?
-  // First remove complete script blocks with content
-  output = output.replace(/<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\s*>/gi, '');
-  // Then remove self-closing or opening script tags (without closing)
-  output = output.replace(/<\s*script\b[^>]{0,1000}?\s*\/?\s*>/gi, '');
-  // Finally remove any remaining closing script tags
-  output = output.replace(/<\/\s*script\s*>/gi, '');
-  // Remove leftover "script" text that might remain after tag removal
-  // This handles cases like "data:text/html,<script>" -> after removal: "data:text/html,script"
-  output = output.replace(/,\s*script\b/gi, ',');
+  // Iterate until no more dangerous patterns are found (stable state)
+  // This ensures complete removal and prevents reintroduction of malicious code
+  while (changed && iterations < maxIterations) {
+    const before = output;
+    
+    // --- STEP 1: Remove script tags iteratively until all are gone ---
+    // CRITICAL: Script tags must be completely removed with their content
+    // Handles: <script>, <script >, </script\t>, <script\n>, <script/>, etc.
+    // Pattern bounded to prevent ReDoS: [\s\S]{0,10000}? and [^>]{0,1000}?
+    // Apply multiple times to handle nested or malformed tags
+    
+    // Remove complete script blocks with content (bounded to prevent ReDoS)
+    // This pattern matches: <script...>...content...</script>
+    output = output.replace(/<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\s*>/gi, '');
+    
+    // Remove self-closing or unclosed opening script tags
+    output = output.replace(/<\s*script\b[^>]{0,1000}?\s*\/?\s*>/gi, '');
+    
+    // Remove any remaining closing script tags
+    output = output.replace(/<\/\s*script\s*>/gi, '');
+    
+    // Remove script tags with whitespace/newline variants (iterative cleanup)
+    output = output.replace(/<\s*script[\s\S]{0,1000}?\/?\s*>/gi, '');
+    output = output.replace(/<\/\s*script[\s\S]{0,1000}?>/gi, '');
+    
+    // --- STEP 2: Remove dangerous protocols (word boundary ensures complete match) ---
+    // Remove protocol prefix only, keep the rest (for test compatibility)
+    // Pattern: \b ensures we match complete protocol names, not partial words
+    output = output.replace(/\b(?:javascript|vbscript|file|data):/gi, '');
 
-  // --- STEP 2: Remove dangerous protocols (bounded, word boundary) ---
-  // Remove protocol prefix only, keep the rest (for test compatibility)
-  output = output.replace(/\b(?:javascript|vbscript|file|data):/gi, '');
+    // --- STEP 3: Remove inline event handlers iteratively ---
+    // CRITICAL: Must iterate to handle cases like "onclick=onload=" or nested patterns
+    // Pattern bounded to prevent ReDoS: \bon\w{1,50}\s*=\s*
+    // Remove handler declarations with optional whitespace and quotes
+    // Iterate until no more matches found (prevents reintroduction)
+    let handlerChanged = true;
+    let handlerIterations = 0;
+    while (handlerChanged && handlerIterations < 10) {
+      const handlerBefore = output;
+      // Remove event handler: onclick=, onload=, etc. (bounded pattern)
+      output = output.replace(/\bon\w{1,50}\s*=\s*/gi, '');
+      // Also handle with quotes: onclick=", onload=', etc.
+      output = output.replace(/\bon\w{1,50}\s*=\s*["']/gi, '');
+      handlerChanged = (output !== handlerBefore);
+      handlerIterations++;
+    }
 
-  // --- STEP 3: Remove inline event handlers (bounded pattern) ---
-  // Remove only handler declaration, preserve value for test compatibility
-  // Pattern bounded to prevent ReDoS: \bon\w{1,50}\s*=\s*
-  output = output.replace(/\bon\w{1,50}\s*=\s*/gi, '');
+    // --- STEP 4: Remove CSS/DOM injection patterns (bounded, iterative) ---
+    // These patterns can be reintroduced, so iterate until stable
+    output = output.replace(/expression\s*\(/gi, '(');
+    output = output.replace(/url\s*\(/gi, '(');
+    output = output.replace(/@import\s+/gi, '');
+    output = output.replace(/document\.(write|writeln|cookie|location)/gi, '');
+    output = output.replace(/window\.(location|document|eval|parent|top)/gi, '');
+    output = output.replace(/\.innerHTML/gi, '');
+    output = output.replace(/\.outerHTML/gi, '');
+    output = output.replace(/\.insertAdjacentHTML/gi, '');
 
-  // --- STEP 4: Remove CSS/DOM injection patterns (bounded) ---
-  output = output
-    .replace(/expression\s*\(/gi, '(')
-    .replace(/url\s*\(/gi, '(')
-    .replace(/@import\s+/gi, '')
-    .replace(/document\.(write|writeln|cookie|location)/gi, '')
-    .replace(/window\.(location|document|eval|parent|top)/gi, '')
-    .replace(/\.innerHTML/gi, '')
-    .replace(/\.outerHTML/gi, '')
-    .replace(/\.insertAdjacentHTML/gi, '');
+    // --- STEP 5: Remove HTML tags but preserve content (for test compatibility) ---
+    // Bounded pattern to prevent ReDoS: [^>]{0,1000}?
+    // This handles cases like "Hello<World>" -> "HelloWorld"
+    // Apply iteratively to handle nested tags
+    let tagChanged = true;
+    let tagIterations = 0;
+    while (tagChanged && tagIterations < 10) {
+      const tagBefore = output;
+      output = output.replace(/<\s*([^>]{0,1000}?)\s*>/g, '$1');
+      tagChanged = (output !== tagBefore);
+      tagIterations++;
+    }
+    
+    // Remove leftover "script" text that might remain after tag removal
+    // This handles cases like "data:text/html,<script>" -> after removal: "data:text/html,script"
+    output = output.replace(/,\s*script\b/gi, ',');
 
-  // --- STEP 5: Remove HTML tags but preserve content (for test compatibility) ---
-  // Bounded pattern to prevent ReDoS: [^>]{0,1000}?
-  // This handles cases like "Hello<World>" -> "HelloWorld"
-  output = output.replace(/<\s*([^>]{0,1000}?)\s*>/g, '$1');
-  
+    // Check if any changes were made in this iteration
+    changed = (output !== before);
+    iterations++;
+  }
+
   // --- STEP 6: Complete escaping of dangerous characters ---
-  // This ensures CodeQL sees complete multi-character sanitization
-  // Escape <, >, &, ", ' (but not / which is safe in this context after tag removal)
-  // Note: We escape & first to avoid double-escaping existing entities
+  // CRITICAL: This ensures CodeQL sees complete multi-character sanitization
+  // Escape ALL remaining dangerous HTML characters: <, >, &, ", '
+  // Note: We escape & first to avoid double-escaping existing HTML entities
+  // Pattern uses negative lookahead to preserve valid HTML entities
   output = output
     .replace(/&(?!amp;|lt;|gt;|quot;|#39;|#x27;|#x2F;|#47;|#[0-9]{1,6};|#x[0-9a-fA-F]{1,6};)/g, '&amp;')
     .replace(/</g, '&lt;')
