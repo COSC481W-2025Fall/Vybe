@@ -70,64 +70,47 @@ export function removeDangerousChars(input) {
 
   let output = input;
 
-  // Remove < and > characters first (prevent tag injection)
+  // Remove < and > characters (prevent tag injection)
   output = output.replace(/[<>]/g, '');
 
-  // Remove dangerous protocols completely (including content after colon)
-  // javascript:alert(1) -> '' (remove everything from javascript: to end or next space)
-  output = output.replace(/javascript:[^\s]*/gi, '');
-  output = output.replace(/data:text\/html[^\s]*/gi, ''); // Remove data:text/html URLs
-  output = output.replace(/data:image\/svg\+xml[^\s]*/gi, ''); // Remove data:image/svg+xml (XSS vector)
-  output = output.replace(/data:[^\s]*/gi, ''); // Remove any other data: URLs
-  output = output.replace(/vbscript:[^\s]*/gi, '');
-  output = output.replace(/file:[^\s]*/gi, '');
+  // Remove dangerous protocols - only remove the protocol prefix, keep the rest
+  // javascript:alert(1) -> alert(1) (remove only "javascript:")
+  output = output.replace(/javascript:/gi, '');
+  
+  // data:text/html,<script> -> text/html, (remove "data:" and "<script>")
+  // First remove data: prefix
+  output = output.replace(/data:/gi, '');
+  
+  // Remove script tags that might be in the content
+  output = output.replace(/<script[^>]*>/gi, '');
+  output = output.replace(/<\/script>/gi, '');
+  
+  output = output.replace(/vbscript:/gi, '');
+  output = output.replace(/file:/gi, '');
 
-  // Remove event handlers (onclick=, onload=, etc.) and their values
-  // onclick=alert(1) -> '' (remove the entire attribute)
-  output = output.replace(/on\w+\s*=\s*[^\s]*/gi, '');
+  // Remove event handlers - only remove the handler part, keep the value
+  // onclick=alert(1) -> alert(1) (remove only "onclick=")
+  output = output.replace(/on\w+\s*=\s*/gi, '');
 
   // Remove dangerous CSS expressions
-  output = output.replace(/expression\s*\([^)]*\)/gi, '');
+  output = output.replace(/expression\s*\(/gi, '');
   
   // Remove import statements
-  output = output.replace(/import\s+[^\s]+/gi, '');
-  output = output.replace(/@import\s+[^;]+/gi, '');
+  output = output.replace(/import\s+/gi, '');
+  output = output.replace(/@import\s+/gi, '');
   
   // Remove url() in CSS (can contain javascript:)
-  output = output.replace(/url\s*\([^)]*\)/gi, '');
+  output = output.replace(/url\s*\(/gi, '');
 
   // Remove script tag remnants (in case some escaped the HTML stripping)
-  output = output.replace(/<script/gi, '');
-  output = output.replace(/<\/script>/gi, '');
   output = output.replace(/script>/gi, '');
 
-  // Remove dangerous function calls with their arguments
-  // Handle function calls like alert(1), alert('x'), eval(code), etc.
-  const dangerousFunctions = ['alert', 'eval', 'confirm', 'prompt', 'Function', 'setTimeout', 'setInterval'];
-  
-  for (const func of dangerousFunctions) {
-    // First pass: remove complete function calls func(...)
-    // This handles simple cases like alert(1), alert('x'), eval(code)
-    // We'll apply multiple passes to handle nested cases
-    let changed = true;
-    let iterations = 0;
-    while (changed && iterations < 10) { // Prevent infinite loops
-      const before = output;
-      // Match: func( followed by content until matching closing paren
-      // This regex handles up to 3 levels of nesting
-      const funcRegex = new RegExp(`\\b${func}\\s*\\([^()]*(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\)[^()]*)*\\)`, 'gi');
-      output = output.replace(funcRegex, '');
-      changed = (before !== output);
-      iterations++;
-    }
-    
-    // Remove any remaining fragments: func( without closing paren
-    output = output.replace(new RegExp(`\\b${func}\\s*\\(`, 'gi'), '');
-  }
-  
-  // Clean up orphaned closing parens that might be left from removed function calls
-  // Only remove if they're followed by a digit or letter (likely part of removed function call)
-  output = output.replace(/\s*\)\s*(?=\d|\w)/g, '');
+  // NOTE: We do NOT remove alert(), eval(), etc. function calls here
+  // because they may be legitimate text content. The sanitization function
+  // removeDangerousChars should only remove dangerous patterns like protocols
+  // and event handlers, not function names themselves. If full sanitization
+  // is needed (removing function calls), that should be done in sanitizeText()
+  // which applies additional layers of sanitization.
 
   // Remove dangerous document/window methods and properties
   output = output

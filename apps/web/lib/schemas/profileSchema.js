@@ -27,16 +27,16 @@ const displayNameSchema = z
     required_error: 'Display name is required',
     invalid_type_error: 'Display name must be a string',
   })
-  .min(2, 'Display name must be at least 2 characters')
-  .max(50, 'Display name must not exceed 50 characters')
+  .min(2, { message: 'Display name must be at least 2 characters' })
+  .max(50, { message: 'Display name must not exceed 50 characters' })
   .regex(
     /^[a-zA-Z0-9\s]+$/,
-    'Display name can only contain letters, numbers, and spaces'
+    { message: 'Display name can only contain letters, numbers, and spaces' }
   )
   .trim()
   .refine(
     (val) => val.length >= 2,
-    'Display name cannot be empty after trimming'
+    { message: 'Display name cannot be empty after trimming' }
   );
 
 /**
@@ -49,11 +49,16 @@ const bioSchema = z
   .string({
     invalid_type_error: 'Bio must be a string',
   })
-  .max(200, 'Bio must not exceed 200 characters')
+  .max(200, { message: 'Bio must not exceed 200 characters' })
   .optional()
-  .or(z.literal(''))
   .nullable()
-  .transform((val) => (val === '' ? undefined : val));
+  .transform((val) => {
+    // Transform empty string, null, or undefined to undefined
+    if (val === '' || val === null || val === undefined) {
+      return undefined;
+    }
+    return val;
+  });
 
 /**
  * Profile picture URL validation:
@@ -115,6 +120,9 @@ export const profileSchema = z.object({
   display_name: displayNameSchema,
   bio: bioSchema,
   profile_picture_url: profilePictureUrlSchema,
+}, {
+  required_error: 'Profile data is required',
+  invalid_type_error: 'Profile data must be an object',
 });
 
 /**
