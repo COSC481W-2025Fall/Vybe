@@ -45,24 +45,31 @@ const displayNameSchema = z
  * - Maximum 200 characters
  * - Can be empty string or null
  */
-const bioSchema = z
-  .union([
-    z.string({
-      invalid_type_error: 'Bio must be a string',
-    }).max(200, { message: 'Bio must not exceed 200 characters' }),
-    z.literal(''),
-    z.null(),
-  ], {
-    invalid_type_error: 'Bio must be a string',
-  })
-  .optional()
-  .transform((val) => {
-    // Transform empty string, null, or undefined to undefined
-    if (val === '' || val === null || val === undefined) {
-      return undefined;
+const bioSchema = z.any().superRefine((val, ctx) => {
+  // If value is provided and not empty/null/undefined, it must be a string
+  if (val !== undefined && val !== null && val !== '') {
+    if (typeof val !== 'string') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Bio must be a string',
+      });
+      return;
     }
-    return val;
-  });
+    // If it's a string, check max length
+    if (val.length > 200) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Bio must not exceed 200 characters',
+      });
+    }
+  }
+}).transform((val) => {
+  // Transform empty string, null, or undefined to undefined
+  if (val === '' || val === null || val === undefined) {
+    return undefined;
+  }
+  return val;
+});
 
 /**
  * Profile picture URL validation:
@@ -120,22 +127,42 @@ const profilePictureUrlSchema = z
  * });
  * ```
  */
-export const profileSchema = z.object({
-  display_name: displayNameSchema,
+const baseProfileSchema = z.object({
+  display_name: displayNameSchema.optional(),
   bio: bioSchema,
   profile_picture_url: profilePictureUrlSchema,
 }, {
   required_error: 'Profile data is required',
   invalid_type_error: 'Profile data must be an object',
-}).superRefine((data, ctx) => {
-  // Ensure display_name is present and not empty
-  // This catches cases where display_name is missing from the object
-  if (!data.display_name || data.display_name.trim() === '') {
+});
+
+export const profileSchema = baseProfileSchema.superRefine((data, ctx) => {
+  // Override error messages for missing or invalid fields
+  // This ensures our custom messages are used instead of Zod's default ones
+  
+  // Check display_name
+  if (data.display_name === undefined) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['display_name'],
       message: 'Display name is required',
     });
+    return; // Don't add duplicate errors
+  }
+  
+  // If display_name exists but fails validation, check if it's a type error
+  const displayNameResult = displayNameSchema.safeParse(data.display_name);
+  if (!displayNameResult.success) {
+    // Override the error message if it's a generic type error
+    const error = displayNameResult.error.issues[0];
+    if (error?.code === 'invalid_type' && error?.message?.includes('expected string')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['display_name'],
+        message: 'Display name is required',
+      });
+      return;
+    }
   }
 });
 
