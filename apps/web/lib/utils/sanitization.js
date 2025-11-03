@@ -230,6 +230,8 @@ export function removeDangerousChars(input) {
       scriptChanged = output !== scriptBefore;
       scriptIterations += 1;
     }
+    // Final pass: Remove any residual literal '<script' substrings, in case any overlaps remain.
+    output = output.replace(/<script/gi, '');
 
     // --- STEP 2: Remove dangerous protocols (word boundary ensures complete match) ---
     // Remove protocol prefix only, keep the rest (for test compatibility)
