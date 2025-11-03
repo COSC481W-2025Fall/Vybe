@@ -213,24 +213,26 @@ export function removeDangerousChars(input) {
 
     // --- STEP 1: Remove script tags iteratively until absolutely none remain ---
     // CRITICAL: Repeat all variants until stabilized (no more <script remnants)
-    let scriptChanged = true;
-    let scriptIterations = 0;
-    const maxScriptIterations = 20; // Extra safety for badly malformed input
-    while (scriptChanged && scriptIterations < maxScriptIterations) {
-      const scriptBefore = output;
+    let scriptSanitizeChanged = true;
+    let scriptSanitizeIterations = 0;
+    const maxScriptSanitizeIterations = 20; // Extra safety for badly malformed input
+    // Combine ALL script tag removals into a single stabilization loop
+    while (scriptSanitizeChanged && scriptSanitizeIterations < maxScriptSanitizeIterations) {
+      const scriptSanitizeBefore = output;
       // Remove complete script blocks with content (bounded to prevent ReDoS)
       output = output.replace(/<\s*script\b[^>]{0,1000}?>[\s\S]{0,10000}?<\s*\/\s*script\b[^>]{0,1000}?>/gi, '');
-      // Remove self-closing or unclosed opening script tags
+      // Remove self-closing or partially malformed opening script tags
       output = output.replace(/<\s*script\b[^>]{0,1000}?\s*\/?\s*>/gi, '');
-      // Remove any remaining closing script tags
-      output = output.replace(/<\/\s*script\s*>/gi, '');
-      // Remove script tags with whitespace/newline variants (iterative cleanup)
       output = output.replace(/<\s*script[\s\S]{0,1000}?\/?\s*>/gi, '');
+      // Remove any remaining closing script tags (malformed or not)
+      output = output.replace(/<\/\s*script\s*>/gi, '');
       output = output.replace(/<\/\s*script[\s\S]{0,1000}?>/gi, '');
-      scriptChanged = output !== scriptBefore;
-      scriptIterations += 1;
+      // Final pass: Remove any residual literal '<script' and '</script'
+      output = output.replace(/<script/gi, '');
+      output = output.replace(/<\/script/gi, '');
+      scriptSanitizeChanged = output !== scriptSanitizeBefore;
+      scriptSanitizeIterations += 1;
     }
-    // Final pass: Remove any residual literal '<script' substrings, in case any overlaps remain.
     // Repeat until none remain (fixes incomplete multi-character sanitization)
     let scriptResidualChanged = true;
     while (scriptResidualChanged) {
