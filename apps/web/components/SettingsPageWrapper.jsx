@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext } from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { User, Shield, Bell, Settings as SettingsIcon, Save, AlertCircle } from 'lucide-react';
 import SettingsNav from '@/components/SettingsNav';
-import SettingsSyncIndicator from '@/components/SettingsSyncIndicator';
 import SettingsConflictDialog from '@/components/SettingsConflictDialog';
 import useSettingsStore from '@/store/settingsStore';
 
@@ -176,46 +174,6 @@ export default function SettingsPageWrapper({ children }) {
   return (
     <SettingsContext.Provider value={{ hasUnsavedChanges, setHasUnsavedChanges, isSaving, handleSaveChanges, handleCancel, setFormSubmitHandler, setFormResetHandler }}>
       <div className="min-h-screen w-full">
-      {/* Breadcrumb Navigation */}
-      <div className="border-b border-white/10 glass-card backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-2 text-sm" aria-label="Breadcrumb">
-            <Link 
-              href="/home" 
-              className="text-gray-400 hover:text-white transition-colors flex items-center gap-1"
-            >
-              <span>Home</span>
-            </Link>
-            <span className="text-gray-500">/</span>
-            <span className="text-white font-medium">Settings</span>
-          </nav>
-        </div>
-      </div>
-
-      {/* Page Header */}
-      <div className="border-b border-white/10 glass-card backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Settings</h1>
-              <p className="mt-1 text-sm text-gray-400">
-                Manage your account settings and preferences
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              {/* Settings Sync Indicator */}
-              <SettingsSyncIndicator />
-              
-              {/* Mobile menu button */}
-              <SettingsNav
-                sections={SETTINGS_SECTIONS}
-                variant="mobile"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
