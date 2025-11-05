@@ -22,8 +22,12 @@ test.describe('Vybe App E2E Tests', () => {
     // Check that sign-in page loads
     await expect(page).toHaveURL(/sign-in/);
     
-    // The Vybe brand should still be visible
-    await expect(page.getByText('Vybe')).toBeVisible();
+    // Check for welcome message
+    await expect(page.getByText('Welcome to Vybe')).toBeVisible();
+    
+    // Check for sign-in buttons
+    await expect(page.getByTestId('spotify-signin')).toBeVisible();
+    await expect(page.getByTestId('google-signin')).toBeVisible();
   });
 
   test('unauthenticated access redirects to sign-in', async ({ page }) => {
