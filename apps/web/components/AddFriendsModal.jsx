@@ -80,7 +80,7 @@ export default function AddFriendsModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="vybe-aurora glass-card rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto modal-scroll">
+      <div className="vybe-aurora glass-card rounded-2xl p-6 w-full max-w-md max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-400/20 rounded-lg border border-blue-400/30">
@@ -120,18 +120,18 @@ export default function AddFriendsModal({ onClose }) {
         <button
           onClick={handleBrowseAll}
           disabled={loading}
-          className="w-full mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 border border-white/20 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 border border-white/20 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
         >
           {loading ? 'Loading all users...' : 'Browse All Users'}
         </button>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg flex-shrink-0">
             <p className="text-sm text-red-400">{error}</p>
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-2">
           {users.length > 0 && (
             <>
               <p className="text-sm text-white/60 mb-2">
