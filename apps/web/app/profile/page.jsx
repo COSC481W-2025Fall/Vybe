@@ -19,6 +19,8 @@ export default function ProfilePage() {
   const [showAddFriendsModal, setShowAddFriendsModal] = useState(false);
   const [showFriendRequestsModal, setShowFriendRequestsModal] = useState(false);
   const [showSongSearchModal, setShowSongSearchModal] = useState(false);
+  const [showRemoveFriendModal, setShowRemoveFriendModal] = useState(false);
+  const [friendToRemove, setFriendToRemove] = useState(null);
   const [groupsCount, setGroupsCount] = useState(0);
   const [songOfDay, setSongOfDay] = useState(null);
 
@@ -369,25 +371,9 @@ export default function ProfilePage() {
                       <p className="text-sm text-white/60 truncate">@{friend.username}</p>
                     </div>
                     <button
-                      onClick={async () => {
-                        if (!confirm(`Remove ${friend.name} from your friends?`)) return;
-
-                        try {
-                          const supabase = supabaseBrowser();
-                          const response = await fetch('/api/friends', {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ friendId: friend.id }),
-                          });
-
-                          if (!response.ok) throw new Error('Failed to remove friend');
-
-                          // Refresh friends list
-                          setFriends(friends.filter(f => f.id !== friend.id));
-                        } catch (error) {
-                          console.error('Error removing friend:', error);
-                          alert('Failed to remove friend. Please try again.');
-                        }
+                      onClick={() => {
+                        setFriendToRemove(friend);
+                        setShowRemoveFriendModal(true);
                       }}
                       className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
                       title="Remove friend"
@@ -436,6 +422,55 @@ export default function ProfilePage() {
           onClose={() => setShowSongSearchModal(false)}
           onSelectSong={handleSetSongOfDay}
         />
+      )}
+
+      {/* Remove Friend Confirmation Modal */}
+      {showRemoveFriendModal && friendToRemove && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-card rounded-2xl p-6 max-w-md w-full border border-white/20 shadow-2xl">
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Remove Friend?
+            </h3>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to remove <span className="font-semibold text-white">{friendToRemove.name}</span> from your friends?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRemoveFriendModal(false);
+                  setFriendToRemove(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/friends', {
+                      method: 'DELETE',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ friendId: friendToRemove.id }),
+                    });
+
+                    if (!response.ok) throw new Error('Failed to remove friend');
+
+                    // Refresh friends list
+                    setFriends(friends.filter(f => f.id !== friendToRemove.id));
+                    setShowRemoveFriendModal(false);
+                    setFriendToRemove(null);
+                  } catch (error) {
+                    console.error('Error removing friend:', error);
+                    alert('Failed to remove friend. Please try again.');
+                  }
+                }}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
