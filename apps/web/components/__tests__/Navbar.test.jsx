@@ -51,7 +51,8 @@ describe('Navbar', () => {
     it('renders all navigation links', () => {
       render(<Navbar />)
       
-      expect(screen.getByRole('link', { name: /home/i })).toBeInTheDocument()
+      // There are multiple home links (logo and nav item), so use getAllByRole
+      expect(screen.getAllByRole('link', { name: /home/i }).length).toBeGreaterThan(0)
       expect(screen.getByRole('link', { name: /groups/i })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /playlist/i })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /library/i })).toBeInTheDocument()
@@ -249,14 +250,16 @@ describe('Navbar', () => {
       const signOutButton = screen.getByRole('button', { name: /sign out/i })
       fireEvent.click(signOutButton)
       
-      // Should show loading state
-      expect(screen.getByText('Logging out...')).toBeInTheDocument()
+      // Should show loading state - wait for the state update
+      await waitFor(() => {
+        expect(screen.getByText('Logging out...')).toBeInTheDocument()
+      })
       expect(signOutButton).toBeDisabled()
       
       // Wait for the loading to complete and button to be re-enabled
       await waitFor(() => {
         expect(signOutButton).not.toBeDisabled()
-      })
+      }, { timeout: 2000 })
     })
 
     it('calls sign-out endpoint on button click', async () => {
@@ -326,9 +329,10 @@ describe('Navbar', () => {
     })
 
     it('shows loading state in mobile menu', async () => {
+      // Use a longer delay to ensure state updates are visible
       global.fetch.mockImplementation(() => 
         new Promise(resolve => 
-          setTimeout(() => resolve({ ok: true }), 100)
+          setTimeout(() => resolve({ ok: true }), 200)
         )
       )
 
@@ -345,11 +349,14 @@ describe('Navbar', () => {
         btn => btn.closest('[data-testid="mobile-nav"]')
       )
       
-      fireEvent.click(mobileSignOutButton)
+      // Use userEvent for better async handling
+      await userEvent.click(mobileSignOutButton)
       
+      // Wait for loading state to appear - check within mobile nav
       await waitFor(() => {
-        expect(screen.getByText('Logging out...')).toBeInTheDocument()
-      })
+        const mobileNav = screen.getByTestId('mobile-nav')
+        expect(mobileNav.textContent).toContain('Logging out...')
+      }, { timeout: 2000 })
     })
   })
 
@@ -402,9 +409,11 @@ describe('Navbar', () => {
     it('supports keyboard navigation', async () => {
       render(<Navbar />)
       
-      const homeLink = screen.getByRole('link', { name: /home/i })
-      homeLink.focus()
-      expect(document.activeElement).toBe(homeLink)
+      // There are multiple home links (logo and nav item), use getAllByRole and pick the nav item
+      const homeLinks = screen.getAllByRole('link', { name: /home/i })
+      const homeNavLink = homeLinks.find(link => link.getAttribute('aria-current') === 'page' || link.className.includes('nav-item'))
+      homeNavLink.focus()
+      expect(document.activeElement).toBe(homeNavLink)
       
       await userEvent.keyboard('{Tab}')
       // Should move focus to next link

@@ -91,6 +91,7 @@ describe('AddFriendsModal', () => {
 
   it('has modal-scroll class for scrollable content', () => {
     const { container } = render(<AddFriendsModal onClose={mockOnClose} />);
+    // modal-scroll is on the content div, not the container
     expect(container.querySelector('.modal-scroll')).toBeInTheDocument();
   });
 });

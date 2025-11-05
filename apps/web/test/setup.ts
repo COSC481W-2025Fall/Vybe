@@ -1,6 +1,13 @@
 import '@testing-library/jest-dom'
 import { beforeAll, afterAll } from 'vitest'
 
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 // Extend global type to include testUtils
 declare global {
   var testUtils: {

@@ -91,6 +91,7 @@ export default function AddFriendsModal({ onClose }) {
           <button
             onClick={onClose}
             className="p-1 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
+            aria-label="Close"
           >
             <X className="h-5 w-5 text-white/60" />
           </button>
@@ -131,7 +132,7 @@ export default function AddFriendsModal({ onClose }) {
           </div>
         )}
 
-        <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-2">
+        <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-2 modal-scroll">
           {users.length > 0 && (
             <>
               <p className="text-sm text-white/60 mb-2">

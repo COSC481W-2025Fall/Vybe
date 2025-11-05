@@ -63,8 +63,10 @@ describe('FriendRequestsModal', () => {
         sent: [],
         received: [
           {
-            id: 'req1',
-            from_user: { id: 'user1', username: 'user1', avatar_url: 'avatar1.jpg' },
+            friendship_id: 'req1',
+            id: 'user1',
+            name: 'User One',
+            username: 'user1',
           },
         ],
       }),
@@ -73,7 +75,8 @@ describe('FriendRequestsModal', () => {
     render(<FriendRequestsModal onClose={mockOnClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('user1')).toBeInTheDocument();
+      // Component displays username as @username
+      expect(screen.getByText('@user1')).toBeInTheDocument();
     });
   });
 
@@ -84,8 +87,10 @@ describe('FriendRequestsModal', () => {
         success: true,
         sent: [
           {
-            id: 'req2',
-            to_user: { id: 'user2', username: 'user2', avatar_url: 'avatar2.jpg' },
+            friendship_id: 'req2',
+            id: 'user2',
+            name: 'User Two',
+            username: 'user2',
           },
         ],
         received: [],
@@ -95,7 +100,8 @@ describe('FriendRequestsModal', () => {
     render(<FriendRequestsModal onClose={mockOnClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('user2')).toBeInTheDocument();
+      // Component displays username as @username
+      expect(screen.getByText('@user2')).toBeInTheDocument();
     });
   });
 
@@ -108,8 +114,10 @@ describe('FriendRequestsModal', () => {
           sent: [],
           received: [
             {
-              id: 'req1',
-              from_user: { id: 'user1', username: 'user1', avatar_url: 'avatar1.jpg' },
+              friendship_id: 'req1',
+              id: 'user1',
+              name: 'User One',
+              username: 'user1',
             },
           ],
         }),
@@ -122,7 +130,8 @@ describe('FriendRequestsModal', () => {
     render(<FriendRequestsModal onClose={mockOnClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('user1')).toBeInTheDocument();
+      // Component displays username as @username
+      expect(screen.getByText('@user1')).toBeInTheDocument();
     });
 
     const acceptButton = screen.getByRole('button', { name: /accept/i });
@@ -147,8 +156,10 @@ describe('FriendRequestsModal', () => {
           sent: [],
           received: [
             {
-              id: 'req1',
-              from_user: { id: 'user1', username: 'user1', avatar_url: 'avatar1.jpg' },
+              friendship_id: 'req1',
+              id: 'user1',
+              name: 'User One',
+              username: 'user1',
             },
           ],
         }),
@@ -161,7 +172,8 @@ describe('FriendRequestsModal', () => {
     render(<FriendRequestsModal onClose={mockOnClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('user1')).toBeInTheDocument();
+      // Component displays username as @username
+      expect(screen.getByText('@user1')).toBeInTheDocument();
     });
 
     const rejectButton = screen.getByRole('button', { name: /reject/i });
@@ -190,7 +202,8 @@ describe('FriendRequestsModal', () => {
     render(<FriendRequestsModal onClose={mockOnClose} />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
+      // Wait for loading to complete
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
     });
 
     const closeButton = screen.getByRole('button', { name: /close/i });

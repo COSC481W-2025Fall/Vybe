@@ -196,6 +196,7 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
           <button
             onClick={onClose}
             className="p-1 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
+            aria-label="Close"
           >
             <X className="h-5 w-5 text-white/60" />
           </button>

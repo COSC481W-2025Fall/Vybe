@@ -55,21 +55,25 @@ describe('SongSearchModal', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        tracks: {
-          items: [
-            {
-              id: 'song1',
-              name: 'Test Song',
-              artists: [{ name: 'Test Artist' }],
-              album: { images: [{ url: 'cover.jpg' }] },
-              duration_ms: 200000,
-            },
-          ],
-        },
+        tracks: [
+          {
+            id: 'song1',
+            name: 'Test Song',
+            artists: [{ name: 'Test Artist' }],
+            album: { images: [{ url: 'cover.jpg' }], name: 'Test Album' },
+            duration_ms: 200000,
+            external_urls: { spotify: 'https://spotify.com/track/song1' },
+          },
+        ],
       }),
     });
 
     render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
+
+    // Wait for provider to be set
+    await waitFor(() => {
+      expect(supabaseBrowser).toHaveBeenCalled();
+    });
 
     const searchInput = screen.getByPlaceholderText(/search/i);
     await userEvent.type(searchInput, 'test');
@@ -124,24 +128,37 @@ describe('SongSearchModal', () => {
   });
 
   it('calls onSelectSong when song is clicked', async () => {
+    // Mock search fetch
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        tracks: {
-          items: [
-            {
-              id: 'song1',
-              name: 'Test Song',
-              artists: [{ name: 'Test Artist' }],
-              album: { images: [{ url: 'cover.jpg' }] },
-              duration_ms: 200000,
-            },
-          ],
-        },
+        tracks: [
+          {
+            id: 'song1',
+            name: 'Test Song',
+            artists: [{ name: 'Test Artist' }],
+            album: { images: [{ url: 'cover.jpg' }], name: 'Test Album' },
+            duration_ms: 200000,
+            external_urls: { spotify: 'https://spotify.com/track/song1' },
+          },
+        ],
+      }),
+    });
+
+    // Mock YouTube fetch (called when selecting a Spotify song)
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        videoUrl: 'https://www.youtube.com/watch?v=test123',
       }),
     });
 
     render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
+
+    // Wait for provider to be set
+    await waitFor(() => {
+      expect(supabaseBrowser).toHaveBeenCalled();
+    });
 
     const searchInput = screen.getByPlaceholderText(/search/i);
     await userEvent.type(searchInput, 'test');
@@ -161,52 +178,66 @@ describe('SongSearchModal', () => {
 
     render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
 
+    // Wait for provider to be set
+    await waitFor(() => {
+      expect(supabaseBrowser).toHaveBeenCalled();
+    });
+
     const searchInput = screen.getByPlaceholderText(/search/i);
     await userEvent.type(searchInput, 'test');
 
     await waitFor(() => {
-      expect(screen.getByText(/error/i)).toBeInTheDocument();
+      expect(screen.getByText(/failed to search/i)).toBeInTheDocument();
     }, { timeout: 2000 });
   });
 
   it('shows loading state during search', async () => {
     global.fetch.mockImplementation(() => new Promise(() => {})); // Never resolves
 
-    render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
+    const { container } = render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
+
+    // Wait for provider to be set
+    await waitFor(() => {
+      expect(supabaseBrowser).toHaveBeenCalled();
+    });
 
     const searchInput = screen.getByPlaceholderText(/search/i);
     await userEvent.type(searchInput, 'test');
 
+    // Wait for loading spinner to appear (check for the spinner element with animate-spin class)
     await waitFor(() => {
-      expect(screen.getByText(/searching/i)).toBeInTheDocument();
+      const spinner = container.querySelector('.animate-spin');
+      expect(spinner).toBeInTheDocument();
     }, { timeout: 2000 });
   });
 
   it('debounces search input', async () => {
-    vi.useFakeTimers();
-    
     global.fetch.mockResolvedValue({
       ok: true,
       json: async () => ({
-        tracks: { items: [] },
+        tracks: [],
       }),
     });
 
     render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
 
+    // Wait for provider to be set
+    await waitFor(() => {
+      expect(supabaseBrowser).toHaveBeenCalled();
+    });
+
     const searchInput = screen.getByPlaceholderText(/search/i);
+    
+    // Type characters quickly - should only trigger one search after debounce
     await userEvent.type(searchInput, 't');
     await userEvent.type(searchInput, 'e');
     await userEvent.type(searchInput, 's');
     await userEvent.type(searchInput, 't');
 
-    vi.advanceTimersByTime(500);
-
+    // Wait for debounce delay (500ms) plus a small buffer
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
-    });
-
-    vi.useRealTimers();
+    }, { timeout: 1500 });
   });
 });
 
