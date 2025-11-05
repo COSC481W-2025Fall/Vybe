@@ -368,6 +368,32 @@ export default function ProfilePage() {
                       <p className="font-medium text-white truncate">{friend.name}</p>
                       <p className="text-sm text-white/60 truncate">@{friend.username}</p>
                     </div>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Remove ${friend.name} from your friends?`)) return;
+
+                        try {
+                          const supabase = supabaseBrowser();
+                          const response = await fetch('/api/friends', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ friendId: friend.id }),
+                          });
+
+                          if (!response.ok) throw new Error('Failed to remove friend');
+
+                          // Refresh friends list
+                          setFriends(friends.filter(f => f.id !== friend.id));
+                        } catch (error) {
+                          console.error('Error removing friend:', error);
+                          alert('Failed to remove friend. Please try again.');
+                        }
+                      }}
+                      className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
+                      title="Remove friend"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 ))}
                 {friends.length > 5 && (
