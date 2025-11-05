@@ -3,6 +3,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import Navbar from '@/components/Navbar';
 import { Toaster } from '@/components/ui/sonner';
+import QueryProvider from '@/components/QueryProvider';
 
 export const metadata = {
   title: 'Vybe',
@@ -27,14 +28,16 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="chroma-bg">
-        <div className="vybe-aurora-fixed" />
-        {user && <Navbar />}
-        <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
-          <div className="w-full max-w-6xl">
-            {children}
-          </div>
-        </main>
-        <Toaster />
+        <QueryProvider>
+          <div className="vybe-aurora-fixed" />
+          {user && <Navbar />}
+          <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
+            <div className="w-full max-w-6xl">
+              {children}
+            </div>
+          </main>
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
   );
