@@ -274,7 +274,7 @@ export default function ProfilePage() {
                       href={songOfDay.spotify_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-green-600 active:bg-green-700 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 hover:border-green-500 text-sm sm:text-base"
+                      className="group flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:!bg-green-600 active:!bg-green-700 text-white rounded-lg font-medium transition-all backdrop-blur-sm border border-white/20 hover:!border-green-500 text-sm sm:text-base"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Open in Spotify
@@ -285,7 +285,7 @@ export default function ProfilePage() {
                       href={songOfDay.youtube_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-red-600 active:bg-red-700 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 hover:border-red-500 text-sm sm:text-base"
+                      className="group flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:!bg-red-600 active:!bg-red-700 text-white rounded-lg font-medium transition-all backdrop-blur-sm border border-white/20 hover:!border-red-500 text-sm sm:text-base"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Open in YouTube
