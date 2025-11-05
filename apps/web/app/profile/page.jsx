@@ -283,7 +283,7 @@ export default function ProfilePage() {
                       Open in Spotify
                     </a>
                   )}
-                  {songOfDay.youtube_url && (
+                  {songOfDay.youtube_url && songOfDay.youtube_url.includes('/watch?v=') && (
                     <a
                       href={songOfDay.youtube_url}
                       target="_blank"
