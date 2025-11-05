@@ -269,17 +269,7 @@ export default function ProfilePage() {
                   >
                     Change Song
                   </button>
-                  {user?.app_metadata?.provider === 'google' && songOfDay.youtube_url ? (
-                    <a
-                      href={songOfDay.youtube_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Open in YouTube
-                    </a>
-                  ) : songOfDay.spotify_url ? (
+                  {songOfDay.spotify_url && (
                     <a
                       href={songOfDay.spotify_url}
                       target="_blank"
@@ -289,7 +279,18 @@ export default function ProfilePage() {
                       <ExternalLink className="h-4 w-4" />
                       Open in Spotify
                     </a>
-                  ) : null}
+                  )}
+                  {songOfDay.youtube_url && (
+                    <a
+                      href={songOfDay.youtube_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open in YouTube
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
