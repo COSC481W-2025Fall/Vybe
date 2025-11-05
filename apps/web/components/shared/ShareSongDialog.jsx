@@ -34,7 +34,7 @@ export function ShareSongDialog({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-h-[80vh] overflow-hidden flex flex-col gap-4">
         <DialogHeader>
           <DialogTitle>Share Your Song of the Day</DialogTitle>
           <DialogDescription>
@@ -42,7 +42,7 @@ export function ShareSongDialog({ open, onOpenChange }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 flex-1 overflow-y-auto">
+        <div className="space-y-4 flex-1 overflow-y-auto modal-scroll">
           <div>
             <Label htmlFor="song-search">Search for a song</Label>
             <div className="relative mt-2">
@@ -73,7 +73,7 @@ export function ShareSongDialog({ open, onOpenChange }) {
           )}
 
           {searchResults.length > 0 && !selectedSong && (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="space-y-2 max-h-48 overflow-y-auto modal-scroll">
               {searchResults.map((song) => (
                 <button
                   key={song.id}
@@ -89,7 +89,7 @@ export function ShareSongDialog({ open, onOpenChange }) {
                       setSearchQuery("");
                     }
                   }}
-                  className="w-full text-left bg-gray-900/50 border border-gray-800 rounded-xl p-3 backdrop-blur-sm hover:bg-gray-800/50 transition-colors cursor-pointer"
+                  className="w-full text-left bg-gray-900/50 border border-gray-800 rounded-xl p-3 backdrop-blur-sm hover:bg-gray-800/50 active:bg-gray-800/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center space-x-3">
                     <Music className="h-8 w-8 text-gray-400" />
@@ -118,18 +118,18 @@ export function ShareSongDialog({ open, onOpenChange }) {
             </p>
           </div>
 
-          <div className="flex justify-between pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20"
+              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 text-white rounded-lg font-medium transition-all backdrop-blur-[20px] border border-white/10 text-sm sm:text-base glass-card hover:bg-white/5 hover:border-white/15 active:bg-white/5 active:border-white/15"
             >
               Cancel
             </button>
             <button
               onClick={handleShare}
               disabled={!selectedSong}
-              className="px-6 py-2 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 text-white rounded-lg font-medium transition-all backdrop-blur-[20px] border border-white/10 text-sm sm:text-base glass-card hover:bg-white/5 hover:border-white/15 active:bg-white/5 active:border-white/15 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/[0.03] disabled:hover:border-white/10 disabled:active:bg-transparent disabled:active:border-white/10"
             >
               Share Song
             </button>

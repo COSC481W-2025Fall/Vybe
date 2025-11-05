@@ -35,16 +35,22 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
+      <div className="min-h-screen flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-white"></div>
+          <p className="text-gray-400 text-sm sm:text-base">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <section className="mx-auto px-6 py-8 text-white">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="page-title mb-6">Settings</h1>
+    <div className="min-h-screen text-white">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+        <header className="mb-4 sm:mb-6">
+          <h1 className="page-title text-xl sm:text-2xl mb-1">Settings</h1>
+          <p className="section-subtitle text-xs sm:text-sm">Manage your account and preferences</p>
+        </header>
 
         {user && (
           <div className="mb-6 glass-card rounded-2xl p-6 transition-colors hover:bg-white/5">
@@ -60,8 +66,8 @@ export default function SettingsPage() {
           </div>
         )}
 
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold">About Your Login</h2>
+        <div className="space-y-4 sm:space-y-6">
+          <h2 className="section-title text-lg sm:text-xl">About Your Login</h2>
 
           <div className="glass-card rounded-2xl p-6 transition-colors hover:bg-white/5">
             <p className="text-gray-300">
@@ -89,6 +95,6 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

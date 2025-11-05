@@ -139,7 +139,10 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white">
-        <p>Loading...</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-white"></div>
+          <p className="text-gray-400 text-sm sm:text-base">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -150,23 +153,23 @@ export default function ProfilePage() {
   const joinedDate = new Date(user.created_at).toLocaleDateString();
 
   return (
-    <div className="min-h-screen text-white p-6 pb-20">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen text-white">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-6 sm:space-y-8">
         {/* Profile Header Card */}
-        <div className="vybe-aurora glass-card rounded-2xl p-6">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
             {/* Avatar */}
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-3xl font-bold">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl sm:text-3xl font-bold flex-shrink-0">
               {user.email?.charAt(0).toUpperCase() || 'U'}
             </div>
 
             {/* User Info */}
             <div className="flex-1 text-center md:text-left space-y-4">
               <div>
-                <h2 className="text-2xl font-semibold">
+                <h2 className="page-title text-xl sm:text-2xl">
                   {user.user_metadata?.full_name || user.email?.split('@')[0]}
                 </h2>
-                <p className="text-white/60">{user.email}</p>
+                <p className="section-subtitle text-xs sm:text-sm">{user.email}</p>
                 <div className="flex items-center justify-center md:justify-start space-x-2 mt-2">
                   <Calendar className="h-4 w-4 text-white/60" />
                   <span className="text-sm text-white/60">
@@ -202,24 +205,24 @@ export default function ProfilePage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col space-y-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={() => setShowFriendRequestsModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-400/20 hover:bg-purple-400/30 border border-purple-400/30 rounded-lg transition-colors"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
               >
                 <Mail className="h-4 w-4" />
                 Requests
               </button>
               <button
                 onClick={() => setShowAddFriendsModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-400/20 hover:bg-blue-400/30 border border-blue-400/30 rounded-lg transition-colors"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
               >
                 <UserPlus className="h-4 w-4" />
                 Add Friend
               </button>
               <Link
                 href="/settings"
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition-colors text-center"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
               >
                 <Settings className="h-4 w-4" />
                 Settings
@@ -229,7 +232,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Song of the Day Section */}
-        <div className="vybe-aurora glass-card rounded-2xl p-6">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-subtitle flex items-center space-x-2">
               <Music className="h-5 w-5" />
@@ -238,7 +241,7 @@ export default function ProfilePage() {
             {songOfDay && (
               <button
                 onClick={handleRemoveSongOfDay}
-                className="p-1 hover:bg-white/10 rounded transition-colors"
+                className="p-1 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
                 title="Remove song"
               >
                 <X className="h-4 w-4 text-white/60" />
@@ -252,17 +255,17 @@ export default function ProfilePage() {
                 <img
                   src={songOfDay.image_url}
                   alt={songOfDay.album}
-                  className="w-24 h-24 rounded-lg"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover flex-shrink-0"
                 />
               )}
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-lg truncate">{songOfDay.song_name}</h4>
-                <p className="text-white/60 truncate">{songOfDay.artist}</p>
-                <p className="text-sm text-white/40 truncate">{songOfDay.album}</p>
-                <div className="flex gap-2 mt-3">
+                <h4 className="font-semibold text-base sm:text-lg truncate text-white">{songOfDay.song_name}</h4>
+                <p className="text-sm sm:text-base text-white/60 truncate">{songOfDay.artist}</p>
+                <p className="text-xs sm:text-sm text-white/40 truncate">{songOfDay.album}</p>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3">
                   <button
                     onClick={() => setShowSongSearchModal(true)}
-                    className="px-3 py-1.5 bg-purple-400/20 hover:bg-purple-400/30 border border-purple-400/30 rounded-lg text-sm transition-colors"
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
                   >
                     Change Song
                   </button>
@@ -271,9 +274,9 @@ export default function ProfilePage() {
                       href={songOfDay.youtube_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-sm transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
                     >
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="h-4 w-4" />
                       Open in YouTube
                     </a>
                   ) : songOfDay.spotify_url ? (
@@ -281,9 +284,9 @@ export default function ProfilePage() {
                       href={songOfDay.spotify_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 rounded-lg text-sm transition-colors"
+                      className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
                     >
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="h-4 w-4" />
                       Open in Spotify
                     </a>
                   ) : null}
@@ -292,12 +295,12 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <Music className="h-12 w-12 text-white/60 mx-auto mb-4" />
-              <h3 className="font-medium mb-2">No song of the day yet</h3>
-              <p className="text-white/60 mb-4">Share your current favorite song with friends</p>
+              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-white/60 mx-auto mb-4" />
+              <h3 className="section-title mb-2 text-lg sm:text-xl">No song of the day yet</h3>
+              <p className="section-subtitle text-xs sm:text-sm mb-4">Share your current favorite song with friends</p>
               <button
                 onClick={() => setShowSongSearchModal(true)}
-                className="px-4 py-2 bg-purple-400 hover:bg-purple-500 rounded-lg transition-colors"
+                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
               >
                 Set Song of the Day
               </button>
@@ -306,9 +309,9 @@ export default function ProfilePage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Recent Activity */}
-          <div className="vybe-aurora glass-card rounded-2xl p-6">
+          <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
             <h3 className="section-subtitle flex items-center space-x-2 mb-4">
               <Users className="h-5 w-5" />
               <span>Recent Activity</span>
@@ -316,21 +319,21 @@ export default function ProfilePage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/60">Groups joined this week</span>
-                <span className="px-2 py-1 bg-purple-400/20 text-purple-400 rounded text-sm">0</span>
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 border border-white/10 rounded-full text-xs sm:text-sm text-white backdrop-blur-sm">0</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/60">Songs shared this month</span>
-                <span className="px-2 py-1 bg-purple-400/20 text-purple-400 rounded text-sm">0</span>
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 border border-white/10 rounded-full text-xs sm:text-sm text-white backdrop-blur-sm">0</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-white/60">Playlists collaborated on</span>
-                <span className="px-2 py-1 bg-purple-400/20 text-purple-400 rounded text-sm">0</span>
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 border border-white/10 rounded-full text-xs sm:text-sm text-white backdrop-blur-sm">0</span>
               </div>
             </div>
           </div>
 
           {/* Friends Section */}
-          <div className="vybe-aurora glass-card rounded-2xl p-6">
+          <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="section-subtitle flex items-center space-x-2">
                 <Heart className="h-5 w-5" />
@@ -340,11 +343,12 @@ export default function ProfilePage() {
 
             {friends.length === 0 ? (
               <div className="text-center py-8">
-                <Users className="h-12 w-12 text-white/60 mx-auto mb-4" />
-                <p className="text-white/60 mb-4">No friends yet</p>
+                <Users className="h-12 w-12 sm:h-16 sm:w-16 text-white/60 mx-auto mb-4" />
+                <h3 className="section-title mb-2 text-lg sm:text-xl">No friends yet</h3>
+                <p className="section-subtitle text-xs sm:text-sm mb-4">Start connecting with friends to share music</p>
                 <button
                   onClick={() => setShowAddFriendsModal(true)}
-                  className="px-4 py-2 bg-blue-400 hover:bg-blue-500 rounded-lg transition-colors"
+                  className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
                 >
                   Add Friends
                 </button>
@@ -354,14 +358,14 @@ export default function ProfilePage() {
                 {friends.slice(0, 5).map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10"
+                    className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 active:bg-white/10 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
                       {friend.name?.charAt(0).toUpperCase() || 'F'}
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{friend.name}</p>
-                      <p className="text-sm text-white/60">@{friend.username}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white truncate">{friend.name}</p>
+                      <p className="text-sm text-white/60 truncate">@{friend.username}</p>
                     </div>
                   </div>
                 ))}
@@ -376,7 +380,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Bottom spacing */}
-        <div className="h-16"></div>
+        <div className="h-16 sm:h-20"></div>
       </div>
 
       {/* Add Friends Modal */}

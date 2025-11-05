@@ -13,9 +13,32 @@ export async function GET(request) {
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   if (code) {
-    const { data: sessionData } = await supabase.auth.exchangeCodeForSession(code);
+    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
-    const { data: { session } } = await supabase.auth.getSession();
+    if (exchangeError) {
+      console.error('[callback] Error exchanging code for session:', exchangeError);
+      console.error('[callback] Error details:', JSON.stringify(exchangeError, null, 2));
+      // Redirect to sign-in with error
+      const errorUrl = new URL('/sign-in', request.url);
+      errorUrl.searchParams.set('error', 'auth_failed');
+      errorUrl.searchParams.set('message', exchangeError.message || 'Failed to authenticate');
+      return NextResponse.redirect(errorUrl);
+    }
+
+    // Use session from exchangeCodeForSession response first, then fallback to getSession
+    // This is important because cookies might not be set immediately after exchangeCodeForSession
+    const session = sessionData?.session || (await supabase.auth.getSession()).data?.session;
+    
+    if (!session || !session.user) {
+      console.error('[callback] No session found after exchangeCodeForSession');
+      console.error('[callback] sessionData:', sessionData);
+      console.error('[callback] exchangeError was:', exchangeError);
+      const errorUrl = new URL('/sign-in', request.url);
+      errorUrl.searchParams.set('error', 'no_session');
+      errorUrl.searchParams.set('message', 'Failed to create session. Please try again.');
+      return NextResponse.redirect(errorUrl);
+    }
+    
     console.log('[callback] session user:', session?.user?.id);
     console.log('[callback] provider:', session?.user?.app_metadata?.provider);
     console.log('[callback] exchangeCodeForSession has session:', !!sessionData?.session);

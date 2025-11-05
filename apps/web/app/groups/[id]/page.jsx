@@ -312,7 +312,10 @@ export default function GroupDetailPage({ params }) {
   if (loading) {
     return (
       <div className="min-h-screen text-white flex items-center justify-center">
-        <p className="text-gray-400">Loading group...</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-white"></div>
+          <p className="text-gray-400 text-sm sm:text-base">Loading group...</p>
+        </div>
       </div>
     );
   }
@@ -321,15 +324,15 @@ export default function GroupDetailPage({ params }) {
     <div className="min-h-screen text-white">
       {/* Header */}
       <div className="border-b border-gray-800">
-        <div className="px-6 py-8">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="page-title mb-1">{group?.name}</h1>
-              <p className="section-subtitle">{group?.description || 'No description'}</p>
+              <h1 className="page-title mb-1 text-xl sm:text-2xl">{group?.name}</h1>
+              <p className="section-subtitle text-xs sm:text-sm">{group?.description || 'No description'}</p>
             </div>
             <button
               onClick={() => setShowAddPlaylistModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors"
+              className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
             >
               <Plus className="h-5 w-5" />
               Add Playlist
@@ -339,7 +342,7 @@ export default function GroupDetailPage({ params }) {
       </div>
 
       {/* Main Content */}
-      <div className="w-full max-w-6xl mx-auto px-6 py-8">
+      <div className="w-full max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
         <div className="w-full">
           {/* Playlist Songs */}
           <div className="w-full">
@@ -407,7 +410,7 @@ export default function GroupDetailPage({ params }) {
                   {playlistSongs.length > 20 && !showAllSongs && (
                     <button
                       onClick={() => setShowAllSongs(true)}
-                      className="w-full mt-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/15"
+                      className="w-full mt-6 py-3 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/15"
                     >
                       View All {playlistSongs.length} Tracks
                     </button>
@@ -419,7 +422,7 @@ export default function GroupDetailPage({ params }) {
                         setShowAllSongs(false);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className="w-full mt-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/15"
+                      className="w-full mt-6 py-3 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/15"
                     >
                       Show Less
                     </button>
@@ -432,7 +435,7 @@ export default function GroupDetailPage({ params }) {
                   <p className="text-gray-400 mb-6">Add a playlist from YouTube or Spotify to get started</p>
                   <button
                     onClick={() => setShowAddPlaylistModal(true)}
-                    className="px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors"
+                    className="px-6 py-3 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors"
                   >
                     Add Playlist
                   </button>
@@ -482,7 +485,7 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
   return (
     <div
       onClick={handleSongClick}
-      className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-800/50 transition-colors group cursor-pointer"
+      className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-800/50 active:bg-gray-800/50 transition-colors group cursor-pointer"
     >
       {/* Track Number */}
       <span className="text-gray-400 font-medium w-8 text-center flex-shrink-0">
@@ -767,7 +770,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+              className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 active:bg-gray-700 rounded-md transition-colors"
             >
               Close
             </button>
@@ -814,7 +817,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                   platform === 'youtube'
                     ? 'bg-red-600 text-white'
                     : hasYoutube
-                    ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 active:bg-gray-700'
                     : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                 }`}
               >
@@ -828,7 +831,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                   platform === 'spotify'
                     ? 'bg-green-600 text-white'
                     : hasSpotify
-                    ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 active:bg-gray-700'
                     : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                 }`}
               >
@@ -846,7 +849,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                 Loading playlists...
               </div>
             ) : playlists.length > 0 ? (
-              <div className="max-h-64 overflow-y-auto bg-gray-800 border border-gray-700 rounded-md">
+              <div className="max-h-64 overflow-y-auto bg-gray-800 border border-gray-700 rounded-md modal-scroll">
                 {playlists.map((playlist) => {
                   const playlistName = platform === 'spotify'
                     ? playlist.name
@@ -863,7 +866,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                       key={playlist.id}
                       type="button"
                       onClick={() => setSelectedPlaylistId(playlist.id)}
-                      className={`w-full flex items-center gap-3 p-3 hover:bg-gray-700 transition-colors ${
+                      className={`w-full flex items-center gap-3 p-3 hover:bg-gray-700 active:bg-gray-700 transition-colors ${
                         selectedPlaylistId === playlist.id ? 'bg-gray-700' : ''
                       }`}
                     >
@@ -899,7 +902,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded text-red-400 text-sm">
+            <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-400 text-sm">
               {error}
             </div>
           )}
@@ -908,7 +911,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+              className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 active:bg-gray-700 rounded-md transition-colors"
             >
               Cancel
             </button>
@@ -968,7 +971,7 @@ function EmbeddedPlayer({ song, onClose }) {
         </div>
         <button
           onClick={onClose}
-          className="ml-2 p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+          className="ml-2 p-1 hover:bg-gray-700 active:bg-gray-700 rounded transition-colors flex-shrink-0"
         >
           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

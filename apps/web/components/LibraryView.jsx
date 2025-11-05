@@ -26,8 +26,8 @@ function TabButton({ isActive, children, onClick }) {
       className={[
         'rounded-full px-3 py-1.5 text-sm transition',
         isActive
-          ? 'bg-white text-black shadow-sm'
-          : 'text-muted-foreground hover:text-foreground hover:bg-accent/60',
+          ? 'bg-white text-black shadow-sm font-medium'
+          : 'text-white/80 hover:text-white hover:bg-white/10',
       ].join(' ')}
     >
       {children}
@@ -37,31 +37,31 @@ function TabButton({ isActive, children, onClick }) {
 
 function Row({ item }) {
   return (
-    <li className="group relative flex items-center gap-5 rounded-xl px-5 py-5 hover:bg-white/10 transition-all duration-300 border border-transparent hover:border-white/20 backdrop-blur-sm">
-      <div className="relative">
+    <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 active:bg-white/10 transition-all duration-300 border border-white/10 hover:border-white/20 active:border-white/20 backdrop-blur-sm glass-card">
+      <div className="relative flex-shrink-0">
         <img
           src={item.cover}
           width={64}
           height={64}
-          className="h-16 w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
+          className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
           alt={`${item.title} cover`}
         />
         <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors duration-300">
+        <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-white group-hover:text-white transition-colors duration-300">
           {item.title}
         </div>
-        <div className="truncate text-base text-muted-foreground mt-1">
+        <div className="truncate text-xs sm:text-sm md:text-base text-muted-foreground mt-0.5 sm:mt-1">
           {item.artist}
         </div>
-        <div className="truncate text-sm text-muted-foreground/80 mt-1">
+        <div className="truncate text-xs sm:text-sm text-muted-foreground/80 mt-0.5 sm:mt-1">
           {item.album}
         </div>
       </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
-        <Clock className="h-4 w-4" />
-        <span className="font-medium">{timeAgo(item.playedAt)}</span>
+      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0">
+        <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+        <span className="font-medium whitespace-nowrap">{timeAgo(item.playedAt)}</span>
       </div>
     </li>
   );
@@ -69,37 +69,37 @@ function Row({ item }) {
 
 function PlaylistRow({ playlist }) {
   return (
-    <li className="group relative flex items-center gap-5 rounded-xl px-5 py-5 hover:bg-white/10 transition-all duration-300 border border-transparent hover:border-white/20 backdrop-blur-sm">
-      <div className="relative">
+    <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 active:bg-white/10 transition-all duration-300 border border-white/10 hover:border-white/20 active:border-white/20 backdrop-blur-sm glass-card">
+      <div className="relative flex-shrink-0">
         {playlist.cover ? (
           <img
             src={playlist.cover}
             width={64}
             height={64}
-            className="h-16 w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
+            className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
             alt={`${playlist.name} cover`}
           />
         ) : (
-          <div className="h-16 w-16 rounded-xl bg-white/10 flex items-center justify-center">
-            <ListMusic className="h-8 w-8 text-white/40" />
+          <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl bg-white/10 flex items-center justify-center">
+            <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-white/40" />
           </div>
         )}
         <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-lg font-semibold text-white group-hover:text-yellow-400 transition-colors duration-300">
+        <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-white group-hover:text-white transition-colors duration-300">
           {playlist.name}
         </div>
-        <div className="truncate text-base text-muted-foreground mt-1">
+        <div className="truncate text-xs sm:text-sm md:text-base text-muted-foreground mt-0.5 sm:mt-1">
           {playlist.description || 'No description'}
         </div>
-        <div className="truncate text-sm text-muted-foreground/80 mt-1">
+        <div className="truncate text-xs sm:text-sm text-muted-foreground/80 mt-0.5 sm:mt-1">
           {playlist.tracks} tracks • by {playlist.owner}
         </div>
       </div>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
-        <ListMusic className="h-4 w-4" />
-        <span className="font-medium">{playlist.public ? 'Public' : 'Private'}</span>
+      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0">
+        <ListMusic className="h-3 w-3 sm:h-4 sm:w-4" />
+        <span className="font-medium whitespace-nowrap">{playlist.public ? 'Public' : 'Private'}</span>
       </div>
     </li>
   );
@@ -308,7 +308,8 @@ export default function LibraryView() {
           console.log('[LibraryView] Raw Spotify API response:', json);
           const items = (json.items || []).map(mapItem);
           setRecent(items);
-          setHasMore((json.items || []).length > 0);
+          // Check if there's a 'next' URL to determine if more data is available
+          setHasMore(!!json.next && (json.items || []).length > 0);
         } else if (provider === 'google') {
           console.log('[LibraryView] Google user - no recent plays available');
           // YouTube doesn't provide recent play history via API
@@ -336,24 +337,19 @@ export default function LibraryView() {
     try {
       setMoreLoading(true);
       const oldest = recent[recent.length - 1];
+      // Use the played_at timestamp as the 'before' parameter for Spotify API pagination
       const before = encodeURIComponent(oldest.playedAt);
-      const url = `/api/history?limit=20&before=${before}`;
+      const url = `/api/spotify/me/player/recently-played?limit=20&before=${before}`;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) {
         const body = await res.text().catch(() => '');
         throw new Error(`HTTP ${res.status} ${body}`);
       }
-      const json = await res.json();
-      const more = (json.items || []).map((row) => ({
-        id: `${row.track_id}-${row.played_at}`,
-        title: row.title ?? row.track_name ?? 'Unknown',
-        artist: row.artist ?? row.artist_name ?? 'Unknown',
-        album: row.album ?? row.album_name ?? '',
-        cover: row.cover_url ?? row.album_image ?? '',
-        playedAt: row.played_at,
-      }));
+      const json = await res.json();              // { items: [...], cursors, next }
+      const more = (json.items || []).map(mapItem);
       setRecent(prev => [...prev, ...more]);
-      if (!json.items || json.items.length === 0) setHasMore(false);
+      // Check if there's a 'next' URL to determine if more data is available
+      setHasMore(!!json.next && (json.items || []).length > 0);
     } catch (err) {
       console.error('Load more error', err);
       setRecError(String(err?.message || err));
@@ -413,16 +409,16 @@ export default function LibraryView() {
     // Show "connect account" message if no provider
     if (!provider) {
       return (
-        <div className="glass-card rounded-2xl p-8 shadow-2xl mb-40 text-white">
-          <div className="relative text-center py-16">
-            <ListMusic className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
-            <h3 className="section-title mb-3">No Music Account Connected</h3>
-            <p className="text-base text-muted-foreground mb-6">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-white">
+          <div className="relative text-center py-8 sm:py-12 md:py-16">
+            <ListMusic className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 text-muted-foreground mx-auto mb-4 sm:mb-6" />
+            <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No Music Account Connected</h3>
+            <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6 px-4">
               Connect your Spotify or YouTube account in Settings to view your library
             </p>
             <a
               href="/settings"
-              className="inline-block px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+              className="inline-block px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
             >
               Go to Settings
             </a>
@@ -433,45 +429,45 @@ export default function LibraryView() {
 
     if (tab !== 'recent') {
       return (
-        <div className="glass-card rounded-2xl p-8 shadow-2xl mb-40 text-white">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-white">
 
-          <div className="relative mb-8 flex items-center gap-3">
-            <div className="p-2 bg-yellow-400/20 rounded-lg">
-              <ListMusic className="h-5 w-5 text-yellow-400" />
+          <div className="relative mb-4 sm:mb-6 md:mb-8 flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-white/10 rounded-lg flex-shrink-0">
+              <ListMusic className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            <div>
-              <h2 className="section-title">Your Playlists</h2>
-              <p className="section-subtitle">
+            <div className="min-w-0">
+              <h2 className="section-title text-lg sm:text-xl">Your Playlists</h2>
+              <p className="section-subtitle text-xs sm:text-sm">
                 {provider === 'google' ? 'Your saved YouTube playlists' : 'Your saved Spotify playlists'}
               </p>
             </div>
           </div>
 
           {loadingPlaylists && (
-            <div className="relative flex items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-400"></div>
-              <span className="ml-4 text-base text-muted-foreground">Loading your playlists…</span>
+            <div className="relative flex items-center justify-center py-8 sm:py-12 md:py-16">
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-white"></div>
+              <span className="ml-3 sm:ml-4 text-sm sm:text-base text-muted-foreground">Loading your playlists…</span>
             </div>
           )}
 
           {playlistsError && (
-            <div className="relative p-6 bg-red-500/20 border border-red-500/30 rounded-xl backdrop-blur-sm">
-              <p className="text-base text-red-400">{playlistsError}</p>
+            <div className="relative p-4 sm:p-6 bg-red-500/20 border border-red-500/30 rounded-xl backdrop-blur-sm">
+              <p className="text-sm sm:text-base text-red-400">{playlistsError}</p>
             </div>
           )}
 
           {!loadingPlaylists && !playlistsError && playlists.length === 0 && (
-            <div className="relative text-center py-16">
-              <ListMusic className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
+            <div className="relative text-center py-8 sm:py-12 md:py-16">
+              <ListMusic className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 text-muted-foreground mx-auto mb-4 sm:mb-6" />
               {provider === 'google' ? (
                 <>
-                  <h3 className="section-title mb-3">No playlists found</h3>
-                  <p className="text-base text-muted-foreground">Create some playlists on YouTube to see them here</p>
+                  <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No playlists found</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">Create some playlists on YouTube to see them here</p>
                 </>
               ) : (
                 <>
-                  <h3 className="section-title mb-3">No playlists found</h3>
-                  <p className="text-base text-muted-foreground">Create some playlists on Spotify to see them here</p>
+                  <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No playlists found</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">Create some playlists on Spotify to see them here</p>
                 </>
               )}
             </div>
@@ -487,42 +483,41 @@ export default function LibraryView() {
     }
 
     return (
-      <div className="glass-card rounded-2xl p-8 shadow-2xl mb-40 text-white">
-        
-        <div className="relative mb-8 flex items-center gap-3">
-          <div className="p-2 bg-yellow-400/20 rounded-lg">
-            <Clock className="h-5 w-5 text-yellow-400" />
+      <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-white">
+        <div className="relative mb-4 sm:mb-6 md:mb-8 flex items-center gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 bg-white/10 rounded-lg flex-shrink-0">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
           </div>
-          <div>
-            <h2 className="section-title">Recent Listening History</h2>
-            <p className="section-subtitle">Your latest musical journey</p>
+          <div className="min-w-0">
+            <h2 className="section-title text-lg sm:text-xl">Recent Listening History</h2>
+            <p className="section-subtitle text-xs sm:text-sm">Your latest musical journey</p>
           </div>
         </div>
 
         {loadingRec && (
-          <div className="relative flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-400"></div>
-            <span className="ml-4 text-base text-muted-foreground">Loading your recent plays…</span>
+          <div className="relative flex items-center justify-center py-8 sm:py-12 md:py-16">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-white"></div>
+            <span className="ml-3 sm:ml-4 text-sm sm:text-base text-muted-foreground">Loading your recent plays…</span>
           </div>
         )}
         {recError && (
-          <div className="relative p-6 bg-red-500/20 border border-red-500/30 rounded-xl backdrop-blur-sm">
-            <p className="text-base text-red-400">{recError}</p>
+          <div className="relative p-4 sm:p-6 bg-red-500/20 border border-red-500/30 rounded-xl backdrop-blur-sm">
+            <p className="text-sm sm:text-base text-red-400">{recError}</p>
           </div>
         )}
 
         {!loadingRec && !recError && recent.length === 0 && (
-          <div className="relative text-center py-16">
-            <Clock className="h-20 w-20 text-muted-foreground mx-auto mb-6" />
+          <div className="relative text-center py-8 sm:py-12 md:py-16">
+            <Clock className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 text-muted-foreground mx-auto mb-4 sm:mb-6" />
             {provider === 'google' ? (
               <>
-                <h3 className="section-title mb-3">No recent play history</h3>
-                <p className="text-base text-muted-foreground">YouTube doesn't provide access to your watch history through our API</p>
+                <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No recent play history</h3>
+                <p className="text-sm sm:text-base text-muted-foreground px-4">YouTube doesn't provide access to your watch history through our API</p>
               </>
             ) : (
               <>
-                <h3 className="section-title mb-3">No recent plays yet</h3>
-                <p className="text-base text-muted-foreground">Start listening to music to see your history here</p>
+                <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No recent plays yet</h3>
+                <p className="text-sm sm:text-base text-muted-foreground px-4">Start listening to music to see your history here</p>
               </>
             )}
           </div>
@@ -535,15 +530,15 @@ export default function LibraryView() {
             </ul>
 
             {hasMore && (
-              <div className="relative mt-8 flex justify-center">
+              <div className="relative mt-6 sm:mt-8 flex justify-center">
                 <button
                   onClick={loadMore}
                   disabled={moreLoading}
-                  className="flex items-center gap-3 rounded-full px-8 py-4 text-base bg-yellow-400 hover:bg-yellow-500 text-black font-semibold shadow-xl hover:shadow-2xl disabled:opacity-60 disabled:cursor-not-allowed transition-all transform hover:scale-105"
+                  className="flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                   {moreLoading ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-black"></div>
                       Loading…
                     </>
                   ) : (
@@ -559,13 +554,13 @@ export default function LibraryView() {
   }, [tab, recent, loadingRec, recError, hasMore, loadMore, playlists, loadingPlaylists, playlistsError, provider]);
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-8">
-      <header className="mb-6">
-        <h1 className="page-title">Your Library</h1>
-        <p className="section-subtitle">Your listening history and saved playlists</p>
+    <section className="mx-auto max-w-6xl px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+      <header className="mb-4 sm:mb-6">
+        <h1 className="page-title text-xl sm:text-2xl mb-1">Your Library</h1>
+        <p className="section-subtitle text-xs sm:text-sm">Your listening history and saved playlists</p>
 
           {/* User identity */}
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 flex-wrap">
             {loadingMe && <span className="text-xs text-muted-foreground">Connecting to {provider === 'google' ? 'Google' : 'Spotify'}…</span>}
             {meError && <span className="text-xs text-red-500 break-all">{meError}</span>}
             {userInfo && (
@@ -574,20 +569,20 @@ export default function LibraryView() {
                   <img
                     src={userInfo.images[0].url}
                     alt={`${provider === 'google' ? 'Google' : 'Spotify'} avatar`}
-                    className="h-8 w-8 rounded-full object-cover"
+                    className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0"
                   />
                 )}
-                <span className="text-sm text-white">
+                <span className="text-xs sm:text-sm text-white">
                   Signed in as <span className="font-medium">{userInfo.display_name}</span>
-                  {provider === 'google' && <span className="text-xs text-muted-foreground ml-2">(Google)</span>}
-                  {provider === 'spotify' && <span className="text-xs text-muted-foreground ml-2">(Spotify)</span>}
+                  {provider === 'google' && <span className="text-xs text-muted-foreground ml-1 sm:ml-2">(Google)</span>}
+                  {provider === 'spotify' && <span className="text-xs text-muted-foreground ml-1 sm:ml-2">(Spotify)</span>}
                 </span>
               </>
             )}
           </div>
       </header>
 
-      <div className="mb-4 flex items-center gap-2 text-white">
+      <div className="mb-3 sm:mb-4 flex items-center gap-2 text-white overflow-x-auto modal-scroll">
         {TABS.map(({ key, label }) => (
           <TabButton key={key} isActive={tab === key} onClick={() => setTab(key)}>
             {label}

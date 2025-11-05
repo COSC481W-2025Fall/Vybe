@@ -46,7 +46,7 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 hover:bg-gray-800/50 transition-colors cursor-pointer backdrop-blur-sm"
+      className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 hover:bg-gray-800/50 active:bg-gray-800/50 transition-colors cursor-pointer backdrop-blur-sm"
     >
       <div className="flex items-start justify-between mb-3">
         <h3 className="text-lg font-semibold text-white truncate">{group.name}</h3>

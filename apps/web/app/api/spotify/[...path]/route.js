@@ -33,7 +33,7 @@ async function handler(req, context) {
     return new NextResponse(JSON.stringify({ error: 'token_error', message: 'An unexpected error occurred.' }), { status: 401 });
   }
 
-  const { params } = await context;
+  const params = await context.params;
   const path = Array.isArray(params?.path) ? params.path.join('/') : 'me';
   const target = `${BASE}/v1/${path}${req.nextUrl.search}`;
 

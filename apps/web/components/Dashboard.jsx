@@ -67,7 +67,7 @@ export function HomePage({ onNavigate } = {}) {
           </div>
           <Dialog open={createGroupDialog.isOpen} onOpenChange={createGroupDialog.setIsOpen}>
           <DialogTrigger asChild>
-              <button type="button" className="flex items-center space-x-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
+              <button type="button" className="flex items-center space-x-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
                 <Plus className="h-4 w-4" />
                 <span>Create Group</span>
               </button>
@@ -110,10 +110,10 @@ export function HomePage({ onNavigate } = {}) {
                   onCheckedChange={setIsPublic}
                 />
                 <div className="flex justify-between">
-                  <button type="submit" disabled={groupsLoading} className="px-6 py-2 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button type="submit" disabled={groupsLoading} className="px-6 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {groupsLoading ? "Creating..." : "Create Group"}
                   </button>
-                  <button type="button" onClick={createGroupDialog.close} className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
+                  <button type="button" onClick={createGroupDialog.close} className="px-6 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
                     Cancel
                   </button>
                 </div>
@@ -156,7 +156,7 @@ export function HomePage({ onNavigate } = {}) {
               title="No groups yet"
               description="Create your first group to start sharing music with friends"
               action={
-                <button type="button" onClick={createGroupDialog.open} className="px-6 py-3 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors">
+                <button type="button" onClick={createGroupDialog.open} className="px-6 py-3 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Your First Group
                 </button>
@@ -173,7 +173,7 @@ export function HomePage({ onNavigate } = {}) {
             <h2 className="text-xl font-semibold text-white">Friends' Song of the Day</h2>
             <p className="text-sm text-gray-400">See what your friends are currently vibing to</p>
           </div>
-          <button type="button" onClick={shareSongDialog.open} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
+          <button type="button" onClick={shareSongDialog.open} className="px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
             <Plus className="h-4 w-4 mr-2" />
             Share Song
           </button>
@@ -252,7 +252,7 @@ export function HomePage({ onNavigate } = {}) {
             <h2 className="text-xl font-semibold text-white">Communities</h2>
             <p className="text-sm text-gray-400">Discover music communities and connect with like-minded listeners</p>
           </div>
-          <button type="button" onClick={communitiesDialog.open} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
+          <button type="button" onClick={communitiesDialog.open} className="px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
             Browse All
           </button>
         </div>
@@ -261,7 +261,7 @@ export function HomePage({ onNavigate } = {}) {
           {communities.map((community) => (
             <Card 
               key={community.id} 
-              className="glass-card hover:bg-accent/50 transition-colors cursor-pointer"
+              className="glass-card hover:bg-accent/50 active:bg-accent/50 transition-colors cursor-pointer"
               onClick={() => toast.success(`Joined ${community.name}`)}
             >
               <CardContent className="p-4">

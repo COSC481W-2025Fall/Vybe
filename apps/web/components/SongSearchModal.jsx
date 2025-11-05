@@ -195,7 +195,7 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-white/10 rounded transition-colors"
+            className="p-1 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
           >
             <X className="h-5 w-5 text-white/60" />
           </button>
@@ -226,7 +226,7 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 modal-scroll">
           {songs.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm text-white/60 mb-4">
@@ -236,7 +236,7 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
                 <div
                   key={song.id}
                   onClick={() => handleSelectSong(song)}
-                  className="flex items-center gap-4 p-3 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 cursor-pointer transition-colors"
+                  className="flex items-center gap-4 p-3 bg-white/5 hover:bg-white/10 active:bg-white/10 rounded-lg border border-white/10 cursor-pointer transition-colors"
                 >
                   {song.album.images[0] && (
                     <img

@@ -12,7 +12,7 @@ async function makeSupabase() {
   return createRouteHandlerClient({ cookies: () => cookieStore });
 }
 
-async function handler(req, { params }) {
+async function handler(req, context) {
   const sb = await makeSupabase();
 
   const { data: { user }, error: userErr } = await sb.auth.getUser();
@@ -28,7 +28,8 @@ async function handler(req, { params }) {
     return new NextResponse(JSON.stringify({ error: 'token_error', message: 'An unexpected error occurred.' }), { status: 401 });
   }
 
-  const path = params?.path?.join('/') ?? 'youtube/v3/channels?part=id&mine=true';
+  const params = await context.params;
+  const path = Array.isArray(params?.path) ? params.path.join('/') : 'youtube/v3/channels?part=id&mine=true';
   const target = `${BASE}/${path}${req.nextUrl.search}`;
 
   const init = {

@@ -30,7 +30,7 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 flex-1 overflow-y-auto">
+        <div className="space-y-4 flex-1 overflow-y-auto modal-scroll">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -69,7 +69,7 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
                     </div>
                     <button
                       onClick={() => handleJoin(community.name)}
-                      className="px-4 py-2 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm"
+                      className="px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm"
                     >
                       Join
                     </button>

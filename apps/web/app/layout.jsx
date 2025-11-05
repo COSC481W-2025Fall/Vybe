@@ -4,6 +4,17 @@ import { cookies } from 'next/headers'
 import Navbar from '@/components/Navbar';
 import { Toaster } from '@/components/ui/sonner';
 
+export const metadata = {
+  title: 'Vybe',
+  description: 'Music collaboration platform',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
   const supabase = createServerComponentClient({
@@ -18,7 +29,7 @@ export default async function RootLayout({ children }) {
       <body className="chroma-bg">
         <div className="vybe-aurora-fixed" />
         {user && <Navbar />}
-        <main className="flex justify-center w-full px-4 sm:px-6">
+        <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
           <div className="w-full max-w-6xl">
             {children}
           </div>

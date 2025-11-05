@@ -78,7 +78,7 @@ export default function FriendRequestsModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="vybe-aurora glass-card rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="vybe-aurora glass-card rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-scroll">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
@@ -88,7 +88,7 @@ export default function FriendRequestsModal({ onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-white/10 rounded transition-colors"
+            className="p-1 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
           >
             <X className="h-5 w-5 text-white/60" />
           </button>
