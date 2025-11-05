@@ -171,3 +171,43 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    // Get the current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { friendId } = body;
+
+    if (!friendId) {
+      return NextResponse.json({ error: 'Friend ID is required' }, { status: 400 });
+    }
+
+    // Delete the friendship (check both directions)
+    const { error: deleteError } = await supabase
+      .from('friendships')
+      .delete()
+      .or(`and(user_id.eq.${user.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${user.id})`);
+
+    if (deleteError) {
+      console.error('Error removing friend:', deleteError);
+      return NextResponse.json({ error: 'Failed to remove friend' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Friend removed successfully'
+    });
+
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
