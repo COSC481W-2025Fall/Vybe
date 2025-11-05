@@ -81,7 +81,7 @@ export default function SettingsPageWrapper({ children }) {
     // Also check store for pending conflicts
     if (conflicts) {
       Object.entries(conflicts).forEach(([type, conflict]) => {
-        if (conflict.needsResolution && !conflictDialog.isOpen) {
+        if (conflict && conflict.needsResolution && !conflictDialog.isOpen) {
           setConflictDialog({
             isOpen: true,
             type,
