@@ -9,6 +9,7 @@ import { Calendar, Heart, Mail, Music, Settings, UserPlus, Users, X, ExternalLin
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 export default function ProfilePage() {
   const supabase = supabaseBrowser();
@@ -457,11 +458,14 @@ export default function ProfilePage() {
 
                     // Refresh friends list
                     setFriends(friends.filter(f => f.id !== friendToRemove.id));
+                    toast.success(`${friendToRemove.name} has been removed from your friends.`);
                     setShowRemoveFriendModal(false);
                     setFriendToRemove(null);
                   } catch (error) {
                     console.error('Error removing friend:', error);
-                    alert('Failed to remove friend. Please try again.');
+                    toast.error('Failed to remove friend. Please try again.');
+                    setShowRemoveFriendModal(false);
+                    setFriendToRemove(null);
                   }
                 }}
                 className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
