@@ -454,7 +454,11 @@ export default function ProfilePage() {
                       body: JSON.stringify({ friendId: friendToRemove.id }),
                     });
 
-                    if (!response.ok) throw new Error('Failed to remove friend');
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                      throw new Error(data.error || 'Failed to remove friend');
+                    }
 
                     // Refresh friends list
                     setFriends(friends.filter(f => f.id !== friendToRemove.id));
@@ -463,7 +467,7 @@ export default function ProfilePage() {
                     setFriendToRemove(null);
                   } catch (error) {
                     console.error('Error removing friend:', error);
-                    toast.error('Failed to remove friend. Please try again.');
+                    toast.error(error.message || 'Failed to remove friend. Please try again.');
                     setShowRemoveFriendModal(false);
                     setFriendToRemove(null);
                   }
