@@ -485,15 +485,15 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
   return (
     <div
       onClick={handleSongClick}
-      className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-800/50 active:bg-gray-800/50 transition-colors group cursor-pointer"
+      className="flex items-center gap-3 sm:gap-4 p-3 rounded-lg hover:bg-gray-800/50 active:bg-gray-800/50 transition-colors group cursor-pointer"
     >
       {/* Track Number */}
-      <span className="text-gray-400 font-medium w-8 text-center flex-shrink-0">
+      <span className="text-gray-400 font-medium w-6 sm:w-8 text-center flex-shrink-0 text-sm sm:text-base">
         {index + 1}
       </span>
 
       {/* Album Art */}
-      <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded flex-shrink-0 overflow-hidden">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded flex-shrink-0 overflow-hidden">
         {song.thumbnail_url ? (
           <img src={song.thumbnail_url} alt={song.title} className="w-full h-full object-cover" />
         ) : (
@@ -503,11 +503,11 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
         )}
       </div>
 
-      {/* Song Info */}
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-white truncate">{song.title || 'Untitled'}</p>
+      {/* Song Info - Takes priority and available space */}
+      <div className="flex-1 min-w-0 pr-2 sm:pr-0">
+        <p className="font-semibold text-white truncate text-sm sm:text-base">{song.title || 'Untitled'}</p>
         <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm text-gray-400 truncate flex-shrink">{song.artist || 'Unknown Artist'}</p>
+          <p className="text-sm text-gray-400 truncate flex-1 min-w-0">{song.artist || 'Unknown Artist'}</p>
           {song.playlistName && (
             <>
               <span className="text-gray-600 flex-shrink-0">•</span>
@@ -525,18 +525,19 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
         </div>
       </div>
 
-      {/* Like Button */}
+      {/* Like Button - Hidden on mobile, visible on desktop */}
       <button
         onClick={handleLikeClick}
-        className="p-2 hover:scale-110 transition-transform z-10"
+        className="hidden sm:block p-2 hover:scale-110 transition-transform flex-shrink-0"
+        aria-label={isLiked ? 'Unlike song' : 'Like song'}
       >
         <Heart
           className={`h-5 w-5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
         />
       </button>
 
-      {/* Duration */}
-      <span className="text-gray-400 text-sm w-12 text-right flex-shrink-0">
+      {/* Duration - Hidden on mobile, visible on desktop */}
+      <span className="hidden sm:block text-gray-400 text-sm w-12 text-right flex-shrink-0">
         {formatDuration(song.duration)}
       </span>
     </div>
