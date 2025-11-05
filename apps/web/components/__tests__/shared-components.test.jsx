@@ -1,11 +1,20 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GroupCard } from '@/components/shared/GroupCard'
 import { LoadingState } from '@/components/shared/LoadingState'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { ShareSongDialog } from '@/components/shared/ShareSongDialog'
+import { CommunitiesDialog } from '@/components/shared/CommunitiesDialog'
 import { Users } from 'lucide-react'
 import { testAccessibility } from '@/test/test-utils'
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}))
 
 describe('GroupCard', () => {
   const defaultProps = {
@@ -77,9 +86,10 @@ describe('GroupCard', () => {
   })
 
   it('truncates long names', () => {
-    render(<GroupCard {...defaultProps} name="A".repeat(100) />)
+    const longName = 'A'.repeat(100)
+    render(<GroupCard {...defaultProps} name={longName} />)
 
-    const nameElement = screen.getByText(/^A+$/)
+    const nameElement = screen.getByText(new RegExp(`^${longName}$`))
     expect(nameElement).toBeInTheDocument()
     expect(nameElement).toHaveClass('truncate')
   })
@@ -200,16 +210,18 @@ describe('EmptyState', () => {
   })
 
   it('handles long text gracefully', () => {
+    const longTitle = 'A'.repeat(100)
+    const longDescription = 'B'.repeat(200)
     render(
       <EmptyState
         {...defaultProps}
-        title="A".repeat(100)
-        description="B".repeat(200)
+        title={longTitle}
+        description={longDescription}
       />
     )
 
-    expect(screen.getByText(/^A+$/)).toBeInTheDocument()
-    expect(screen.getByText(/^B+$/)).toBeInTheDocument()
+    expect(screen.getByText(longTitle)).toBeInTheDocument()
+    expect(screen.getByText(longDescription)).toBeInTheDocument()
   })
 
   it('renders without action', () => {
@@ -230,6 +242,183 @@ describe('EmptyState', () => {
 
     expect(screen.getByRole('button', { name: 'Button 1' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Button 2' })).toBeInTheDocument()
+  })
+})
+
+describe('ShareSongDialog', () => {
+  const mockOnOpenChange = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders dialog when open', () => {
+    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
+
+    expect(screen.getByText('Share Your Song of the Day')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/search songs/i)).toBeInTheDocument()
+  })
+
+  it('does not render when closed', () => {
+    render(<ShareSongDialog open={false} onOpenChange={mockOnOpenChange} />)
+
+    expect(screen.queryByText('Share Your Song of the Day')).not.toBeInTheDocument()
+  })
+
+  it('allows searching for songs', async () => {
+    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
+
+    const searchInput = screen.getByPlaceholderText(/search songs/i)
+    await userEvent.type(searchInput, 'test')
+
+    expect(searchInput).toHaveValue('test')
+  })
+
+  it('displays search results when query is long enough', async () => {
+    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
+
+    const searchInput = screen.getByPlaceholderText(/search songs/i)
+    await userEvent.type(searchInput, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Blinding Lights')).toBeInTheDocument()
+    })
+  })
+
+  it('handles song selection', async () => {
+    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
+
+    const searchInput = screen.getByPlaceholderText(/search songs/i)
+    await userEvent.type(searchInput, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Blinding Lights')).toBeInTheDocument()
+    })
+
+    const songButton = screen.getByText('Blinding Lights')
+    await userEvent.click(songButton)
+
+    expect(screen.getByText('Blinding Lights')).toBeInTheDocument()
+    expect(screen.getByText('The Weeknd')).toBeInTheDocument()
+  })
+
+  it('disables share button when no song is selected', () => {
+    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
+
+    const shareButton = screen.getByRole('button', { name: /share song/i })
+    expect(shareButton).toBeDisabled()
+  })
+
+  it('enables share button when song is selected', async () => {
+    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
+
+    const searchInput = screen.getByPlaceholderText(/search songs/i)
+    await userEvent.type(searchInput, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Blinding Lights')).toBeInTheDocument()
+    })
+
+    const songButton = screen.getByText('Blinding Lights')
+    await userEvent.click(songButton)
+
+    const shareButton = screen.getByRole('button', { name: /share song/i })
+    expect(shareButton).not.toBeDisabled()
+  })
+
+  it('has modal-scroll class for scrollable content', () => {
+    const { container } = render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
+    expect(container.querySelector('.modal-scroll')).toBeInTheDocument()
+  })
+})
+
+describe('CommunitiesDialog', () => {
+  const mockOnOpenChange = vi.fn()
+  const mockCommunities = [
+    {
+      id: 'comm1',
+      name: 'Jazz Lovers',
+      description: 'For jazz enthusiasts',
+      member_count: 1500,
+      group_count: 25
+    },
+    {
+      id: 'comm2',
+      name: 'Rock Nation',
+      description: 'All about rock music',
+      member_count: 3000,
+      group_count: 50
+    }
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders dialog when open', () => {
+    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+
+    expect(screen.getByText('Browse Communities')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/search communities/i)).toBeInTheDocument()
+  })
+
+  it('does not render when closed', () => {
+    render(<CommunitiesDialog open={false} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+
+    expect(screen.queryByText('Browse Communities')).not.toBeInTheDocument()
+  })
+
+  it('displays all communities', () => {
+    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+
+    expect(screen.getByText('Jazz Lovers')).toBeInTheDocument()
+    expect(screen.getByText('Rock Nation')).toBeInTheDocument()
+  })
+
+  it('displays community member counts', () => {
+    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+
+    expect(screen.getByText('1,500')).toBeInTheDocument()
+    expect(screen.getByText('3,000')).toBeInTheDocument()
+  })
+
+  it('filters communities by search query', async () => {
+    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+
+    const searchInput = screen.getByPlaceholderText(/search communities/i)
+    await userEvent.type(searchInput, 'Jazz')
+
+    expect(screen.getByText('Jazz Lovers')).toBeInTheDocument()
+    expect(screen.queryByText('Rock Nation')).not.toBeInTheDocument()
+  })
+
+  it('shows trending badge for large communities', () => {
+    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+
+    expect(screen.getByText('Trending')).toBeInTheDocument()
+  })
+
+  it('displays empty state when no communities match', async () => {
+    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+
+    const searchInput = screen.getByPlaceholderText(/search communities/i)
+    await userEvent.type(searchInput, 'Nonexistent')
+
+    expect(screen.getByText('No communities found')).toBeInTheDocument()
+  })
+
+  it('handles join button click', async () => {
+    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+
+    const joinButtons = screen.getAllByRole('button', { name: /join/i })
+    await userEvent.click(joinButtons[0])
+
+    expect(joinButtons[0]).toBeInTheDocument()
+  })
+
+  it('has modal-scroll class for scrollable content', () => {
+    const { container } = render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
+    expect(container.querySelector('.modal-scroll')).toBeInTheDocument()
   })
 })
 
