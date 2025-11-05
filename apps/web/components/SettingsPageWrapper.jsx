@@ -175,9 +175,9 @@ export default function SettingsPageWrapper({ children }) {
 
   return (
     <SettingsContext.Provider value={{ hasUnsavedChanges, setHasUnsavedChanges, isSaving, handleSaveChanges, handleCancel, setFormSubmitHandler, setFormResetHandler }}>
-      <div className="min-h-screen w-full bg-[#0f0f0f]">
+      <div className="min-h-screen w-full">
       {/* Breadcrumb Navigation */}
-      <div className="border-b border-white/10 bg-black/40 backdrop-blur-sm">
+      <div className="border-b border-white/10 glass-card backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
           <nav className="flex items-center gap-2 text-sm" aria-label="Breadcrumb">
             <Link 
@@ -193,7 +193,7 @@ export default function SettingsPageWrapper({ children }) {
       </div>
 
       {/* Page Header */}
-      <div className="border-b border-white/10 bg-black/40 backdrop-blur-sm">
+      <div className="border-b border-white/10 glass-card backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
@@ -228,7 +228,7 @@ export default function SettingsPageWrapper({ children }) {
           {/* Main Content Area */}
           <main className="flex-1 min-w-0" style={{ height: 'auto' }}>
             {/* Content Card */}
-            <div className="rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm flex flex-col w-full" style={{ minHeight: 'fit-content' }}>
+            <div className="glass-card rounded-2xl flex flex-col w-full" style={{ minHeight: 'fit-content' }}>
               {/* Unsaved Changes Indicator */}
               {hasUnsavedChanges && (
                 <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-6 py-2 flex-shrink-0">
@@ -245,7 +245,7 @@ export default function SettingsPageWrapper({ children }) {
               </div>
 
               {/* Action Buttons - Always visible at bottom */}
-              <div className="flex items-center justify-between gap-4 mt-6 pt-6 px-6 pb-6 border-t border-white/10 bg-black/40 flex-shrink-0">
+              <div className="flex items-center justify-between gap-4 mt-6 pt-6 px-6 pb-6 border-t border-white/10 flex-shrink-0">
                 <button
                   onClick={handleCancel}
                   disabled={!hasUnsavedChanges}
