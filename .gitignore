@@ -101,3 +101,7 @@ coverage/
 # Build outputs
 dist/
 *.tsbuildinfo
+
+# Private planning and documentation folders
+old-pbi/
+pbi-77/
