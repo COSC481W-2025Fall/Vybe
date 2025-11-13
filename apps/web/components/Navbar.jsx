@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, Users, Music2, Library, User as UserIcon, LogOut, Settings, Menu, X } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import VybeLogo from './common/VybeLogo';
+import NotificationBell from './NotificationBell';
 import { useState, useEffect, useRef } from 'react';
 
 const links = CONFIG.NAV_LINKS.map(link => {
@@ -142,34 +143,40 @@ export default function Navbar() {
         {/* spacer right of center */}
         <div className="flex-1 hidden md:block" />
         
-        {/* Sign out button - desktop only */}
-        <button
-          onClick={handleSignOut}
-          disabled={isSigningOut}
-          className="hidden md:flex group items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition nav-item backdrop-blur-sm border border-white/10 text-white/70 hover:text-red-400 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Sign out"
-          title="Sign out"
-        >
-          <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-70 group-hover:opacity-100'}`} />
-          <span suppressHydrationWarning>
-            {isSigningOut ? 'Logging out...' : 'Log out'}
-          </span>
-        </button>
+        {/* Notification Bell and Sign out button - desktop only */}
+        <div className="hidden md:flex items-center gap-3">
+          <NotificationBell />
+          <button
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="group items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition nav-item backdrop-blur-sm border border-white/10 text-white/70 hover:text-red-400 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-70 group-hover:opacity-100'}`} />
+            <span suppressHydrationWarning>
+              {isSigningOut ? 'Logging out...' : 'Log out'}
+            </span>
+          </button>
+        </div>
 
-        {/* Mobile hamburger menu button */}
-        <button
-          ref={hamburgerButtonRef}
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden ml-auto flex items-center justify-center w-10 h-10 rounded-lg text-white/80 hover:text-white hover:bg-white/10 active:bg-white/10 active:text-white transition-colors"
-          aria-label="Toggle menu"
-          aria-expanded={isMobileMenuOpen}
-        >
-          {isMobileMenuOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
-        </button>
+        {/* Mobile: Notification Bell and hamburger menu button */}
+        <div className="md:hidden ml-auto flex items-center gap-2">
+          <NotificationBell />
+          <button
+            ref={hamburgerButtonRef}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="flex items-center justify-center w-10 h-10 rounded-lg text-white/80 hover:text-white hover:bg-white/10 active:bg-white/10 active:text-white transition-colors"
+            aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Mobile dropdown menu */}

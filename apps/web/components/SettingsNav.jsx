@@ -125,11 +125,12 @@ export default function SettingsNav({
             }
           }}
           className={[
-            'w-full flex items-start gap-3 rounded-xl px-4 py-3 text-left transition-all block',
-            'focus:outline-none',
+            'w-full flex items-start gap-3 rounded-xl px-4 py-3.5 text-left transition-all block',
+            'focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:ring-offset-2 focus:ring-offset-[#0f0f0f]',
+            'touch-manipulation min-h-[48px]', // Better touch target for mobile
             isActive
               ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 shadow-lg'
-              : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent',
+              : 'text-gray-400 hover:bg-white/10 active:bg-white/15 hover:text-white border border-transparent',
           ].join(' ')}
           aria-current={isActive ? 'page' : undefined}
           aria-label={`${section.label} settings`}
@@ -177,7 +178,7 @@ export default function SettingsNav({
         {/* Hamburger Menu Button */}
         <button
           onClick={handleToggleMenu}
-          className="lg:hidden rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white transition"
+          className="lg:hidden rounded-lg p-2.5 text-gray-400 hover:bg-white/10 hover:text-white active:bg-white/15 transition-all touch-manipulation"
           aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-settings-menu"
@@ -192,26 +193,26 @@ export default function SettingsNav({
         {/* Slide-out Mobile Menu */}
         {isMobileMenuOpen && (
           <div 
-            className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="lg:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
             role="dialog"
             aria-modal="true"
             aria-labelledby="mobile-menu-title"
           >
-            {/* Menu Panel */}
+            {/* Menu Panel - Slides in from right */}
             <div 
               ref={menuRef}
               id="mobile-settings-menu"
-              className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-[#0f0f0f] border-r border-white/10 overflow-y-auto"
+              className="fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-[#0f0f0f] border-l border-white/10 overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-300"
             >
-              <div className="p-4">
+              <div className="p-5">
                 {/* Menu Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <h2 id="mobile-menu-title" className="text-lg font-semibold text-white">
-                    Settings Menu
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                  <h2 id="mobile-menu-title" className="text-xl font-semibold text-white">
+                    Settings
                   </h2>
                   <button
                     onClick={handleToggleMenu}
-                    className="rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    className="rounded-lg p-2.5 text-gray-400 hover:bg-white/10 hover:text-white active:bg-white/15 transition-all touch-manipulation focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     aria-label="Close menu"
                   >
                     <X className="h-5 w-5" aria-hidden="true" />
