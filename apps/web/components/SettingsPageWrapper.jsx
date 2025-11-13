@@ -2,7 +2,7 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
 import { usePathname } from 'next/navigation';
-import { User, Settings as SettingsIcon, Save, AlertCircle } from 'lucide-react';
+import { User, Shield, Settings as SettingsIcon, Save, AlertCircle } from 'lucide-react';
 import SettingsNav from '@/components/SettingsNav';
 import SettingsConflictDialog from '@/components/SettingsConflictDialog';
 import useSettingsStore from '@/store/settingsStore';
@@ -21,6 +21,13 @@ const SETTINGS_SECTIONS = [
     icon: User,
     description: 'Manage your display name, bio, and profile picture',
     path: '/settings/profile',
+  },
+  {
+    id: 'privacy',
+    label: 'Privacy',
+    icon: Shield,
+    description: 'Control who can find you and see your song of the day',
+    path: '/settings/privacy',
   },
   {
     id: 'account',
@@ -91,7 +98,9 @@ export default function SettingsPageWrapper({ children }) {
       case 'profile':
         store.setProfile(resolvedData, { optimistic: false });
         break;
-      // Privacy and notifications removed - no longer in settings
+      case 'privacy':
+        store.setPrivacy(resolvedData, { optimistic: false });
+        break;
       default:
         console.warn(`Unknown conflict type: ${type}`);
         break;
