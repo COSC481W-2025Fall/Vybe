@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Users, Heart, MoreVertical, Plus } from 'lucide-react';
+import { Users, Heart, MoreVertical, Plus, Youtube } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 
 export default function GroupDetailPage({ params }) {
@@ -21,6 +21,7 @@ export default function GroupDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [hasYouTube, setHasYouTube] = useState(false);
 
   useEffect(() => {
     // Unwrap params Promise
@@ -52,6 +53,13 @@ export default function GroupDetailPage({ params }) {
     }
 
     setUser(session.user);
+
+    // Check if user has YouTube/Google connected
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.identities) {
+      const hasGoogle = user.identities.some(id => id.provider === 'google');
+      setHasYouTube(hasGoogle);
+    }
   }
 
   async function loadGroupData() {
@@ -378,12 +386,26 @@ export default function GroupDetailPage({ params }) {
 
                   {/* Playlist Header */}
                   <div className="mb-6">
-                    <h2 className="section-title mb-1">
-                      {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
-                    </h2>
-                    <p className="section-subtitle">
-                      {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
-                    </p>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="section-title mb-1">
+                          {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
+                        </h2>
+                        <p className="section-subtitle">
+                          {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
+                        </p>
+                      </div>
+                      {/* Export to YouTube Button - Only shown for YouTube-connected users */}
+                      {hasYouTube && (
+                        <button
+                          onClick={() => console.log('Export to YouTube clicked for playlist:', selectedPlaylist)}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
+                        >
+                          <Youtube className="h-4 w-4" />
+                          Export to YouTube
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Songs List */}
