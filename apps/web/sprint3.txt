@@ -1,4 +1,0 @@
-1. Fix group playlist algorithm
-2. Add open in youtube button
-3. Add playlist to designated app
-4. Settings functionality
