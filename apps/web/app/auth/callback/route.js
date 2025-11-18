@@ -2,44 +2,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { CONFIG } from '@/config/constants';
-
-// Helper function to exchange authorization code for Spotify tokens
-async function exchangeSpotifyCode(code, redirectUri) {
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    console.error('[exchangeSpotifyCode] ❌ Missing Spotify credentials');
-    throw new Error('Spotify credentials not configured');
-  }
-
-  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: redirectUri,
-  });
-
-  const res = await fetch(CONFIG.SPOTIFY_TOKEN_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${basic}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body,
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error('[exchangeSpotifyCode] ❌ Exchange failed:', res.status, text);
-    throw new Error(`Failed to exchange Spotify code: ${res.status} ${text}`);
-  }
-
-  const tokenData = await res.json();
-  console.log('[exchangeSpotifyCode] ✅ Exchange successful');
-  return tokenData; // { access_token, refresh_token, expires_in, scope, token_type }
-}
 
 export async function GET(request) {
   const url = new URL(request.url);
@@ -61,45 +23,12 @@ export async function GET(request) {
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   if (code) {
-    // IMPORTANT: For Spotify, we need to exchange the code BEFORE Supabase consumes it
-    // because Supabase's exchangeCodeForSession will consume the code and we won't be able to use it again
+    // Let Supabase handle the code exchange (it uses PKCE which we can't replicate)
+    // We'll get tokens from Supabase's session response
     let accessToken = null;
     let refreshToken = null;
     let expiresIn = 3600;
     let scope = null;
-
-    // If this is a Spotify login, exchange the code manually FIRST to get tokens
-    // CRITICAL: The redirect URI must match EXACTLY what Supabase uses
-    // Supabase uses: https://<project-ref>.supabase.co/auth/v1/callback
-    // This is what Spotify sees, not our app's callback URL
-    if (intendedProvider === 'spotify') {
-      try {
-        // Get Supabase URL from environment - this is the redirect URI Spotify actually sees
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const requestOrigin = new URL(request.url).origin;
-        let redirectUri;
-        
-        if (supabaseUrl) {
-          // Use Supabase's actual redirect URI (what Spotify expects)
-          // Remove trailing slash if present to avoid double slashes
-          const cleanSupabaseUrl = supabaseUrl.replace(/\/$/, '');
-          redirectUri = `${cleanSupabaseUrl}/auth/v1/callback`;
-        } else {
-          // Fallback: try our callback URL (may not work if not configured in Spotify app)
-          redirectUri = `${requestOrigin}/auth/callback`;
-          console.warn('[callback] ⚠️ Supabase URL not found, using fallback redirect URI');
-        }
-        
-        const tokenData = await exchangeSpotifyCode(code, redirectUri);
-        accessToken = tokenData.access_token;
-        refreshToken = tokenData.refresh_token;
-        expiresIn = tokenData.expires_in || 3600;
-        scope = tokenData.scope || null;
-      } catch (exchangeError) {
-        console.error('[callback] ❌ Manual code exchange failed:', exchangeError.message);
-        console.error('[callback] Continuing with Supabase exchange (tokens may be missing)');
-      }
-    }
 
     // Now exchange the code with Supabase to create the session
     const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -124,19 +53,19 @@ export async function GET(request) {
       return NextResponse.redirect(errorUrl);
     }
 
-    // If we didn't get tokens from manual exchange, try to get them from Supabase
-    if (!accessToken || !refreshToken) {
-      const supabaseAccessToken = sessionData?.session?.provider_token || session?.provider_token || null;
-      const supabaseRefreshToken = sessionData?.session?.provider_refresh_token || session?.provider_refresh_token || null;
-      const supabaseExpiresIn = sessionData?.session?.provider_token_expires_in || session?.provider_token_expires_in || 3600;
-      const supabaseScope = sessionData?.session?.provider_scope || session?.provider_scope || null;
-      
-      if (supabaseAccessToken && supabaseRefreshToken) {
-        accessToken = supabaseAccessToken;
-        refreshToken = supabaseRefreshToken;
-        expiresIn = supabaseExpiresIn;
-        scope = supabaseScope;
-      }
+    // Get tokens from Supabase session (Supabase handles the OAuth exchange with PKCE)
+    const supabaseAccessToken = sessionData?.session?.provider_token || session?.provider_token || null;
+    const supabaseRefreshToken = sessionData?.session?.provider_refresh_token || session?.provider_refresh_token || null;
+    const supabaseExpiresIn = sessionData?.session?.provider_token_expires_in || session?.provider_token_expires_in || 3600;
+    const supabaseScope = sessionData?.session?.provider_scope || session?.provider_scope || null;
+    
+    if (supabaseAccessToken && supabaseRefreshToken) {
+      accessToken = supabaseAccessToken;
+      refreshToken = supabaseRefreshToken;
+      expiresIn = supabaseExpiresIn;
+      scope = supabaseScope;
+    } else {
+      console.warn('[callback] ⚠️ No provider tokens found in Supabase session');
     }
 
     if (session?.user) {
