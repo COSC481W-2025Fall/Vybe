@@ -59,8 +59,20 @@ export async function getValidAccessToken(sb, userId) {
     .eq('user_id', userId)
     .single();
 
-  if (error || !row?.refresh_token) {
-    throw new Error('No Spotify tokens on file');
+  if (error) {
+    // Database error or no row found
+    const errorMessage = error.code === 'PGRST116' 
+      ? 'No Spotify account connected. Please connect your Spotify account in Settings.'
+      : `Database error: ${error.message}`;
+    const err = new Error(errorMessage);
+    err.code = 'NO_TOKENS';
+    throw err;
+  }
+
+  if (!row?.refresh_token) {
+    const err = new Error('No Spotify account connected. Please connect your Spotify account in Settings.');
+    err.code = 'NO_TOKENS';
+    throw err;
   }
 
   const now = Math.floor(Date.now() / 1000) + 60; // 1 min leeway

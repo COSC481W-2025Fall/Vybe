@@ -36,7 +36,7 @@ export const CONFIG = {
   
   // Navigation Links (matching Navbar.jsx)
   NAV_LINKS: [
-    { href: '/', label: 'Home' },
+    { href: '/dashboard', label: 'Home' },
     { href: '/groups', label: 'Groups' },
     { href: '/playlist', label: 'Playlist' },
     { href: '/library', label: 'Library' },

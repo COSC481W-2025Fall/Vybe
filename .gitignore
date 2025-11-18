@@ -105,3 +105,9 @@ dist/
 # Private planning and documentation folders
 old-pbi/
 pbi-77/
+pbi-72/
+memory-bank/
+.cursorrules
+
+# Issues folder
+issues/
