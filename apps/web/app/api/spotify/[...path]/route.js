@@ -29,8 +29,23 @@ async function handler(req, context) {
   } catch (e) {
     // Log full error details on the server for debugging
     console.error('[proxy] token error:', e);
-    // Respond with a generic error message to the client
-    return new NextResponse(JSON.stringify({ error: 'token_error', message: 'An unexpected error occurred.' }), { status: 401 });
+    
+    // Return a more helpful error message to the client
+    const errorMessage = e.code === 'NO_TOKENS' 
+      ? e.message 
+      : 'An unexpected error occurred while accessing Spotify. Please try reconnecting your account.';
+    
+    return new NextResponse(
+      JSON.stringify({ 
+        error: 'token_error', 
+        message: errorMessage,
+        code: e.code || 'UNKNOWN_ERROR'
+      }), 
+      { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 
   const params = await context.params;
