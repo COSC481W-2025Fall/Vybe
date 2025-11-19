@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { getValidAccessToken } from '@/app/lib/spotify'; // make sure this path is correct
+import { getValidAccessToken } from '@/lib/spotify';
 
 const BASE = 'https://api.spotify.com';
 
@@ -13,7 +13,7 @@ async function makeSupabase() {
   return createRouteHandlerClient({ cookies: () => cookieStore });
 }
 
-async function handler(req, { params }) {
+async function handler(req, context) {
   const sb = await makeSupabase();
 
   // who is the user (from your own app session)?
@@ -33,7 +33,8 @@ async function handler(req, { params }) {
     return new NextResponse(JSON.stringify({ error: 'token_error', message: 'An unexpected error occurred.' }), { status: 401 });
   }
 
-  const path = params?.path?.join('/') ?? 'me';
+  const params = await context.params;
+  const path = Array.isArray(params?.path) ? params.path.join('/') : 'me';
   const target = `${BASE}/v1/${path}${req.nextUrl.search}`;
 
   const init = {
