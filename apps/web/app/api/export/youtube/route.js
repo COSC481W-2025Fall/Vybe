@@ -223,17 +223,133 @@ export async function POST(request) {
 
     console.log(`[Export YouTube] Created YouTube playlist ID: ${youtubePlaylistId}`);
 
-    // Step 5: Return success (songs will be added in next step)
+    // Step 5: Search for songs and add them to the YouTube playlist
+    const addResults = {
+      successful: [],
+      failed: [],
+      skipped: []
+    };
+
+    console.log(`[Export YouTube] Starting to add ${songs.length} songs to playlist`);
+
+    for (let i = 0; i < songs.length; i++) {
+      const song = songs[i];
+      console.log(`[Export YouTube] Processing song ${i + 1}/${songs.length}: "${song.title}" by "${song.artist}"`);
+
+      try {
+        // Build search query: "artist - title" or just "title" if no artist
+        const searchQuery = song.artist 
+          ? `${song.artist} - ${song.title}`
+          : song.title;
+
+        console.log(`[Export YouTube] Searching for: "${searchQuery}"`);
+
+        // Search YouTube for the song
+        const searchResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(searchQuery)}&maxResults=1`,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          }
+        );
+
+        if (!searchResponse.ok) {
+          const errorText = await searchResponse.text();
+          console.error(`[Export YouTube] Search failed for "${searchQuery}":`, errorText);
+          addResults.failed.push({
+            song: `${song.artist} - ${song.title}`,
+            reason: 'Search failed',
+            error: errorText
+          });
+          continue;
+        }
+
+        const searchData = await searchResponse.json();
+
+        // Check if we found any results
+        if (!searchData.items || searchData.items.length === 0) {
+          console.log(`[Export YouTube] No results found for "${searchQuery}"`);
+          addResults.failed.push({
+            song: `${song.artist} - ${song.title}`,
+            reason: 'No YouTube results found'
+          });
+          continue;
+        }
+
+        const videoId = searchData.items[0].id.videoId;
+        console.log(`[Export YouTube] Found video ID: ${videoId}`);
+
+        // Add the video to the playlist
+        const addVideoResponse = await fetch(
+          'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              snippet: {
+                playlistId: youtubePlaylistId,
+                resourceId: {
+                  kind: 'youtube#video',
+                  videoId: videoId,
+                },
+              },
+            }),
+          }
+        );
+
+        if (!addVideoResponse.ok) {
+          const errorText = await addVideoResponse.text();
+          console.error(`[Export YouTube] Failed to add video ${videoId}:`, errorText);
+          addResults.failed.push({
+            song: `${song.artist} - ${song.title}`,
+            videoId,
+            reason: 'Failed to add to playlist',
+            error: errorText
+          });
+          continue;
+        }
+
+        console.log(`[Export YouTube] Successfully added: "${song.title}"`);
+        addResults.successful.push({
+          song: `${song.artist} - ${song.title}`,
+          videoId
+        });
+
+        // Small delay to avoid rate limits (100ms between requests)
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+      } catch (error) {
+        console.error(`[Export YouTube] Error processing song "${song.title}":`, error);
+        addResults.failed.push({
+          song: `${song.artist} - ${song.title}`,
+          reason: 'Unexpected error',
+          error: error.message
+        });
+      }
+    }
+
+    console.log(`[Export YouTube] Finished adding songs. Success: ${addResults.successful.length}, Failed: ${addResults.failed.length}`);
+
+    // Step 6: Return success with detailed results
     return NextResponse.json(
       { 
-        message: 'YouTube playlist created successfully',
+        message: 'YouTube playlist export completed',
         playlistId,
         groupId,
-        songCount: songs.length,
         youtubePlaylistId,
         youtubePlaylistUrl: `https://www.youtube.com/playlist?list=${youtubePlaylistId}`,
         playlistTitle,
-        note: 'Playlist is empty - songs will be added in Step 5'
+        totalSongs: songs.length,
+        songsAdded: addResults.successful.length,
+        songsFailed: addResults.failed.length,
+        results: {
+          successful: addResults.successful,
+          failed: addResults.failed
+        }
       },
       { status: 200 }
     );
