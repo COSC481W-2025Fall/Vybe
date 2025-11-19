@@ -21,6 +21,8 @@ export default function GroupDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportingCSV, setExportingCSV] = useState(false);
 
   useEffect(() => {
     // Unwrap params Promise
@@ -378,12 +380,86 @@ export default function GroupDetailPage({ params }) {
 
                   {/* Playlist Header */}
                   <div className="mb-6">
-                    <h2 className="section-title mb-1">
-                      {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
-                    </h2>
-                    <p className="section-subtitle">
-                      {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
-                    </p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="section-title mb-1">
+                          {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
+                        </h2>
+                        <p className="section-subtitle">
+                          {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
+                        </p>
+                      </div>
+
+                      {/* Export buttons (only for a single Spotify playlist) */}
+                      {selectedPlaylist !== 'all' && (() => {
+                        const gp = playlists.find(p => String(p.id) === String(selectedPlaylist));
+                        const isSpotify = gp?.platform === 'spotify' && gp?.playlist_id;
+                        if (!isSpotify) return null;
+                        return (
+                          <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  setExporting(true);
+                                  const res = await fetch('/api/export-playlist', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ playlistId: gp.playlist_id }),
+                                  });
+                                  if (!res.ok) throw new Error(await res.text().catch(() => String(res.status)));
+                                  const json = await res.json();
+                                  const filename = `${(json.playlist?.name || 'playlist').replace(/[^a-z0-9\-_\. ]/gi, '_')}.json`;
+                                  const blob = new Blob([JSON.stringify(json.playlist, null, 2)], { type: 'application/json' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+                                } catch (err) {
+                                  console.error('Export error', err);
+                                  alert(String(err?.message || err));
+                                } finally {
+                                  setExporting(false);
+                                }
+                              }}
+                              disabled={exporting}
+                              className="px-3 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white text-sm"
+                            >
+                              {exporting ? 'Exporting…' : 'Export'}
+                            </button>
+
+                            <button
+                              onClick={async () => {
+                                try {
+                                  setExportingCSV(true);
+                                  const res = await fetch('/api/export-playlist', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ playlistId: gp.playlist_id }),
+                                  });
+                                  if (!res.ok) throw new Error(await res.text().catch(() => String(res.status)));
+                                  const json = await res.json();
+                                  const tracks = json.playlist?.tracks || [];
+                                  const headers = ['order','id','title','artist','duration_seconds','thumbnail'];
+                                  const rows = tracks.map((t, idx) => [idx+1, t.id || '', (t.title||'').replace(/"/g,'""'), (t.artist||'').replace(/"/g,'""'), t.duration_seconds ?? '', t.thumbnail || '']);
+                                  const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n')].join('\n');
+                                  const filename = `${(json.playlist?.name || 'playlist').replace(/[^a-z0-9\-_\. ]/gi, '_')}.csv`;
+                                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+                                } catch (err) {
+                                  console.error('Export CSV error', err);
+                                  alert(String(err?.message || err));
+                                } finally {
+                                  setExportingCSV(false);
+                                }
+                              }}
+                              disabled={exportingCSV}
+                              className="px-3 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white text-sm"
+                            >
+                              {exportingCSV ? 'Exporting CSV…' : 'Export CSV'}
+                            </button>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
 
                   {/* Songs List */}

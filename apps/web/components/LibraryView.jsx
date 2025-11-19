@@ -68,6 +68,92 @@ function Row({ item }) {
 }
 
 function PlaylistRow({ playlist }) {
+  const [exporting, setExporting] = useState(false);
+  const [exportingCSV, setExportingCSV] = useState(false);
+
+  async function handleExport() {
+    try {
+      setExporting(true);
+      const res = await fetch('/api/export-playlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistId: playlist.id }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Export failed: ${res.status} ${text}`);
+      }
+
+      const json = await res.json();
+      if (!json.success || !json.playlist) throw new Error(json.error || 'Invalid response');
+
+      const filename = `${(json.playlist.name || 'playlist').replace(/[^a-z0-9\-_\. ]/gi, '_')}.json`;
+      const blob = new Blob([JSON.stringify(json.playlist, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export error', err);
+      alert(String(err?.message || err));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleExportCSV() {
+    try {
+      setExportingCSV(true);
+      const res = await fetch('/api/export-playlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistId: playlist.id }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Export failed: ${res.status} ${text}`);
+      }
+
+      const json = await res.json();
+      if (!json.success || !json.playlist) throw new Error(json.error || 'Invalid response');
+
+      // Convert ordered tracks to CSV (preserve index order)
+      const tracks = json.playlist.tracks || [];
+      const headers = ['order', 'id', 'title', 'artist', 'duration_seconds', 'thumbnail'];
+      const rows = tracks.map((t, idx) => [
+        idx + 1,
+        t.id || '',
+        (t.title || '').replace(/"/g, '""'),
+        (t.artist || '').replace(/"/g, '""'),
+        t.duration_seconds ?? '',
+        t.thumbnail || '',
+      ]);
+
+      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+
+      const filename = `${(json.playlist.name || 'playlist').replace(/[^a-z0-9\-_\. ]/gi, '_')}.csv`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export CSV error', err);
+      alert(String(err?.message || err));
+    } finally {
+      setExportingCSV(false);
+    }
+  }
   return (
     <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 active:bg-white/10 transition-all duration-300 border border-white/10 hover:border-white/20 active:border-white/20 backdrop-blur-sm glass-card">
       <div className="relative flex-shrink-0">
@@ -98,6 +184,20 @@ function PlaylistRow({ playlist }) {
         </div>
       </div>
       <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0">
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="px-3 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white text-sm"
+        >
+          {exporting ? 'Exporting…' : 'Export'}
+        </button>
+        <button
+          onClick={handleExportCSV}
+          disabled={exportingCSV}
+          className="px-3 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white text-sm"
+        >
+          {exportingCSV ? 'Exporting CSV…' : 'Export CSV'}
+        </button>
         <ListMusic className="h-3 w-3 sm:h-4 sm:w-4" />
         <span className="font-medium whitespace-nowrap">{playlist.public ? 'Public' : 'Private'}</span>
       </div>
