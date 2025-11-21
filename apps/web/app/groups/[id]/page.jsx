@@ -5,6 +5,8 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Users, Heart, MoreVertical, Plus, Youtube } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
@@ -22,6 +24,53 @@ export default function GroupDetailPage({ params }) {
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [hasYouTube, setHasYouTube] = useState(false);
+
+  // Export to YouTube mutation
+  const exportToYouTubeMutation = useMutation({
+    mutationFn: async ({ playlistId, groupId }) => {
+      const response = await fetch('/api/export/youtube', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          playlistId,
+          groupId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to export playlist to YouTube');
+      }
+
+      return data;
+    },
+    onSuccess: (data) => {
+      const { youtubePlaylistUrl, playlistTitle, songsAdded, songsFailed, totalSongs } = data;
+      
+      let message = `Playlist exported successfully!`;
+      if (songsAdded && totalSongs) {
+        message = `Exported "${playlistTitle}" to YouTube: ${songsAdded}/${totalSongs} songs added`;
+        if (songsFailed > 0) {
+          message += ` (${songsFailed} failed)`;
+        }
+      }
+
+      toast.success(message, {
+        duration: 5000,
+        action: youtubePlaylistUrl ? {
+          label: 'Open Playlist',
+          onClick: () => window.open(youtubePlaylistUrl, '_blank'),
+        } : undefined,
+      });
+    },
+    onError: (error) => {
+      console.error('[Export YouTube] Error:', error);
+      toast.error(error.message || 'Failed to export playlist to YouTube. Please try again.');
+    },
+  });
 
   useEffect(() => {
     // Unwrap params Promise
@@ -398,11 +447,27 @@ export default function GroupDetailPage({ params }) {
                       {/* Export to YouTube Button - Only shown for YouTube-connected users */}
                       {hasYouTube && (
                         <button
-                          onClick={() => console.log('Export to YouTube clicked for playlist:', selectedPlaylist)}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
+                          onClick={() => {
+                            if (exportToYouTubeMutation.isPending) return;
+                            exportToYouTubeMutation.mutate({
+                              playlistId: selectedPlaylist,
+                              groupId: groupId,
+                            });
+                          }}
+                          disabled={exportToYouTubeMutation.isPending}
+                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed disabled:opacity-70 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
                         >
-                          <Youtube className="h-4 w-4" />
-                          Export to YouTube
+                          {exportToYouTubeMutation.isPending ? (
+                            <>
+                              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Exporting...
+                            </>
+                          ) : (
+                            <>
+                              <Youtube className="h-4 w-4" />
+                              Export to YouTube
+                            </>
+                          )}
                         </button>
                       )}
                     </div>

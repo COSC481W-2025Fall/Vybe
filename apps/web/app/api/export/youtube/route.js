@@ -39,8 +39,6 @@ export async function POST(request) {
       );
     }
 
-    console.log('[Export YouTube] Authenticated user:', user.id);
-
     // Step 2: Parse and validate request body
     const body = await request.json();
     const { playlistId, groupId } = body;
@@ -58,8 +56,6 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-
-    console.log('[Export YouTube] Request:', { playlistId, groupId, userId: user.id });
 
     // Step 3: Fetch playlist songs from database
     let songs = [];
@@ -131,8 +127,6 @@ export async function POST(request) {
       songs = playlistSongs || [];
     }
 
-    console.log(`[Export YouTube] Found ${songs.length} songs`);
-
     // Step 4: Create YouTube playlist
     // Determine playlist title
     let playlistTitle;
@@ -156,15 +150,10 @@ export async function POST(request) {
       playlistTitle = `[Vybe Export] ${playlistData?.name || 'Playlist'}`;
     }
 
-    console.log(`[Export YouTube] Creating YouTube playlist: "${playlistTitle}"`);
-
     // Get YouTube access token
-    console.log('[Export YouTube] Attempting to get YouTube access token for user:', user.id);
-    
     let accessToken;
     try {
       accessToken = await getValidAccessToken(supabase, user.id);
-      console.log('[Export YouTube] Successfully got access token');
     } catch (error) {
       console.error('[Export YouTube] Failed to get access token:', error);
       console.error('[Export YouTube] Error details:', error.message, error.stack);
@@ -175,8 +164,6 @@ export async function POST(request) {
         .select('user_id, expires_at')
         .eq('user_id', user.id)
         .maybeSingle();
-      
-      console.log('[Export YouTube] Token check result:', { tokenCheck, tokenError });
       
       return NextResponse.json(
         { 
@@ -221,8 +208,6 @@ export async function POST(request) {
     const youtubePlaylist = await createPlaylistResponse.json();
     const youtubePlaylistId = youtubePlaylist.id;
 
-    console.log(`[Export YouTube] Created YouTube playlist ID: ${youtubePlaylistId}`);
-
     // Step 5: Search for songs and add them to the YouTube playlist
     const addResults = {
       successful: [],
@@ -230,19 +215,14 @@ export async function POST(request) {
       skipped: []
     };
 
-    console.log(`[Export YouTube] Starting to add ${songs.length} songs to playlist`);
-
     for (let i = 0; i < songs.length; i++) {
       const song = songs[i];
-      console.log(`[Export YouTube] Processing song ${i + 1}/${songs.length}: "${song.title}" by "${song.artist}"`);
 
       try {
         // Build search query: "artist - title" or just "title" if no artist
         const searchQuery = song.artist 
           ? `${song.artist} - ${song.title}`
           : song.title;
-
-        console.log(`[Export YouTube] Searching for: "${searchQuery}"`);
 
         // Search YouTube for the song
         const searchResponse = await fetch(
@@ -269,7 +249,6 @@ export async function POST(request) {
 
         // Check if we found any results
         if (!searchData.items || searchData.items.length === 0) {
-          console.log(`[Export YouTube] No results found for "${searchQuery}"`);
           addResults.failed.push({
             song: `${song.artist} - ${song.title}`,
             reason: 'No YouTube results found'
@@ -278,7 +257,6 @@ export async function POST(request) {
         }
 
         const videoId = searchData.items[0].id.videoId;
-        console.log(`[Export YouTube] Found video ID: ${videoId}`);
 
         // Add the video to the playlist
         const addVideoResponse = await fetch(
@@ -313,7 +291,6 @@ export async function POST(request) {
           continue;
         }
 
-        console.log(`[Export YouTube] Successfully added: "${song.title}"`);
         addResults.successful.push({
           song: `${song.artist} - ${song.title}`,
           videoId
@@ -331,8 +308,6 @@ export async function POST(request) {
         });
       }
     }
-
-    console.log(`[Export YouTube] Finished adding songs. Success: ${addResults.successful.length}, Failed: ${addResults.failed.length}`);
 
     // Step 6: Return success with detailed results
     return NextResponse.json(
