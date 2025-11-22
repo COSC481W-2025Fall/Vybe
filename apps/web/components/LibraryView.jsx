@@ -298,7 +298,15 @@ export default function LibraryView() {
         if (finalProvider === 'spotify') {
           console.log('[LibraryView] Loading Spotify profile...');
           const res = await fetch('/api/spotify/me', { cache: 'no-store' });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            const errorMessage = errorData.message || `HTTP ${res.status}`;
+            // If it's a token error, provide a helpful message
+            if (errorData.code === 'NO_TOKENS' || res.status === 401) {
+              throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
+            }
+            throw new Error(errorMessage);
+          }
           const me = await res.json();
           setUserInfo(me);
         } else if (finalProvider === 'google') {
@@ -401,8 +409,13 @@ export default function LibraryView() {
           console.log('[LibraryView] Loading Spotify recent plays...');
           const res = await fetch('/api/spotify/me/player/recently-played?limit=20', { cache: 'no-store' });
           if (!res.ok) {
-            const body = await res.text().catch(() => '');
-            throw new Error(`HTTP ${res.status} ${body}`);
+            const errorData = await res.json().catch(() => ({}));
+            const errorMessage = errorData.message || `HTTP ${res.status}`;
+            // If it's a token error, provide a helpful message
+            if (errorData.code === 'NO_TOKENS' || res.status === 401) {
+              throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
+            }
+            throw new Error(errorMessage);
           }
           const json = await res.json();              // { items: [...], cursors, next }
           console.log('[LibraryView] Raw Spotify API response:', json);
@@ -442,8 +455,13 @@ export default function LibraryView() {
       const url = `/api/spotify/me/player/recently-played?limit=20&before=${before}`;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) {
-        const body = await res.text().catch(() => '');
-        throw new Error(`HTTP ${res.status} ${body}`);
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.message || `HTTP ${res.status}`;
+        // If it's a token error, provide a helpful message
+        if (errorData.code === 'NO_TOKENS' || res.status === 401) {
+          throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
+        }
+        throw new Error(errorMessage);
       }
       const json = await res.json();              // { items: [...], cursors, next }
       const more = (json.items || []).map(mapItem);
@@ -469,8 +487,13 @@ export default function LibraryView() {
         console.log('[LibraryView] Loading Spotify playlists...');
         const res = await fetch('/api/spotify/me/playlists?limit=50', { cache: 'no-store' });
         if (!res.ok) {
-          const body = await res.text().catch(() => '');
-          throw new Error(`HTTP ${res.status} ${body}`);
+          const errorData = await res.json().catch(() => ({}));
+          const errorMessage = errorData.message || `HTTP ${res.status}`;
+          // If it's a token error, provide a helpful message
+          if (errorData.code === 'NO_TOKENS' || res.status === 401) {
+            throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
+          }
+          throw new Error(errorMessage);
         }
         const json = await res.json();
         console.log('[LibraryView] Raw Spotify playlists response:', json);
