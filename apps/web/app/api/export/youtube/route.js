@@ -17,6 +17,7 @@ async function makeSupabase() {
  * Request Body:
  * - playlistId: string (ID of the playlist to export, or 'all' for combined playlists)
  * - groupId: string (ID of the group containing the playlist)
+ * - customName: string (optional) - Custom name for the exported playlist. If provided and not empty, this will be used instead of the default name.
  * 
  * Returns:
  * - 200: Success with songs data
@@ -41,7 +42,7 @@ export async function POST(request) {
 
     // Step 2: Parse and validate request body
     const body = await request.json();
-    const { playlistId, groupId } = body;
+    const { playlistId, groupId, customName } = body;
 
     if (!playlistId) {
       return NextResponse.json(
@@ -130,24 +131,31 @@ export async function POST(request) {
     // Step 4: Create YouTube playlist
     // Determine playlist title
     let playlistTitle;
-    if (playlistId === 'all') {
-      // For combined playlists, get the group name
-      const { data: groupData } = await supabase
-        .from('groups')
-        .select('name')
-        .eq('id', groupId)
-        .single();
-      
-      playlistTitle = `[Vybe Export] ${groupData?.name || 'Group Playlist'}`;
+    
+    // If customName is provided and not empty, use it
+    if (customName && customName.trim() !== '') {
+      playlistTitle = customName.trim();
     } else {
-      // For individual playlists, get the playlist name
-      const { data: playlistData } = await supabase
-        .from('group_playlists')
-        .select('name')
-        .eq('id', playlistId)
-        .single();
-      
-      playlistTitle = `[Vybe Export] ${playlistData?.name || 'Playlist'}`;
+      // Otherwise, use the default naming logic
+      if (playlistId === 'all') {
+        // For combined playlists, get the group name
+        const { data: groupData } = await supabase
+          .from('groups')
+          .select('name')
+          .eq('id', groupId)
+          .single();
+        
+        playlistTitle = `[Vybe Export] ${groupData?.name || 'Group Playlist'}`;
+      } else {
+        // For individual playlists, get the playlist name
+        const { data: playlistData } = await supabase
+          .from('group_playlists')
+          .select('name')
+          .eq('id', playlistId)
+          .single();
+        
+        playlistTitle = `[Vybe Export] ${playlistData?.name || 'Playlist'}`;
+      }
     }
 
     // Get YouTube access token
