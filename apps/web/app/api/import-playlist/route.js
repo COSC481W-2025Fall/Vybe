@@ -282,9 +282,24 @@ async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
   let resolvedUrl = validatedUrl;
   if (!validatedUrl.startsWith('spotify:') && (validatedUrl.includes('spotify.link/') || validatedUrl.includes('spoti.fi/'))) {
     try {
-      // Follow redirect to get the actual playlist URL
-      // Use validated URL to prevent SSRF - only validated Spotify domains reach here
-      const response = await fetch(validatedUrl, { 
+      // SSRF protection: Explicit allowlist validation before fetch
+      // CodeQL requires inline validation to recognize the URL as safe
+      const ALLOWED_SPOTIFY_HOSTS = ['open.spotify.com', 'spotify.link', 'spoti.fi', 'play.spotify.com'];
+      const urlObj = new URL(validatedUrl);
+      const hostname = urlObj.hostname.toLowerCase();
+      
+      // Explicit allowlist check - only proceed if hostname matches allowed domains
+      const isHostAllowed = ALLOWED_SPOTIFY_HOSTS.some(allowed => 
+        hostname === allowed || hostname.endsWith('.' + allowed)
+      );
+      
+      if (!isHostAllowed) {
+        throw new Error(`SSRF protection: Hostname ${hostname} not in allowlist`);
+      }
+      
+      // At this point, urlObj.href is guaranteed to be a Spotify domain
+      // codeql[js/ssrf]: URL validated against allowlist of Spotify domains only
+      const response = await fetch(urlObj.href, { 
         method: 'HEAD', 
         redirect: 'follow',
         headers: { 'User-Agent': 'Mozilla/5.0' }
@@ -297,7 +312,7 @@ async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
     } catch (error) {
       console.warn('[Spotify Import] Failed to resolve short link, trying original URL:', error);
       // If it's a validation error, re-throw it
-      if (error.message.includes('Invalid Spotify URL') || error.message.includes('Invalid URL format')) {
+      if (error.message.includes('Invalid Spotify URL') || error.message.includes('Invalid URL format') || error.message.includes('SSRF protection')) {
         throw error;
       }
       // Continue with original validated URL - extractSpotifyPlaylistId might still work
