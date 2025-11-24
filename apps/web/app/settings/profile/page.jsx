@@ -120,12 +120,12 @@ function ProfileSettingsContent() {
   if (loading) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
           <div className="flex items-center gap-3">
             <User className="h-6 w-6 text-purple-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">Profile</h2>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
                 Manage your display name, bio, and profile picture
               </p>
             </div>
@@ -143,12 +143,12 @@ function ProfileSettingsContent() {
   if (profileError) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
           <div className="flex items-center gap-3">
             <User className="h-6 w-6 text-purple-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">Profile</h2>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
                 Manage your display name, bio, and profile picture
               </p>
             </div>
@@ -166,12 +166,12 @@ function ProfileSettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <User className="h-6 w-6 text-purple-400" />
           <div>
-            <h2 className="text-xl font-semibold text-white">Profile</h2>
-            <p className="text-sm text-gray-400 mt-0.5">
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
+            <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
               Manage your display name, bio, and profile picture
             </p>
           </div>
@@ -183,7 +183,7 @@ function ProfileSettingsContent() {
         <div className="space-y-6 w-full">
           {/* Display Name Input */}
           <div>
-            <label htmlFor="display_name" className="block text-sm font-medium text-white mb-2">
+            <label htmlFor="display_name" className="block text-sm font-medium text-[var(--foreground)] mb-2">
               Display Name <span className="text-red-400">*</span>
             </label>
             <input
@@ -192,24 +192,24 @@ function ProfileSettingsContent() {
               {...register('display_name')}
               maxLength={50}
               className={[
-                'w-full px-4 py-2 rounded-lg bg-white/5 border',
-                'text-white placeholder-gray-500',
+                'w-full px-4 py-2 rounded-lg bg-white/10 [data-theme="light"]:bg-black/10 border',
+                'text-[var(--foreground)] placeholder-[var(--muted-foreground)]',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
                 errors.display_name
                   ? 'border-red-500/50'
-                  : 'border-white/20 focus:border-purple-500/50',
+                  : 'border-white/20 [data-theme="light"]:border-black/30 focus:border-purple-500/50',
               ].join(' ')}
               placeholder="Enter your display name"
             />
             <div className="mt-1 flex items-center justify-between">
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-[var(--muted-foreground)]">
                 {errors.display_name ? (
                   <span className="text-red-400">{errors.display_name.message}</span>
                 ) : (
                   <span>2-50 characters, letters, numbers, and spaces only</span>
                 )}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-[var(--muted-foreground)]">
                 {displayName?.length || 0}/50
               </div>
             </div>
@@ -217,7 +217,7 @@ function ProfileSettingsContent() {
 
           {/* Bio Textarea */}
           <div>
-            <label htmlFor="bio" className="block text-sm font-medium text-white mb-2">
+            <label htmlFor="bio" className="block text-sm font-medium text-[var(--foreground)] mb-2">
               Bio
             </label>
             <textarea
@@ -226,24 +226,24 @@ function ProfileSettingsContent() {
               maxLength={200}
               rows={4}
               className={[
-                'w-full px-4 py-2 rounded-lg bg-white/5 border resize-none',
-                'text-white placeholder-gray-500',
+                'w-full px-4 py-2 rounded-lg bg-white/10 [data-theme="light"]:bg-black/10 border resize-none',
+                'text-[var(--foreground)] placeholder-[var(--muted-foreground)]',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
                 errors.bio
                   ? 'border-red-500/50'
-                  : 'border-white/20 focus:border-purple-500/50',
+                  : 'border-white/20 [data-theme="light"]:border-black/30 focus:border-purple-500/50',
               ].join(' ')}
               placeholder="Tell us about yourself..."
             />
             <div className="mt-1 flex items-center justify-between">
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-[var(--muted-foreground)]">
                 {errors.bio ? (
                   <span className="text-red-400">{errors.bio.message}</span>
                 ) : (
                   <span>Optional. Share a little about yourself with the community.</span>
                 )}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-[var(--muted-foreground)]">
                 {bio?.length || 0}/200
               </div>
             </div>
@@ -261,23 +261,23 @@ function ProfileSettingsContent() {
           />
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Account Information (Read-only) */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-white">Account Information</h3>
+            <h3 className="text-lg font-medium text-[var(--foreground)]">Account Information</h3>
 
             {/* Authentication Provider */}
             <div className="flex items-start gap-3">
-              <Music className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+              <Music className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <div className="text-sm text-gray-400 mb-1">Logged in with</div>
+                <div className="text-sm text-[var(--muted-foreground)] mb-1">Logged in with</div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white">
+                  <span className="text-[var(--foreground)]">
                     {profileData?.auth_provider_display || 'Email'}
                   </span>
                   {profileData?.provider_account_name && (
-                    <span className="text-gray-400 text-sm">
+                    <span className="text-[var(--muted-foreground)] text-sm">
                       ({profileData.provider_account_name})
                     </span>
                   )}
@@ -287,11 +287,11 @@ function ProfileSettingsContent() {
 
             {/* Email */}
             <div className="flex items-start gap-3">
-              <Mail className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+              <Mail className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <div className="text-sm text-gray-400 mb-1">Email</div>
+                <div className="text-sm text-[var(--muted-foreground)] mb-1">Email</div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white">{profileData?.email || 'N/A'}</span>
+                  <span className="text-[var(--foreground)]">{profileData?.email || 'N/A'}</span>
                   {profileData?.email_verified ? (
                     <CheckCircle2 className="h-4 w-4 text-green-400" title="Verified" />
                   ) : (
@@ -304,38 +304,38 @@ function ProfileSettingsContent() {
             {/* Username (if applicable) */}
             {profileData?.username && (
               <div className="flex items-start gap-3">
-                <User className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                <User className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <div className="text-sm text-gray-400 mb-1">Username</div>
-                  <span className="text-white">{profileData.username}</span>
+                  <div className="text-sm text-[var(--muted-foreground)] mb-1">Username</div>
+                  <span className="text-[var(--foreground)]">{profileData.username}</span>
                 </div>
               </div>
             )}
 
             {/* Account Creation Date */}
             <div className="flex items-start gap-3">
-              <Calendar className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+              <Calendar className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <div className="text-sm text-gray-400 mb-1">Member Since</div>
-                <span className="text-white">{formatDate(profileData?.created_at)}</span>
+                <div className="text-sm text-[var(--muted-foreground)] mb-1">Member Since</div>
+                <span className="text-[var(--foreground)]">{formatDate(profileData?.created_at)}</span>
               </div>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Connected Accounts */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-white">Connected Accounts</h3>
+            <h3 className="text-lg font-medium text-[var(--foreground)]">Connected Accounts</h3>
 
             {/* Spotify Connection */}
-            <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
+            <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 [data-theme='light']:border-black/20 bg-white/10 [data-theme='light']:bg-black/10">
               <div className="flex items-center gap-3">
                 <Music className="h-5 w-5 text-green-400" />
                 <div>
-                  <div className="text-sm font-medium text-white">Spotify</div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-sm font-medium text-[var(--foreground)]">Spotify</div>
+                  <div className="text-xs text-[var(--muted-foreground)]">
                     {profileData?.spotify_connected
                       ? profileData?.spotify_account?.display_name || profileData?.spotify_account?.id || 'Connected'
                       : 'Not connected'}
@@ -358,12 +358,12 @@ function ProfileSettingsContent() {
             </div>
 
             {/* YouTube Connection */}
-            <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
+            <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 [data-theme='light']:border-black/20 bg-white/10 [data-theme='light']:bg-black/10">
               <div className="flex items-center gap-3">
                 <Music className="h-5 w-5 text-red-400" />
                 <div>
-                  <div className="text-sm font-medium text-white">YouTube</div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-sm font-medium text-[var(--foreground)]">YouTube</div>
+                  <div className="text-xs text-[var(--muted-foreground)]">
                     {profileData?.youtube_connected
                       ? 'Connected'
                       : 'Not connected'}

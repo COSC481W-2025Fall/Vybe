@@ -14,28 +14,28 @@ export function GroupCard({
 }) {
   return (
     <div 
-      className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 hover:bg-white/5 active:bg-white/5 transition-colors cursor-pointer"
+      className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 hover:bg-white/5 [data-theme='light']:hover:bg-black/5 active:bg-white/5 [data-theme='light']:active:bg-black/5 transition-colors cursor-pointer"
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
-          <h3 className="text-base sm:text-lg font-semibold text-white truncate">{name}</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-[var(--foreground)] truncate">{name}</h3>
         </div>
         {visibility && (
-          <span className="px-2 sm:px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300 ml-2 sm:ml-3 whitespace-nowrap flex-shrink-0">
+          <span className="px-2 sm:px-3 py-1 bg-white/5 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-full text-xs text-[var(--muted-foreground)] ml-2 sm:ml-3 whitespace-nowrap flex-shrink-0">
             {visibility}
           </span>
         )}
       </div>
 
       {description && (
-        <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4 line-clamp-2">
+        <p className="text-xs sm:text-sm text-[var(--muted-foreground)] mb-3 sm:mb-4 line-clamp-2">
           {description}
         </p>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-        <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-400">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-sm text-[var(--muted-foreground)]">
           <span>{memberCount || 0} members</span>
           <span>{songCount || 0} songs</span>
           <span className="flex items-center gap-1">
@@ -47,7 +47,7 @@ export function GroupCard({
           </span>
         </div>
         {joinCode && (
-          <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white/5 border border-white/10 rounded-md text-gray-300 text-xs sm:text-sm font-mono font-semibold self-start sm:self-auto">
+          <div className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white/5 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-md text-[var(--muted-foreground)] text-xs sm:text-sm font-mono font-semibold self-start sm:self-auto">
             {joinCode}
           </div>
         )}

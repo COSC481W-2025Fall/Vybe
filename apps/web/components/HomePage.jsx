@@ -52,20 +52,20 @@ export function HomePage({ onNavigate } = {}) {
   };
 
   return (
-    <div className="min-h-screen text-white w-full max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-6 sm:space-y-8 md:space-y-10">
+    <div className="min-h-screen text-[var(--foreground)] w-full max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-6 sm:space-y-8 md:space-y-10">
       {/* Groups Section */}
       <section>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h2 className="flex items-center space-x-2 text-xl sm:text-2xl font-bold text-white mb-1">
+            <h2 className="flex items-center space-x-2 text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-1">
               <Users className="h-5 w-5 sm:h-6 sm:w-6" />
               <span>My Groups</span>
             </h2>
-            <p className="text-gray-400 text-xs sm:text-sm">Your most active music groups</p>
+            <p className="text-[var(--muted-foreground)] text-xs sm:text-sm">Your most active music groups</p>
           </div>
           <Dialog open={createGroupDialog.isOpen} onOpenChange={createGroupDialog.setIsOpen}>
             <DialogTrigger asChild>
-              <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start">
+              <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start">
                 <Plus className="h-4 w-4" />
                 <span>Create Group</span>
               </button>
@@ -111,14 +111,14 @@ export function HomePage({ onNavigate } = {}) {
                   <button
                     type="button"
                     onClick={createGroupDialog.close}
-                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
+                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={groupsLoading}
-                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     {groupsLoading ? "Creating..." : "Create Group"}
                   </button>
@@ -158,7 +158,7 @@ export function HomePage({ onNavigate } = {}) {
               action={
                 <button
                   onClick={createGroupDialog.open}
-                  className="px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base w-full sm:w-auto"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-2 inline" />
                   Create Your First Group
@@ -173,12 +173,12 @@ export function HomePage({ onNavigate } = {}) {
       <section>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">Friends' Song of the Day</h2>
-            <p className="text-gray-400 text-xs sm:text-sm">See what your friends are currently vibing to</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-1">Friends' Song of the Day</h2>
+            <p className="text-[var(--muted-foreground)] text-xs sm:text-sm">See what your friends are currently vibing to</p>
           </div>
           <button
             onClick={shareSongDialog.open}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
           >
             <Plus className="h-4 w-4" />
             Share Song
@@ -198,9 +198,9 @@ export function HomePage({ onNavigate } = {}) {
               <div className="animate-pulse grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 md:gap-6 w-full">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="flex flex-col items-center space-y-2 sm:space-y-3">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white/10 rounded-full"></div>
-                    <div className="h-2 sm:h-3 bg-white/10 rounded w-12 sm:w-16"></div>
-                    <div className="h-1.5 sm:h-2 bg-white/10 rounded w-8 sm:w-12"></div>
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white/10 [data-theme='light']:bg-black/10 rounded-full"></div>
+                    <div className="h-2 sm:h-3 bg-white/10 [data-theme='light']:bg-black/10 rounded w-12 sm:w-16"></div>
+                    <div className="h-1.5 sm:h-2 bg-white/10 [data-theme='light']:bg-black/10 rounded w-8 sm:w-12"></div>
                   </div>
                 ))}
               </div>
@@ -229,22 +229,22 @@ export function HomePage({ onNavigate } = {}) {
                       {friend.shared_by_avatar ? (
                         <img src={friend.shared_by_avatar} alt={friend.shared_by} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white text-xs sm:text-sm md:text-lg font-bold">
+                        <div className="w-full h-full flex items-center justify-center text-[var(--foreground)] text-xs sm:text-sm md:text-lg font-bold">
                           {friend.shared_by?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                         </div>
                       )}
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white rounded-full border-2 border-gray-900 flex items-center justify-center shadow-md">
-                      <Music className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 text-gray-900" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white [data-theme='light']:bg-white rounded-full border-2 border-gray-900 [data-theme='light']:border-gray-100 flex items-center justify-center shadow-md">
+                      <Music className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 text-gray-900 [data-theme='light']:text-gray-900" />
                     </div>
                   </div>
 
                   <div className="text-center w-full">
-                    <p className="text-xs sm:text-sm font-semibold text-white mb-1 sm:mb-1.5 truncate">{friend.shared_by?.split(' ')[0] || 'Friend'}</p>
-                    <p className="text-xs font-medium text-white mb-0.5 leading-tight truncate">{friend.title || 'Untitled'}</p>
-                    <p className="text-xs text-gray-400 mb-1 leading-tight truncate">{friend.artist || 'Unknown Artist'}</p>
+                    <p className="text-xs sm:text-sm font-semibold text-[var(--foreground)] mb-1 sm:mb-1.5 truncate">{friend.shared_by?.split(' ')[0] || 'Friend'}</p>
+                    <p className="text-xs font-medium text-[var(--foreground)] mb-0.5 leading-tight truncate">{friend.title || 'Untitled'}</p>
+                    <p className="text-xs text-[var(--muted-foreground)] mb-1 leading-tight truncate">{friend.artist || 'Unknown Artist'}</p>
                     {friend.shared_at && (
-                      <p className="text-xs text-gray-500">{new Date(friend.shared_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      <p className="text-xs text-[var(--muted-foreground)] opacity-70">{new Date(friend.shared_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                     )}
                   </div>
                 </button>
@@ -252,11 +252,11 @@ export function HomePage({ onNavigate } = {}) {
             </div>
           ) : (
             <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-white/5">
-                <Music className="h-8 w-8 text-gray-500" />
+              <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-white/5 [data-theme='light']:bg-black/5">
+                <Music className="h-8 w-8 text-[var(--muted-foreground)]" />
               </div>
-              <h3 className="font-semibold text-lg mb-2 text-white">No songs shared today</h3>
-              <p className="text-gray-400 text-sm">Be the first to share your song of the day!</p>
+              <h3 className="font-semibold text-lg mb-2 text-[var(--foreground)]">No songs shared today</h3>
+              <p className="text-[var(--muted-foreground)] text-sm">Be the first to share your song of the day!</p>
             </div>
           )}
         </div>
@@ -266,15 +266,15 @@ export function HomePage({ onNavigate } = {}) {
       <section>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h2 className="flex items-center space-x-2 text-xl sm:text-2xl font-bold text-white mb-1">
+            <h2 className="flex items-center space-x-2 text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-1">
               <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
               <span>Trending Communities</span>
             </h2>
-            <p className="text-gray-400 text-xs sm:text-sm">Discover new music communities</p>
+            <p className="text-[var(--muted-foreground)] text-xs sm:text-sm">Discover new music communities</p>
           </div>
           <button
             onClick={communitiesDialog.open}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
           >
             Browse All
           </button>
@@ -294,8 +294,8 @@ export function HomePage({ onNavigate } = {}) {
             >
               <div className="flex items-start justify-between mb-2 sm:mb-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-white text-base sm:text-lg mb-1 truncate">{community.name}</h3>
-                  <p className="text-xs sm:text-sm text-gray-400 mb-2 sm:mb-3 line-clamp-2">{community.description}</p>
+                  <h3 className="font-semibold text-[var(--foreground)] text-base sm:text-lg mb-1 truncate">{community.name}</h3>
+                  <p className="text-xs sm:text-sm text-[var(--muted-foreground)] mb-2 sm:mb-3 line-clamp-2">{community.description}</p>
                 </div>
                 {community.member_count > 2000 && (
                   <span className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-purple-900/40 text-purple-300 text-xs font-medium rounded-full border border-purple-800/50 ml-2 flex-shrink-0">
@@ -310,10 +310,10 @@ export function HomePage({ onNavigate } = {}) {
               </div> */}
 
               <div className="flex flex-col gap-1">
-                <span className="text-sm text-gray-400">{community.member_count.toLocaleString()} members</span>
+                <span className="text-sm text-[var(--muted-foreground)]">{community.member_count.toLocaleString()} members</span>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">{community.group_count?.toLocaleString() || 0} groups</span>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-[var(--muted-foreground)]">{community.group_count?.toLocaleString() || 0} groups</span>
+                  <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
                 </div>
               </div>
               

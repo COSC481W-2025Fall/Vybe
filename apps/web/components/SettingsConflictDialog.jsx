@@ -86,26 +86,26 @@ export default function SettingsConflictDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm [data-theme='light']:bg-black/40"
         onClick={onClose}
       />
 
       {/* Dialog */}
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg border border-white/20 bg-gradient-to-b from-gray-900 to-black shadow-2xl">
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg border border-white/20 glass-card shadow-2xl [data-theme='light']:border-black/20">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-gray-900/95 backdrop-blur-sm px-6 py-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 glass-card px-6 py-4 [data-theme='light']:border-black/10">
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-yellow-500/20 p-2">
               <AlertTriangle className="h-5 w-5 text-yellow-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Settings Conflict Detected</h2>
-              <p className="text-sm text-gray-400">{formattedConflict.typeLabel}</p>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Settings Conflict Detected</h2>
+              <p className="text-sm text-[var(--muted-foreground)]">{formattedConflict.typeLabel}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            className="rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition-colors"
             aria-label="Close dialog"
           >
             <X className="h-5 w-5" />
@@ -123,9 +123,9 @@ export default function SettingsConflictDialog({
 
           {/* Conflict Summary */}
           <div>
-            <h3 className="text-sm font-medium text-white mb-2">Conflict Summary</h3>
-            <div className="rounded-lg bg-white/5 border border-white/10 p-4">
-              <p className="text-sm text-gray-300">
+            <h3 className="text-sm font-medium text-[var(--foreground)] mb-2">Conflict Summary</h3>
+            <div className="rounded-lg bg-white/5 border border-white/10 p-4 [data-theme='light']:bg-black/5 [data-theme='light']:border-black/10">
+              <p className="text-sm text-[var(--foreground)]">
                 {formattedConflict.conflictingFieldsCount > 0
                   ? `${formattedConflict.conflictingFieldsCount} field${formattedConflict.conflictingFieldsCount > 1 ? 's' : ''} have conflicting values`
                   : 'No direct conflicts, but changes exist in both versions'}
@@ -136,15 +136,15 @@ export default function SettingsConflictDialog({
           {/* Conflict Details */}
           {conflictInfo.conflictingFields.length > 0 && (
             <div>
-              <h3 className="text-sm font-medium text-white mb-3">Conflicting Fields</h3>
+              <h3 className="text-sm font-medium text-[var(--foreground)] mb-3">Conflicting Fields</h3>
               <div className="space-y-3">
                 {conflictInfo.conflictingFields.map((field, index) => (
                   <div
                     key={index}
-                    className="rounded-lg border border-white/10 bg-white/5 p-4"
+                    className="rounded-lg border border-white/10 bg-white/5 p-4 [data-theme='light']:bg-black/5 [data-theme='light']:border-black/10"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-white capitalize">
+                      <span className="text-sm font-medium text-[var(--foreground)] capitalize">
                         {field.field.replace(/_/g, ' ')}
                       </span>
                     </div>
@@ -202,10 +202,10 @@ export default function SettingsConflictDialog({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10 [data-theme='light']:border-black/10">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 transition-colors"
             >
               Cancel
             </button>

@@ -69,7 +69,7 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
                     </div>
                     <button
                       onClick={() => handleJoin(community.name)}
-                      className="px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm"
+                      className="px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm"
                     >
                       Join
                     </button>
