@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { getValidAccessToken } from '@/lib/youtube';
 
 export async function POST(request) {
   try {
-    const supabase = supabaseServer();
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError || !session) {
@@ -104,6 +106,27 @@ export async function POST(request) {
       // Clean up the playlist if songs failed to insert
       await supabase.from('group_playlists').delete().eq('id', groupPlaylist.id);
       return NextResponse.json({ error: 'Failed to import songs' }, { status: 500 });
+    }
+
+    // Trigger smart sorting automatically (don't fail import if sorting fails)
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : 'http://localhost:3000';
+      
+      // Call smart-sort endpoint asynchronously (fire and forget)
+      fetch(`${baseUrl}/api/groups/${groupId}/smart-sort`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }).catch(error => {
+        console.error('[import-playlist] Error triggering smart sort:', error);
+        // Don't throw - sorting failure shouldn't break import
+      });
+    } catch (error) {
+      console.error('[import-playlist] Error setting up smart sort trigger:', error);
+      // Don't throw - sorting failure shouldn't break import
     }
 
     return NextResponse.json({

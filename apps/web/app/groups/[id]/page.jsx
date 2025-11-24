@@ -148,11 +148,13 @@ export default function GroupDetailPage({ params }) {
 
     setMembers(allMembers);
 
-    // Get playlists associated with this group
+    // Get playlists associated with this group, ordered by smart_sorted_order if available
     const { data: playlistData } = await supabase
       .from('group_playlists')
       .select('*')
-      .eq('group_id', groupId);
+      .eq('group_id', groupId)
+      .order('smart_sorted_order', { ascending: true, nullsLast: true })
+      .order('created_at', { ascending: true });
 
     setPlaylists(playlistData || []);
 
@@ -211,6 +213,7 @@ export default function GroupDetailPage({ params }) {
             )
           `)
           .in('playlist_id', playlistIds)
+          .order('smart_sorted_order', { ascending: true, nullsLast: true })
           .order('created_at', { ascending: true })
           .range(rangeStart, rangeStart + batchSize - 1);
 
@@ -252,6 +255,7 @@ export default function GroupDetailPage({ params }) {
             )
           `)
           .eq('playlist_id', playlistId)
+          .order('smart_sorted_order', { ascending: true, nullsLast: true })
           .order('position', { ascending: true })
           .range(rangeStart, rangeStart + batchSize - 1);
 
@@ -350,6 +354,22 @@ export default function GroupDetailPage({ params }) {
               {/* Playlist Selector */}
               {playlists.length > 0 ? (
                 <>
+                  {/* Smart Sort Indicator */}
+                  {playlists.some(p => p.smart_sorted_order !== null) && (
+                    <div className="mb-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      <span className="text-sm text-[var(--foreground)]">
+                        <span className="font-medium">AI Smart Sort Active</span>
+                        {playlists[0]?.last_sorted_at && (
+                          <span className="text-[var(--muted-foreground)] ml-2">
+                            (Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-[var(--muted-foreground)] mb-2">
                       Select Playlist
