@@ -238,12 +238,31 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
 }
 
 async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
+  // Handle Spotify short links by following redirects
+  let resolvedUrl = playlistUrl;
+  if (playlistUrl.includes('spotify.link/') || playlistUrl.includes('spoti.fi/')) {
+    try {
+      // Follow redirect to get the actual playlist URL
+      const response = await fetch(playlistUrl, { 
+        method: 'HEAD', 
+        redirect: 'follow',
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+      if (response.ok && response.url) {
+        resolvedUrl = response.url;
+      }
+    } catch (error) {
+      console.warn('[Spotify Import] Failed to resolve short link, trying original URL:', error);
+      // Continue with original URL - extractSpotifyPlaylistId might still work
+    }
+  }
+
   // Extract playlist ID from URL
-  const playlistId = extractSpotifyPlaylistId(playlistUrl);
+  const playlistId = extractSpotifyPlaylistId(resolvedUrl);
 
   // Validate playlist ID against Spotify spec (typically 22 chars, base62)
   if (!playlistId || !isValidSpotifyPlaylistId(playlistId)) {
-    throw new Error('Invalid Spotify playlist URL or ID');
+    throw new Error('Invalid Spotify playlist URL or ID. Please provide a valid Spotify playlist link.');
   }
 
   // Get Spotify access token
@@ -317,15 +336,54 @@ function extractYouTubePlaylistId(url) {
   return match ? match[1] : null;
 }
 
+
+// Function to extract the Spotify playlist ID from the URL
+// Addded for trending communities on homepage
 function extractSpotifyPlaylistId(url) {
-  const match = url.match(/playlist\/([a-zA-Z0-9]+)/);
-  return match ? match[1] : null;
+  if (!url || typeof url !== 'string') {
+    return null;
+  }
+
+  // Trim whitespace
+  url = url.trim();
+
+  // Handle Spotify URI format: spotify:playlist:37i9dQZF1DXcBWIGoYBM5M
+  const uriMatch = url.match(/^spotify:playlist:([a-zA-Z0-9]+)$/);
+  if (uriMatch) {
+    return uriMatch[1];
+  }
+
+  // Handle full URLs: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+  // Also handles URLs with query params: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=...
+  const urlMatch = url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+  if (urlMatch) {
+    return urlMatch[1];
+  }
+
+  // Handle alternative URL format: https://play.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+  const altUrlMatch = url.match(/play\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+  if (altUrlMatch) {
+    return altUrlMatch[1];
+  }
+
+  // Handle just the ID itself (if it's a valid base62 string)
+  // Spotify playlist IDs are typically 22 characters, but can vary
+  const directIdMatch = url.match(/^([a-zA-Z0-9]{15,25})$/);
+  if (directIdMatch) {
+    return directIdMatch[1];
+  }
+
+  return null;
 }
 
-// Validate Spotify playlist ID (base62, usually length 22)
+// Validate Spotify playlist ID (base62, typically 15-25 chars, most common is 22)
 function isValidSpotifyPlaylistId(id) {
-  // Spotify playlist IDs are 22 characters, base62: [A-Za-z0-9]
-  return typeof id === "string" && /^[A-Za-z0-9]{22}$/.test(id);
+  if (!id || typeof id !== "string") {
+    return false;
+  }
+  // Spotify playlist IDs are base62: [A-Za-z0-9], typically 15-25 characters
+  // Most common is 22, but we'll be flexible and let the API validate
+  return /^[A-Za-z0-9]{15,25}$/.test(id);
 }
 
 function parseYouTubeDuration(duration) {

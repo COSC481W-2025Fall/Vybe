@@ -52,16 +52,80 @@ export function HomePage({ onNavigate } = {}) {
   const [loadingSongs, setLoadingSongs] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
 
-  // Map each community to a specific Spotify playlist name
+  // Map each community to a specific Spotify playlist URL or name
   // **********************************************************
   // *******************EDIT PLAYLISTS HERE********************
+  // You can use either:
+  // - A Spotify playlist URL (any format): https://open.spotify.com/playlist/37i9dQZF1E4yzIYT5qw6EX
+  // - A playlist name (searches your playlists): 'My Playlist Name'
   // **********************************************************
 
   const communityPlaylistMap = {
-    'Indie Discoveries': 'Chill music', // Replace with your actual playlist name
-    'Jazz Lounge': 'Music from hell', // Replace with your actual playlist name
-    'Electronic Pulse': 'Gaming', // Replace with your actual playlist name
+    'Indie Discoveries': 'https://open.spotify.com/album/50Rlpxdb1cBvnm53gCsQhV', // Spotify playlist URL
+    'Jazz Lounge': 'https://open.spotify.com/playlist/27jT444qwWyHkzDYrQE8Du', // Playlist name (searches your playlists)
+    'Electronic Pulse': 'https://open.spotify.com/playlist/1dvoCOb3vso33rTd4FWqRW', // Playlist name (searches your playlists)
   };
+
+  // Helper function to extract Spotify playlist/album ID and type from URL
+  // Allows using URL's in the communityPlaylistMap
+  // Returns { id: string, type: 'playlist' | 'album' } or null
+  function extractSpotifyId(url) {
+    if (!url || typeof url !== 'string') {
+      return null;
+    }
+
+    // Trim whitespace
+    url = url.trim();
+
+    // Handle Spotify URI format: spotify:playlist:37i9dQZF1DXcBWIGoYBM5M or spotify:album:6VGPtorpkn6TSWp47Edyjj
+    const uriMatch = url.match(/^spotify:(playlist|album):([a-zA-Z0-9]+)$/);
+    if (uriMatch) {
+      return { id: uriMatch[2], type: uriMatch[1] };
+    }
+
+    // Handle full URLs: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+    // Also handles URLs with query params
+    const playlistMatch = url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+    if (playlistMatch) {
+      return { id: playlistMatch[1], type: 'playlist' };
+    }
+
+    // Handle album URLs: https://open.spotify.com/album/6VGPtorpkn6TSWp47Edyjj
+    const albumMatch = url.match(/open\.spotify\.com\/album\/([a-zA-Z0-9]+)/);
+    if (albumMatch) {
+      return { id: albumMatch[1], type: 'album' };
+    }
+
+    // Handle alternative URL format: https://play.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+    const altPlaylistMatch = url.match(/play\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+    if (altPlaylistMatch) {
+      return { id: altPlaylistMatch[1], type: 'playlist' };
+    }
+
+    // Handle alternative album URL format
+    const altAlbumMatch = url.match(/play\.spotify\.com\/album\/([a-zA-Z0-9]+)/);
+    if (altAlbumMatch) {
+      return { id: altAlbumMatch[1], type: 'album' };
+    }
+
+    // Handle just the ID itself (if it's a valid base62 string)
+    // Default to playlist if we can't determine type
+    const directIdMatch = url.match(/^([a-zA-Z0-9]{15,25})$/);
+    if (directIdMatch) {
+      return { id: directIdMatch[1], type: 'playlist' }; // Default to playlist
+    }
+
+    return null;
+  }
+
+  // Helper function to check if a string is a URL
+  function isUrl(str) {
+    if (!str || typeof str !== 'string') return false;
+    return str.startsWith('http://') || 
+           str.startsWith('https://') || 
+           str.startsWith('spotify:') ||
+           /^[a-zA-Z0-9]{15,25}$/.test(str.trim()); // Looks like a direct ID
+  }
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
@@ -131,8 +195,8 @@ export function HomePage({ onNavigate } = {}) {
     }
   }
 
-  // Loads songs from a Spotify playlist (fetches all songs using pagination)
-  async function loadSpotifyPlaylistSongs(spotifyPlaylistId) {
+  // Loads songs from a Spotify playlist or album (fetches all songs using pagination)
+  async function loadSpotifyPlaylistSongs(spotifyId, type = 'playlist') {
     try {
       setLoadingSongs(true);
       setCommunityError('');
@@ -143,8 +207,8 @@ export function HomePage({ onNavigate } = {}) {
         return;
       }
 
-      if (!spotifyPlaylistId) {
-        throw new Error('Playlist ID is required');
+      if (!spotifyId) {
+        throw new Error(`${type === 'album' ? 'Album' : 'Playlist'} ID is required`);
       }
 
       // Helper function to convert Spotify API URL to our proxy URL
@@ -165,9 +229,14 @@ export function HomePage({ onNavigate } = {}) {
         }
       };
 
-      // Fetch all tracks from Spotify playlist using pagination
+      // Fetch all tracks from Spotify playlist or album using pagination
+      // Albums use /albums/{id}/tracks, playlists use /playlists/{id}/tracks
+      const endpoint = type === 'album' 
+        ? `/api/spotify/albums/${spotifyId}/tracks?limit=50`
+        : `/api/spotify/playlists/${spotifyId}/tracks?limit=100`;
+      
       let allItems = [];
-      let nextUrl = `/api/spotify/playlists/${spotifyPlaylistId}/tracks?limit=100`;
+      let nextUrl = endpoint;
       
       while (nextUrl) {
         const response = await fetch(nextUrl);
@@ -182,7 +251,7 @@ export function HomePage({ onNavigate } = {}) {
             // Not JSON, use text as-is
             errorMessage = errorText.substring(0, 200); // Limit error message length
           }
-          throw new Error(`Failed to fetch Spotify playlist tracks: ${errorMessage}`);
+          throw new Error(`Failed to fetch Spotify ${type} tracks: ${errorMessage}`);
         }
 
         const data = await response.json();
@@ -204,10 +273,14 @@ export function HomePage({ onNavigate } = {}) {
       }
 
       // Transform Spotify tracks to match our song format
+      // Playlists return items with a `track` property, albums return tracks directly
       const songs = allItems
-        .filter(item => item.track && item.track.id) // Filter out null tracks
+        .filter(item => {
+          const track = type === 'album' ? item : item.track;
+          return track && track.id;
+        })
         .map((item, index) => {
-          const track = item.track;
+          const track = type === 'album' ? item : item.track;
           return {
             id: track.id,
             title: track.name,
@@ -217,15 +290,15 @@ export function HomePage({ onNavigate } = {}) {
             external_id: track.id,
             platform: 'spotify',
             position: index,
-            isLiked: false, // Spotify API doesn't include like status in playlist tracks
+            isLiked: false, // Spotify API doesn't include like status
             likeCount: 0,
           };
         });
 
       setPlaylistSongs(songs);
     } catch (e) {
-      console.error('[Home] Error loading Spotify playlist songs:', e);
-      setCommunityError(e.message || 'Failed to load playlist songs');
+      console.error('[Home] Error loading Spotify songs:', e);
+      setCommunityError(e.message || `Failed to load ${type} songs`);
     } finally {
       setLoadingSongs(false);
     }
@@ -558,38 +631,103 @@ export function HomePage({ onNavigate } = {}) {
                 setSelectedCommunity(community);
                 communityDetailDialog.open();
                 // Load specific Spotify playlist for this community and show songs directly
-                const playlistName = communityPlaylistMap[community.name];
-                if (playlistName) {
+                const playlistValue = communityPlaylistMap[community.name];
+                if (playlistValue) {
                   try {
                     setCommunityLoading(true);
-                    // Fetch user's Spotify playlists
-                    const response = await fetch('/api/spotify/me/playlists?limit=50');
-                    if (!response.ok) throw new Error('Failed to fetch Spotify playlists');
+                    setCommunityError('');
                     
-                    const data = await response.json();
-                    const playlists = data.items || [];
-                    
-                    // Find the matching playlist
-                    const searchName = playlistName.trim().toLowerCase();
-                    const matchingPlaylist = playlists.find(p => 
-                      p.name.toLowerCase() === searchName || 
-                      p.name.toLowerCase().includes(searchName)
-                    );
-                    
-                    if (matchingPlaylist) {
-                      // Set as selected playlist and load songs directly
+                    // Check if it's a URL/link or a playlist name
+                    if (isUrl(playlistValue)) {
+                      // It's a URL - extract the ID and type (playlist or album)
+                      const spotifyInfo = extractSpotifyId(playlistValue);
+                      
+                      if (!spotifyInfo) {
+                        throw new Error(`Invalid Spotify URL. Could not extract ID from: ${playlistValue}`);
+                      }
+
+                      const { id, type } = spotifyInfo;
+                      console.log('[Home] Extracted Spotify ID:', id, 'Type:', type, 'from URL:', playlistValue);
+
+                      // Fetch the playlist or album directly by ID
+                      const endpoint = type === 'album' ? `/api/spotify/albums/${id}` : `/api/spotify/playlists/${id}`;
+                      console.log('[Home] Fetching from:', endpoint);
+
+                      const response = await fetch(endpoint);
+                      
+                      if (!response.ok) {
+                        const errorText = await response.text();
+                        let errorMessage = `Failed to fetch ${type} (HTTP ${response.status})`;
+                        
+                        try {
+                          const errorData = JSON.parse(errorText);
+                          if (errorData.error?.message) {
+                            errorMessage = errorData.error.message;
+                          } else if (errorData.error) {
+                            errorMessage = JSON.stringify(errorData.error);
+                          }
+                        } catch {
+                          errorMessage = errorText.substring(0, 200);
+                        }
+                        
+                        // Provide helpful error messages
+                        if (response.status === 404) {
+                          errorMessage = `${type === 'album' ? 'Album' : 'Playlist'} not found. It may be private, deleted, or the URL is incorrect. ${type === 'album' ? 'Album' : 'Playlist'} ID: ${id}`;
+                        } else if (response.status === 403) {
+                          errorMessage = `Access denied. This ${type} may be private and you don't have permission to view it.`;
+                        }
+                        
+                        throw new Error(errorMessage);
+                      }
+                      
+                      const data = await response.json();
+                      
+                      // Format and set the playlist/album
+                      // Albums and playlists have slightly different structures
                       const formattedPlaylist = {
-                        id: matchingPlaylist.id,
-                        name: matchingPlaylist.name,
+                        id: data.id,
+                        name: data.name,
                         platform: 'spotify',
-                        spotify_url: matchingPlaylist.external_urls?.spotify || `https://open.spotify.com/playlist/${matchingPlaylist.id}`,
-                        image: matchingPlaylist.images?.[0]?.url,
-                        track_count: matchingPlaylist.tracks?.total || 0
+                        spotify_url: data.external_urls?.spotify || (type === 'album' 
+                          ? `https://open.spotify.com/album/${data.id}` 
+                          : `https://open.spotify.com/playlist/${data.id}`),
+                        image: data.images?.[0]?.url,
+                        track_count: type === 'album' 
+                          ? (data.tracks?.total || data.tracks?.items?.length || 0)
+                          : (data.tracks?.total || 0)
                       };
                       setSelectedPlaylist(formattedPlaylist);
-                      loadSpotifyPlaylistSongs(matchingPlaylist.id);
+                      loadSpotifyPlaylistSongs(data.id, type);
                     } else {
-                      setCommunityError(`Playlist "${playlistName}" not found`);
+                      // It's a playlist name - search user's playlists
+                      const response = await fetch('/api/spotify/me/playlists?limit=50');
+                      if (!response.ok) throw new Error('Failed to fetch Spotify playlists');
+                      
+                      const data = await response.json();
+                      const playlists = data.items || [];
+                      
+                      // Find the matching playlist
+                      const searchName = playlistValue.trim().toLowerCase();
+                      const matchingPlaylist = playlists.find(p => 
+                        p.name.toLowerCase() === searchName || 
+                        p.name.toLowerCase().includes(searchName)
+                      );
+                      
+                      if (matchingPlaylist) {
+                        // Set as selected playlist and load songs directly
+                        const formattedPlaylist = {
+                          id: matchingPlaylist.id,
+                          name: matchingPlaylist.name,
+                          platform: 'spotify',
+                          spotify_url: matchingPlaylist.external_urls?.spotify || `https://open.spotify.com/playlist/${matchingPlaylist.id}`,
+                          image: matchingPlaylist.images?.[0]?.url,
+                          track_count: matchingPlaylist.tracks?.total || 0
+                        };
+                        setSelectedPlaylist(formattedPlaylist);
+                        loadSpotifyPlaylistSongs(matchingPlaylist.id, 'playlist');
+                      } else {
+                        setCommunityError(`Playlist "${playlistValue}" not found in your playlists`);
+                      }
                     }
                   } catch (e) {
                     console.error('[Home] Error loading playlist:', e);
@@ -773,7 +911,7 @@ export function HomePage({ onNavigate } = {}) {
                     className="mt-3 w-full px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/15"
                     onClick={() => {
                       setSelectedPlaylist(p);
-                      loadSpotifyPlaylistSongs(p.id);
+                      loadSpotifyPlaylistSongs(p.id, 'playlist');
                     }}
                   >
                     View Playlist
