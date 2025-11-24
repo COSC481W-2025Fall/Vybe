@@ -238,6 +238,29 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
 }
 
 async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
+  // SSRF protection: allow only Spotify domains
+  const allowedHostnames = ['open.spotify.com', 'spotify.link', 'spoti.fi', 'play.spotify.com'];
+  
+  try {
+    const url = new URL(playlistUrl);
+    const hostname = url.hostname.toLowerCase();
+    
+    // Check if hostname matches any allowed domain (exact match or subdomain)
+    const isAllowed = allowedHostnames.some(allowed => 
+      hostname === allowed || hostname.endsWith('.' + allowed)
+    );
+    
+    if (!isAllowed) {
+      throw new Error(`Invalid Spotify URL. Only Spotify domains are allowed: ${allowedHostnames.join(', ')}`);
+    }
+  } catch (error) {
+    // If URL parsing fails or validation fails, reject the request
+    if (error.message.includes('Invalid Spotify URL')) {
+      throw error;
+    }
+    throw new Error('Invalid URL format');
+  }
+
   // Handle Spotify short links by following redirects
   let resolvedUrl = playlistUrl;
   if (playlistUrl.includes('spotify.link/') || playlistUrl.includes('spoti.fi/')) {
@@ -249,10 +272,25 @@ async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });
       if (response.ok && response.url) {
+        // Validate the resolved URL as well to prevent SSRF through redirects
+        const resolvedUrlObj = new URL(response.url);
+        const resolvedHostname = resolvedUrlObj.hostname.toLowerCase();
+        const isResolvedAllowed = allowedHostnames.some(allowed => 
+          resolvedHostname === allowed || resolvedHostname.endsWith('.' + allowed)
+        );
+        
+        if (!isResolvedAllowed) {
+          throw new Error('Redirect resolved to a non-Spotify domain');
+        }
+        
         resolvedUrl = response.url;
       }
     } catch (error) {
       console.warn('[Spotify Import] Failed to resolve short link, trying original URL:', error);
+      // If it's a validation error, re-throw it
+      if (error.message.includes('non-Spotify domain')) {
+        throw error;
+      }
       // Continue with original URL - extractSpotifyPlaylistId might still work
     }
   }
