@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Users, Heart, MoreVertical, Plus } from 'lucide-react';
+import { Users, Heart, MoreVertical, Plus, Trash2, X } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 
 export default function GroupDetailPage({ params }) {
@@ -21,6 +21,9 @@ export default function GroupDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [showRemoveMemberModal, setShowRemoveMemberModal] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState(null);
+  const [showDeleteGroupModal, setShowDeleteGroupModal] = useState(false);
 
   useEffect(() => {
     // Unwrap params Promise
@@ -309,6 +312,50 @@ export default function GroupDetailPage({ params }) {
     loadPlaylistSongs(selectedPlaylist);
   }
 
+  async function handleRemoveMember(member) {
+    try {
+      const response = await fetch(`/api/groups/${groupId}/members`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: member.user_id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to remove member');
+      }
+
+      // Reload group data
+      loadGroupData();
+      setShowRemoveMemberModal(false);
+      setMemberToRemove(null);
+    } catch (error) {
+      console.error('Error removing member:', error);
+      alert(error.message || 'Failed to remove member. Please try again.');
+    }
+  }
+
+  async function handleDeleteGroup() {
+    try {
+      const response = await fetch(`/api/groups/${groupId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete group');
+      }
+
+      // Redirect to groups page
+      router.push('/groups');
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      alert(error.message || 'Failed to delete group. Please try again.');
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen text-white flex items-center justify-center">
@@ -330,13 +377,24 @@ export default function GroupDetailPage({ params }) {
               <h1 className="page-title mb-1 text-xl sm:text-2xl">{group?.name}</h1>
               <p className="section-subtitle text-xs sm:text-sm">{group?.description || 'No description'}</p>
             </div>
-            <button
-              onClick={() => setShowAddPlaylistModal(true)}
-              className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
-            >
-              <Plus className="h-5 w-5" />
-              Add Playlist
-            </button>
+            <div className="flex items-center gap-2 sm:gap-3">
+              {group?.owner_id === user?.id && (
+                <button
+                  onClick={() => setShowDeleteGroupModal(true)}
+                  className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-red-600/20 hover:bg-red-600/30 active:bg-red-600/30 text-red-400 rounded-lg font-medium transition-colors text-sm sm:text-base border border-red-600/30"
+                >
+                  <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Delete Group</span>
+                </button>
+              )}
+              <button
+                onClick={() => setShowAddPlaylistModal(true)}
+                className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
+              >
+                <Plus className="h-5 w-5" />
+                Add Playlist
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -444,7 +502,119 @@ export default function GroupDetailPage({ params }) {
             </div>
           </div>
         </div>
+
+        {/* Members Section */}
+        <div className="mt-6">
+          <div className="glass-card rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="section-title flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Members ({members.length})
+              </h2>
+            </div>
+            <div className="space-y-2">
+              {members.map((member) => (
+                <div
+                  key={member.user_id}
+                  className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      {member.users?.username?.charAt(0).toUpperCase() || member.users?.email?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">
+                        {member.users?.username || member.users?.email?.split('@')[0] || 'Unknown User'}
+                        {member.isOwner && (
+                          <span className="ml-2 text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded border border-purple-500/30">
+                            Owner
+                          </span>
+                        )}
+                      </p>
+                      {member.users?.email && (
+                        <p className="text-sm text-white/60">{member.users.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  {group?.owner_id === user?.id && !member.isOwner && (
+                    <button
+                      onClick={() => {
+                        setMemberToRemove(member);
+                        setShowRemoveMemberModal(true);
+                      }}
+                      className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
+                      title="Remove member"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Remove Member Confirmation Modal */}
+      {showRemoveMemberModal && memberToRemove && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-card rounded-2xl p-6 max-w-md w-full border border-white/20 shadow-2xl">
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Remove Member?
+            </h3>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to remove <span className="font-semibold text-white">
+                {memberToRemove.users?.username || memberToRemove.users?.email?.split('@')[0] || 'this member'}
+              </span> from the group?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRemoveMemberModal(false);
+                  setMemberToRemove(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleRemoveMember(memberToRemove)}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Group Confirmation Modal */}
+      {showDeleteGroupModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-card rounded-2xl p-6 max-w-md w-full border border-white/20 shadow-2xl">
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Delete Group?
+            </h3>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete <span className="font-semibold text-white">{group?.name}</span>? This action cannot be undone and will remove all playlists and members.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteGroupModal(false)}
+                className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteGroup}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Delete Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Playlist Modal */}
       {showAddPlaylistModal && groupId && (
