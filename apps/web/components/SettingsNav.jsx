@@ -129,7 +129,7 @@ export default function SettingsNav({
             'focus:outline-none',
             isActive
               ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 shadow-lg'
-              : 'text-gray-400 hover:bg-white/5 hover:text-white border border-transparent',
+              : 'text-[var(--muted-foreground)] hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 hover:text-[var(--foreground)] border border-transparent',
           ].join(' ')}
           aria-current={isActive ? 'page' : undefined}
           aria-label={`${section.label} settings`}
@@ -145,12 +145,12 @@ export default function SettingsNav({
             <div
               className={[
                 'text-sm font-medium transition-colors',
-                isActive ? 'text-white' : 'text-gray-300',
+                isActive ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]',
               ].join(' ')}
             >
               {section.label}
             </div>
-            <div className="text-xs text-gray-500 mt-0.5 transition-colors">
+            <div className="text-xs text-[var(--muted-foreground)] opacity-70 mt-0.5 transition-colors">
               {section.description}
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function SettingsNav({
         {/* Hamburger Menu Button */}
         <button
           onClick={handleToggleMenu}
-          className="lg:hidden rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white transition"
+          className="lg:hidden rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition"
           aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-settings-menu"
@@ -201,17 +201,17 @@ export default function SettingsNav({
             <div 
               ref={menuRef}
               id="mobile-settings-menu"
-              className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-[#0f0f0f] border-r border-white/10 overflow-y-auto"
+              className="fixed inset-y-0 left-0 w-80 max-w-[85vw] glass-card border-r border-white/10 [data-theme='light']:border-black/10 overflow-y-auto"
             >
               <div className="p-4">
                 {/* Menu Header */}
                 <div className="flex items-center justify-between mb-6">
-                  <h2 id="mobile-menu-title" className="text-lg font-semibold text-white">
+                  <h2 id="mobile-menu-title" className="text-lg font-semibold text-[var(--foreground)]">
                     Settings Menu
                   </h2>
                   <button
                     onClick={handleToggleMenu}
-                    className="rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    className="rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     aria-label="Close menu"
                   >
                     <X className="h-5 w-5" aria-hidden="true" />

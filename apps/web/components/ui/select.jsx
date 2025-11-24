@@ -16,14 +16,14 @@ function SelectTrigger({ className = '', children, ...props }) {
   return (
     <SelectPrimitive.Trigger
       className={[
-        'w-full px-4 py-3 glass-select rounded-xl text-white cursor-pointer flex items-center justify-between',
+        'w-full px-4 py-3 glass-select rounded-xl text-[var(--foreground)] cursor-pointer flex items-center justify-between',
         className,
       ].join(' ')}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon>
-        <ChevronDown className="h-5 w-5 text-gray-400" />
+        <ChevronDown className="h-5 w-5 text-[var(--muted-foreground)]" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -38,9 +38,9 @@ function SelectContent({ className = '', children, ...props }) {
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={[
-          'z-50 rounded-xl text-white overflow-hidden shadow-2xl',
+          'z-50 rounded-xl text-[var(--foreground)] overflow-hidden shadow-2xl',
           'backdrop-blur-md border',
-          'bg-gray-900/90 border-white/15',
+          'glass-card',
           className,
         ].join(' ')}
         position="popper"
@@ -61,7 +61,7 @@ function SelectItem({ className = '', children, ...props }) {
     <SelectPrimitive.Item
       className={[
         'relative flex items-center rounded-md py-2 px-3 text-sm outline-none select-none',
-        'text-white hover:bg-white/10 cursor-pointer',
+        'text-[var(--foreground)] hover:bg-[var(--glass-bg)] cursor-pointer',
         className,
       ].join(' ')}
       {...props}

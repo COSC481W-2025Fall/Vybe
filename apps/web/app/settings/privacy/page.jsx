@@ -124,12 +124,12 @@ function PrivacySettingsContent() {
   if (loading) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <Shield className="h-6 w-6 text-purple-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">Privacy</h2>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Privacy</h2>
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
                 Control who can see your activity and playlists
               </p>
             </div>
@@ -147,12 +147,12 @@ function PrivacySettingsContent() {
   if (privacyError) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <Shield className="h-6 w-6 text-purple-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">Privacy</h2>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Privacy</h2>
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
                 Control who can see your activity and playlists
               </p>
             </div>
@@ -218,7 +218,7 @@ function PrivacySettingsContent() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Playlist Visibility */}
           <div>
@@ -253,7 +253,7 @@ function PrivacySettingsContent() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Listening Activity */}
           <div>
@@ -270,7 +270,7 @@ function PrivacySettingsContent() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Song of the Day Visibility */}
           <div>
@@ -305,7 +305,7 @@ function PrivacySettingsContent() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Friend Request Settings */}
           <div>
@@ -340,7 +340,7 @@ function PrivacySettingsContent() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Search Visibility */}
           <div>
@@ -357,7 +357,7 @@ function PrivacySettingsContent() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Activity Feed Visibility */}
           <div>

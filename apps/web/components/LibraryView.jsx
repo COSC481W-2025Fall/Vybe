@@ -26,8 +26,8 @@ function TabButton({ isActive, children, onClick }) {
       className={[
         'rounded-full px-3 py-1.5 text-sm transition',
         isActive
-          ? 'bg-white text-black shadow-sm font-medium'
-          : 'text-white/80 hover:text-white hover:bg-white/10',
+          ? 'bg-[var(--foreground)] text-[var(--background)] shadow-sm font-medium'
+          : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-border)]',
       ].join(' ')}
     >
       {children}
@@ -37,7 +37,7 @@ function TabButton({ isActive, children, onClick }) {
 
 function Row({ item }) {
   return (
-    <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 active:bg-white/10 transition-all duration-300 border border-white/10 hover:border-white/20 active:border-white/20 backdrop-blur-sm glass-card">
+    <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card">
       <div className="relative flex-shrink-0">
         <img
           src={item.cover}
@@ -49,7 +49,7 @@ function Row({ item }) {
         <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-white group-hover:text-white transition-colors duration-300">
+        <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-[var(--foreground)] group-hover:text-[var(--foreground)] transition-colors duration-300">
           {item.title}
         </div>
         <div className="truncate text-xs sm:text-sm md:text-base text-muted-foreground mt-0.5 sm:mt-1">
@@ -59,7 +59,7 @@ function Row({ item }) {
           {item.album}
         </div>
       </div>
-      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0">
+      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-[var(--muted-foreground)] bg-white/10 [data-theme='light']:bg-black/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0 border border-white/10 [data-theme='light']:border-black/10">
         <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
         <span className="font-medium whitespace-nowrap">{timeAgo(item.playedAt)}</span>
       </div>
@@ -69,7 +69,7 @@ function Row({ item }) {
 
 function PlaylistRow({ playlist }) {
   return (
-    <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 active:bg-white/10 transition-all duration-300 border border-white/10 hover:border-white/20 active:border-white/20 backdrop-blur-sm glass-card">
+    <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card">
       <div className="relative flex-shrink-0">
         {playlist.cover ? (
           <img
@@ -80,14 +80,14 @@ function PlaylistRow({ playlist }) {
             alt={`${playlist.name} cover`}
           />
         ) : (
-          <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl bg-white/10 flex items-center justify-center">
-            <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-white/40" />
+          <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 flex items-center justify-center">
+            <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-[var(--muted-foreground)]" />
           </div>
         )}
         <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-white group-hover:text-white transition-colors duration-300">
+        <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-[var(--foreground)] group-hover:text-[var(--foreground)] transition-colors duration-300">
           {playlist.name}
         </div>
         <div className="truncate text-xs sm:text-sm md:text-base text-muted-foreground mt-0.5 sm:mt-1">
@@ -97,7 +97,7 @@ function PlaylistRow({ playlist }) {
           {playlist.tracks} tracks • by {playlist.owner}
         </div>
       </div>
-      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0">
+      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-[var(--foreground)] bg-white/10 [data-theme='light']:bg-black/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0 border border-white/10 [data-theme='light']:border-black/20">
         <ListMusic className="h-3 w-3 sm:h-4 sm:w-4" />
         <span className="font-medium whitespace-nowrap">{playlist.public ? 'Public' : 'Private'}</span>
       </div>
@@ -108,27 +108,27 @@ function PlaylistRow({ playlist }) {
 // ---------------- component ----------------
 const TABS = [
   { key: 'recent', label: 'Recent History' },
-  { key: 'saved',  label: 'Saved Playlists' },
+  { key: 'saved', label: 'Saved Playlists' },
 ];
 
 export default function LibraryView() {
   const [tab, setTab] = useState('recent');
 
   // User identity and provider
-  const [userInfo, setUserInfo]     = useState(null);
-  const [provider, setProvider]     = useState(null);
-  const [loadingMe, setLoadingMe]   = useState(true);
-  const [meError, setMeError]       = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
+  const [provider, setProvider] = useState(null);
+  const [loadingMe, setLoadingMe] = useState(true);
+  const [meError, setMeError] = useState(null);
 
   // Listening history
-  const [recent, setRecent]         = useState([]);   // normalized items for UI
+  const [recent, setRecent] = useState([]);   // normalized items for UI
   const [loadingRec, setLoadingRec] = useState(true);
   const [moreLoading, setMoreLoading] = useState(false);
-  const [recError, setRecError]     = useState(null);
-  const [hasMore, setHasMore]       = useState(true); // we stop when Spotify returns empty
+  const [recError, setRecError] = useState(null);
+  const [hasMore, setHasMore] = useState(true); // we stop when Spotify returns empty
 
   // Playlists
-  const [playlists, setPlaylists]   = useState([]);   // normalized playlists for UI
+  const [playlists, setPlaylists] = useState([]);   // normalized playlists for UI
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [playlistsError, setPlaylistsError] = useState(null);
 
@@ -226,7 +226,7 @@ export default function LibraryView() {
             email: user.email,
           });
         }
-        
+
         setMeError(null);
       } catch (err) {
         console.error('Failed to load user profile', err);
@@ -242,16 +242,16 @@ export default function LibraryView() {
     console.log('[mapItem] Raw Spotify item:', sp);
     const t = sp.track;
     console.log('[mapItem] Track data:', t);
-    
+
     const mapped = {
       id: `${t?.id || 'unknown'}-${sp.played_at}`, // unique per play
       title: t?.name || 'Unknown',
       artist: t?.artists?.map(a => a.name).join(', ') || 'Unknown',
-      album:  t?.album?.name || 'Unknown',
-      cover:  t?.album?.images?.[1]?.url || t?.album?.images?.[0]?.url || '',
+      album: t?.album?.name || 'Unknown',
+      cover: t?.album?.images?.[1]?.url || t?.album?.images?.[0]?.url || '',
       playedAt: sp.played_at,
     };
-    
+
     console.log('[mapItem] Mapped item:', mapped);
     return mapped;
   }, []);
@@ -259,7 +259,7 @@ export default function LibraryView() {
   // --- helper: map Spotify playlist -> UI row ---
   const mapPlaylist = useCallback((playlist) => {
     console.log('[mapPlaylist] Raw Spotify playlist:', playlist);
-    
+
     const mapped = {
       id: playlist.id,
       name: playlist.name,
@@ -269,7 +269,7 @@ export default function LibraryView() {
       owner: playlist.owner?.display_name || 'Unknown',
       public: playlist.public || false,
     };
-    
+
     console.log('[mapPlaylist] Mapped playlist:', mapped);
     return mapped;
   }, []);
@@ -277,7 +277,7 @@ export default function LibraryView() {
   // --- helper: map YouTube playlist -> UI row ---
   const mapYouTubePlaylist = useCallback((playlist) => {
     console.log('[mapYouTubePlaylist] Raw YouTube playlist:', playlist);
-    
+
     const mapped = {
       id: playlist.id,
       name: playlist.snippet?.title || 'Untitled Playlist',
@@ -287,7 +287,7 @@ export default function LibraryView() {
       owner: playlist.snippet?.channelTitle || 'Unknown',
       public: playlist.snippet?.privacyStatus === 'public',
     };
-    
+
     console.log('[mapYouTubePlaylist] Mapped playlist:', mapped);
     return mapped;
   }, []);
@@ -300,11 +300,11 @@ export default function LibraryView() {
         console.log('[LibraryView] Provider not yet determined, skipping data load');
         return;
       }
-      
+
       try {
         setLoadingRec(true);
         console.log('[LibraryView] Loading data for provider:', provider);
-        
+
         if (provider === 'spotify') {
           console.log('[LibraryView] Loading Spotify recent plays...');
           const res = await fetch('/api/spotify/me/player/recently-played?limit=20', { cache: 'no-store' });
@@ -333,7 +333,7 @@ export default function LibraryView() {
           setRecent([]);
           setHasMore(false);
         }
-        
+
         setRecError(null);
       } catch (err) {
         console.error('Failed to load listening history', err);
@@ -379,10 +379,10 @@ export default function LibraryView() {
   // --- load playlists (for both Spotify and YouTube) ---
   const loadPlaylists = useCallback(async () => {
     if (provider !== 'spotify' && provider !== 'google') return;
-    
+
     try {
       setLoadingPlaylists(true);
-      
+
       if (provider === 'spotify') {
         console.log('[LibraryView] Loading Spotify playlists...');
         const res = await fetch('/api/spotify/me/playlists?limit=50', { cache: 'no-store' });
@@ -411,7 +411,7 @@ export default function LibraryView() {
         const items = (json.items || []).map(mapYouTubePlaylist);
         setPlaylists(items);
       }
-      
+
       setPlaylistsError(null);
     } catch (err) {
       console.error('Failed to load playlists', err);
@@ -432,7 +432,7 @@ export default function LibraryView() {
     // Show "connect account" message if no provider
     if (!provider) {
       return (
-        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-white">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-[var(--foreground)]">
           <div className="relative text-center py-8 sm:py-12 md:py-16">
             <ListMusic className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 text-muted-foreground mx-auto mb-4 sm:mb-6" />
             <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No Music Account Connected</h3>
@@ -441,7 +441,7 @@ export default function LibraryView() {
             </p>
             <a
               href="/settings"
-              className="inline-block px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
+              className="inline-block px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg font-medium transition-colors text-sm sm:text-base"
             >
               Go to Settings
             </a>
@@ -452,11 +452,11 @@ export default function LibraryView() {
 
     if (tab !== 'recent') {
       return (
-        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-white">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-[var(--foreground)]">
 
           <div className="relative mb-4 sm:mb-6 md:mb-8 flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-white/10 rounded-lg flex-shrink-0">
-              <ListMusic className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            <div className="p-1.5 sm:p-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-lg flex-shrink-0">
+              <ListMusic className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--foreground)]" />
             </div>
             <div className="min-w-0">
               <h2 className="section-title text-lg sm:text-xl">Your Playlists</h2>
@@ -468,7 +468,7 @@ export default function LibraryView() {
 
           {loadingPlaylists && (
             <div className="relative flex items-center justify-center py-8 sm:py-12 md:py-16">
-              <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-[var(--foreground)]"></div>
               <span className="ml-3 sm:ml-4 text-sm sm:text-base text-muted-foreground">Loading your playlists…</span>
             </div>
           )}
@@ -506,10 +506,10 @@ export default function LibraryView() {
     }
 
     return (
-      <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-white">
+      <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl mb-20 sm:mb-40 text-[var(--foreground)]">
         <div className="relative mb-4 sm:mb-6 md:mb-8 flex items-center gap-2 sm:gap-3">
           <div className="p-1.5 sm:p-2 bg-white/10 rounded-lg flex-shrink-0">
-            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--foreground)]" />
           </div>
           <div className="min-w-0">
             <h2 className="section-title text-lg sm:text-xl">Recent Listening History</h2>
@@ -519,7 +519,7 @@ export default function LibraryView() {
 
         {loadingRec && (
           <div className="relative flex items-center justify-center py-8 sm:py-12 md:py-16">
-            <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-white"></div>
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-[var(--foreground)]"></div>
             <span className="ml-3 sm:ml-4 text-sm sm:text-base text-muted-foreground">Loading your recent plays…</span>
           </div>
         )}
@@ -557,11 +557,11 @@ export default function LibraryView() {
                 <button
                   onClick={loadMore}
                   disabled={moreLoading}
-                  className="flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                  className="flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                 >
                   {moreLoading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-black"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-[var(--background)]"></div>
                       Loading…
                     </>
                   ) : (
@@ -582,30 +582,30 @@ export default function LibraryView() {
         <h1 className="page-title text-xl sm:text-2xl mb-1">Your Library</h1>
         <p className="section-subtitle text-xs sm:text-sm">Your listening history and saved playlists</p>
 
-          {/* User identity */}
-          <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 flex-wrap">
-            {loadingMe && <span className="text-xs text-muted-foreground">Connecting to {provider === 'google' ? 'Google' : 'Spotify'}…</span>}
-            {meError && <span className="text-xs text-red-500 break-all">{meError}</span>}
-            {userInfo && (
-              <>
-                {userInfo.images?.[0]?.url && (
-                  <img
-                    src={userInfo.images[0].url}
-                    alt={`${provider === 'google' ? 'Google' : 'Spotify'} avatar`}
-                    className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0"
-                  />
-                )}
-                <span className="text-xs sm:text-sm text-white">
-                  Signed in as <span className="font-medium">{userInfo.display_name}</span>
-                  {provider === 'google' && <span className="text-xs text-muted-foreground ml-1 sm:ml-2">(Google)</span>}
-                  {provider === 'spotify' && <span className="text-xs text-muted-foreground ml-1 sm:ml-2">(Spotify)</span>}
-                </span>
-              </>
-            )}
-          </div>
+        {/* User identity */}
+        <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-3 flex-wrap">
+          {loadingMe && <span className="text-xs text-muted-foreground">Connecting to {provider === 'google' ? 'Google' : 'Spotify'}…</span>}
+          {meError && <span className="text-xs text-red-500 break-all">{meError}</span>}
+          {userInfo && (
+            <>
+              {userInfo.images?.[0]?.url && (
+                <img
+                  src={userInfo.images[0].url}
+                  alt={`${provider === 'google' ? 'Google' : 'Spotify'} avatar`}
+                  className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0"
+                />
+              )}
+              <span className="text-xs sm:text-sm text-[var(--foreground)]">
+                Signed in as <span className="font-medium">{userInfo.display_name}</span>
+                {provider === 'google' && <span className="text-xs text-[var(--muted-foreground)] ml-1 sm:ml-2">(Google)</span>}
+                {provider === 'spotify' && <span className="text-xs text-[var(--muted-foreground)] ml-1 sm:ml-2">(Spotify)</span>}
+              </span>
+            </>
+          )}
+        </div>
       </header>
 
-      <div className="mb-3 sm:mb-4 flex items-center gap-2 text-white overflow-x-auto modal-scroll">
+      <div className="mb-3 sm:mb-4 flex items-center gap-2 text-[var(--foreground)] overflow-x-auto modal-scroll">
         {TABS.map(({ key, label }) => (
           <TabButton key={key} isActive={tab === key} onClick={() => setTab(key)}>
             {label}

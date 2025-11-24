@@ -36,11 +36,11 @@ function ConfirmationDialog({ isOpen, onConfirm, onCancel, title, message, confi
       aria-describedby="confirmation-dialog-description"
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm [data-theme='light']:bg-black/40" />
       
       {/* Dialog */}
       <div
-        className="relative z-10 w-full max-w-md rounded-xl border border-white/20 bg-black/95 p-6 shadow-xl"
+        className="relative z-10 w-full max-w-md rounded-xl border border-white/20 glass-card p-6 shadow-xl [data-theme='light']:border-black/20"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
@@ -49,10 +49,10 @@ function ConfirmationDialog({ isOpen, onConfirm, onCancel, title, message, confi
           </div>
           
           <div className="flex-1">
-            <h3 id="confirmation-dialog-title" className="text-lg font-semibold text-white mb-2">
+            <h3 id="confirmation-dialog-title" className="text-lg font-semibold text-[var(--foreground)] mb-2">
               {title}
             </h3>
-            <p id="confirmation-dialog-description" className="text-sm text-gray-300 mb-4">
+            <p id="confirmation-dialog-description" className="text-sm text-[var(--foreground)] mb-4">
               {message}
             </p>
             
@@ -61,7 +61,7 @@ function ConfirmationDialog({ isOpen, onConfirm, onCancel, title, message, confi
                 type="button"
                 onClick={onCancel}
                 ref={cancelButtonRef}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 {cancelText}
               </button>
@@ -78,7 +78,7 @@ function ConfirmationDialog({ isOpen, onConfirm, onCancel, title, message, confi
           <button
             type="button"
             onClick={onCancel}
-            className="flex-shrink-0 text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 rounded p-1"
+            className="flex-shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 rounded p-1"
             aria-label="Close dialog"
           >
             <X className="h-5 w-5" />
@@ -158,10 +158,10 @@ export function PrivacyToggle({
             htmlFor={id} 
             className="flex items-center gap-2 cursor-pointer"
           >
-            <span className="text-sm font-medium text-white">{label}</span>
+            <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
           </label>
           {description && (
-            <p id={`${id}-description`} className="text-xs text-gray-400 mt-1">
+            <p id={`${id}-description`} className="text-xs text-[var(--muted-foreground)] mt-1">
               {description}
             </p>
           )}
@@ -290,11 +290,11 @@ export function PrivacyRadioGroup({
     <>
       <div className="space-y-3" role="radiogroup" aria-labelledby={`${name}-label`} aria-describedby={description ? `${name}-description` : undefined}>
         <div className="mb-4">
-          <h3 id={`${name}-label`} className="text-sm font-medium text-white mb-1">
+          <h3 id={`${name}-label`} className="text-sm font-medium text-[var(--foreground)] mb-1">
             {label}
           </h3>
           {description && (
-            <p id={`${name}-description`} className="text-xs text-gray-400">
+            <p id={`${name}-description`} className="text-xs text-[var(--muted-foreground)]">
               {description}
             </p>
           )}
@@ -348,13 +348,13 @@ export function PrivacyRadioGroup({
                     ].join(' ')} aria-hidden="true" />
                     <span className={[
                       'text-sm font-medium',
-                      isSelected ? 'text-white' : 'text-gray-300',
+                      isSelected ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]',
                     ].join(' ')}>
                       {option.label}
                     </span>
                   </div>
                   {option.description && (
-                    <p id={`${optionId}-description`} className="text-xs text-gray-400 mt-0.5">
+                    <p id={`${optionId}-description`} className="text-xs text-[var(--muted-foreground)] mt-0.5">
                       {option.description}
                     </p>
                   )}
@@ -451,11 +451,11 @@ export function PrivacyDropdown({
   return (
     <div className="space-y-2">
       <div>
-        <label id={`${id}-label`} htmlFor={id} className="block text-sm font-medium text-white mb-1">
+        <label id={`${id}-label`} htmlFor={id} className="block text-sm font-medium text-[var(--foreground)] mb-1">
           {label}
         </label>
         {description && (
-          <p id={`${id}-description`} className="text-xs text-gray-400">
+          <p id={`${id}-description`} className="text-xs text-[var(--muted-foreground)]">
             {description}
           </p>
         )}
@@ -475,8 +475,8 @@ export function PrivacyDropdown({
           aria-describedby={description ? `${id}-description` : undefined}
           className={[
             'w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border text-left transition-all',
-            'bg-white/5 border-white/20 text-white',
-            'hover:bg-white/10 hover:border-white/30',
+            'bg-white/5 border-white/20 [data-theme="light"]:bg-black/5 [data-theme="light"]:border-black/20 text-[var(--foreground)]',
+            'hover:bg-white/10 hover:border-white/30 [data-theme="light"]:hover:bg-black/10 [data-theme="light"]:hover:border-black/30',
             'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500/50',
             disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
           ].join(' ')}
@@ -502,7 +502,7 @@ export function PrivacyDropdown({
           <div
             role="listbox"
             aria-labelledby={`${id}-label`}
-            className="absolute z-10 w-full mt-2 rounded-lg border border-white/20 bg-black/95 backdrop-blur-sm shadow-xl overflow-hidden"
+            className="absolute z-10 w-full mt-2 rounded-lg border border-white/20 [data-theme='light']:border-black/20 bg-black/95 [data-theme='light']:bg-white/95 backdrop-blur-sm shadow-xl overflow-hidden"
           >
             <div className="max-h-60 overflow-auto">
               {options.map((option) => {
@@ -520,7 +520,7 @@ export function PrivacyDropdown({
                     onClick={() => handleSelect(option.value)}
                     className={[
                       'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors',
-                      'hover:bg-white/10 focus:bg-white/10',
+                      'hover:bg-white/10 [data-theme="light"]:hover:bg-black/10 focus:bg-white/10 [data-theme="light"]:focus:bg-black/10',
                       'focus:outline-none focus:ring-1 focus:ring-purple-500',
                       isSelected ? 'bg-purple-500/10' : '',
                     ].join(' ')}
@@ -536,7 +536,7 @@ export function PrivacyDropdown({
                       <div className="flex items-center gap-2 mb-1">
                         <span className={[
                           'text-sm font-medium',
-                          isSelected ? 'text-white' : 'text-gray-300',
+                          isSelected ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]',
                         ].join(' ')}>
                           {option.label}
                         </span>
@@ -545,7 +545,7 @@ export function PrivacyDropdown({
                         )}
                       </div>
                       {option.description && (
-                        <p className="text-xs text-gray-400">{option.description}</p>
+                        <p className="text-xs text-[var(--muted-foreground)]">{option.description}</p>
                       )}
                     </div>
                   </button>

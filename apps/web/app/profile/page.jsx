@@ -141,10 +141,10 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
+      <div className="min-h-screen flex items-center justify-center text-[var(--foreground)]">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-white"></div>
-          <p className="text-gray-400 text-sm sm:text-base">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-[var(--foreground)]"></div>
+          <p className="text-[var(--muted-foreground)] text-sm sm:text-base">Loading...</p>
         </div>
       </div>
     );
@@ -156,7 +156,7 @@ export default function ProfilePage() {
   const joinedDate = new Date(user.created_at).toLocaleDateString();
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen text-[var(--foreground)]">
       <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-6 sm:space-y-8">
         {/* Profile Header Card */}
         <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
@@ -174,8 +174,8 @@ export default function ProfilePage() {
                 </h2>
                 <p className="section-subtitle text-xs sm:text-sm">{user.email}</p>
                 <div className="flex items-center justify-center md:justify-start space-x-2 mt-2">
-                  <Calendar className="h-4 w-4 text-white/60" />
-                  <span className="text-sm text-white/60">
+                  <Calendar className="h-4 w-4 text-[var(--muted-foreground)]" />
+                  <span className="text-sm text-[var(--muted-foreground)]">
                     Joined {joinedDate}
                   </span>
                 </div>
@@ -188,21 +188,21 @@ export default function ProfilePage() {
                     <Music className="h-4 w-4 text-purple-400" />
                     <span className="font-medium">{songOfDay ? '1' : '0'}</span>
                   </div>
-                  <p className="text-sm text-white/60">Song Today</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">Song Today</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center space-x-1">
                     <Users className="h-4 w-4 text-blue-400" />
                     <span className="font-medium">{groupsCount}</span>
                   </div>
-                  <p className="text-sm text-white/60">Groups</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">Groups</p>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center space-x-1">
                     <Heart className="h-4 w-4 text-pink-400" />
                     <span className="font-medium">{friends.length}</span>
                   </div>
-                  <p className="text-sm text-white/60">Friends</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">Friends</p>
                 </div>
               </div>
             </div>
@@ -211,21 +211,21 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={() => setShowFriendRequestsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
               >
                 <Mail className="h-4 w-4" />
                 Requests
               </button>
               <button
                 onClick={() => setShowAddFriendsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base"
               >
                 <UserPlus className="h-4 w-4" />
                 Add Friend
               </button>
               <Link
                 href="/settings"
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
               >
                 <Settings className="h-4 w-4" />
                 Settings
@@ -244,10 +244,10 @@ export default function ProfilePage() {
             {songOfDay && (
               <button
                 onClick={handleRemoveSongOfDay}
-                className="p-1 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
+                className="p-1 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 rounded transition-colors"
                 title="Remove song"
               >
-                <X className="h-4 w-4 text-white/60" />
+                <X className="h-4 w-4 text-[var(--muted-foreground)]" />
               </button>
             )}
           </div>
@@ -262,13 +262,13 @@ export default function ProfilePage() {
                 />
               )}
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-base sm:text-lg truncate text-white">{songOfDay.song_name}</h4>
-                <p className="text-sm sm:text-base text-white/60 truncate">{songOfDay.artist}</p>
-                <p className="text-xs sm:text-sm text-white/40 truncate">{songOfDay.album}</p>
+                <h4 className="font-semibold text-base sm:text-lg truncate text-[var(--foreground)]">{songOfDay.song_name}</h4>
+                <p className="text-sm sm:text-base text-[var(--muted-foreground)] truncate">{songOfDay.artist}</p>
+                <p className="text-xs sm:text-sm text-[var(--muted-foreground)] opacity-70 truncate">{songOfDay.album}</p>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3">
                   <button
                     onClick={() => setShowSongSearchModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
                   >
                     Change Song
                   </button>
@@ -299,12 +299,12 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-white/60 mx-auto mb-4" />
+              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" />
               <h3 className="section-title mb-2 text-lg sm:text-xl">No song of the day yet</h3>
               <p className="section-subtitle text-xs sm:text-sm mb-4">Share your current favorite song with friends</p>
               <button
                 onClick={() => setShowSongSearchModal(true)}
-                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
+                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base"
               >
                 Set Song of the Day
               </button>
@@ -322,16 +322,16 @@ export default function ProfilePage() {
             </h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/60">Groups joined this week</span>
-                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 border border-white/10 rounded-full text-xs sm:text-sm text-white backdrop-blur-sm">0</span>
+                <span className="text-sm text-[var(--muted-foreground)]">Groups joined this week</span>
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-full text-xs sm:text-sm text-[var(--foreground)] backdrop-blur-sm">0</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/60">Songs shared this month</span>
-                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 border border-white/10 rounded-full text-xs sm:text-sm text-white backdrop-blur-sm">0</span>
+                <span className="text-sm text-[var(--muted-foreground)]">Songs shared this month</span>
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-full text-xs sm:text-sm text-[var(--foreground)] backdrop-blur-sm">0</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-white/60">Playlists collaborated on</span>
-                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 border border-white/10 rounded-full text-xs sm:text-sm text-white backdrop-blur-sm">0</span>
+                <span className="text-sm text-[var(--muted-foreground)]">Playlists collaborated on</span>
+                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-full text-xs sm:text-sm text-[var(--foreground)] backdrop-blur-sm">0</span>
               </div>
             </div>
           </div>
@@ -347,12 +347,12 @@ export default function ProfilePage() {
 
             {friends.length === 0 ? (
               <div className="text-center py-8">
-                <Users className="h-12 w-12 sm:h-16 sm:w-16 text-white/60 mx-auto mb-4" />
+                <Users className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" />
                 <h3 className="section-title mb-2 text-lg sm:text-xl">No friends yet</h3>
                 <p className="section-subtitle text-xs sm:text-sm mb-4">Start connecting with friends to share music</p>
                 <button
                   onClick={() => setShowAddFriendsModal(true)}
-                  className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
+                  className="px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base"
                 >
                   Add Friends
                 </button>
@@ -362,14 +362,14 @@ export default function ProfilePage() {
                 {friends.slice(0, 5).map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 active:bg-white/10 transition-colors"
+                    className="flex items-center space-x-3 p-3 bg-white/5 [data-theme='light']:bg-black/5 rounded-lg border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors"
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
                       {friend.name?.charAt(0).toUpperCase() || 'F'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white truncate">{friend.name}</p>
-                      <p className="text-sm text-white/60 truncate">@{friend.username}</p>
+                      <p className="font-medium text-[var(--foreground)] truncate">{friend.name}</p>
+                      <p className="text-sm text-[var(--muted-foreground)] truncate">@{friend.username}</p>
                     </div>
                     <button
                       onClick={() => {
@@ -384,7 +384,7 @@ export default function ProfilePage() {
                   </div>
                 ))}
                 {friends.length > 5 && (
-                  <p className="text-sm text-white/60 text-center pt-2">
+                  <p className="text-sm text-[var(--muted-foreground)] text-center pt-2">
                     +{friends.length - 5} more friends
                   </p>
                 )}

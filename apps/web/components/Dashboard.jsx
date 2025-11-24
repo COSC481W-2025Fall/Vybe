@@ -59,15 +59,15 @@ export function HomePage({ onNavigate } = {}) {
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
+            <h2 className="flex items-center gap-2 text-xl font-semibold text-[var(--foreground)]">
               <Users className="h-5 w-5" />
               <span>My Groups</span>
             </h2>
-            <p className="text-sm text-gray-400">Your most active music groups</p>
+            <p className="text-sm text-[var(--muted-foreground)]">Your most active music groups</p>
           </div>
           <Dialog open={createGroupDialog.isOpen} onOpenChange={createGroupDialog.setIsOpen}>
-          <DialogTrigger asChild>
-              <button type="button" className="flex items-center space-x-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
+            <DialogTrigger asChild>
+              <button type="button" className="flex items-center space-x-2 px-3 py-1.5 bg-[var(--glass-border)] hover:bg-[var(--glass-border-hover)] active:bg-[var(--glass-border-hover)] text-[var(--foreground)] rounded-lg font-medium transition-colors border border-[var(--glass-border)]">
                 <Plus className="h-4 w-4" />
                 <span>Create Group</span>
               </button>
@@ -110,10 +110,10 @@ export function HomePage({ onNavigate } = {}) {
                   onCheckedChange={setIsPublic}
                 />
                 <div className="flex justify-between">
-                  <button type="submit" disabled={groupsLoading} className="px-6 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button type="submit" disabled={groupsLoading} className="px-6 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
                     {groupsLoading ? "Creating..." : "Create Group"}
                   </button>
-                  <button type="button" onClick={createGroupDialog.close} className="px-6 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
+                  <button type="button" onClick={createGroupDialog.close} className="px-6 py-2 bg-[var(--glass-border)] hover:bg-[var(--glass-border-hover)] active:bg-[var(--glass-border-hover)] text-[var(--foreground)] rounded-lg font-medium transition-colors border border-[var(--glass-border)]">
                     Cancel
                   </button>
                 </div>
@@ -121,7 +121,7 @@ export function HomePage({ onNavigate } = {}) {
             </DialogContent>
           </Dialog>
         </div>
-        
+
         {groupsError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -156,7 +156,7 @@ export function HomePage({ onNavigate } = {}) {
               title="No groups yet"
               description="Create your first group to start sharing music with friends"
               action={
-                <button type="button" onClick={createGroupDialog.open} className="px-6 py-3 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors">
+                <button type="button" onClick={createGroupDialog.open} className="px-6 py-3 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Your First Group
                 </button>
@@ -170,15 +170,15 @@ export function HomePage({ onNavigate } = {}) {
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-white">Friends' Song of the Day</h2>
-            <p className="text-sm text-gray-400">See what your friends are currently vibing to</p>
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">Friends' Song of the Day</h2>
+            <p className="text-sm text-[var(--muted-foreground)]">See what your friends are currently vibing to</p>
           </div>
-          <button type="button" onClick={shareSongDialog.open} className="px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
+          <button type="button" onClick={shareSongDialog.open} className="px-4 py-2 bg-[var(--glass-border)] hover:bg-[var(--glass-border-hover)] active:bg-[var(--glass-border-hover)] text-[var(--foreground)] rounded-lg font-medium transition-colors border border-[var(--glass-border)]">
             <Plus className="h-4 w-4 mr-2" />
             Share Song
           </button>
         </div>
-        
+
         {socialError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -203,8 +203,8 @@ export function HomePage({ onNavigate } = {}) {
             ) : friendsSongsOfTheDay.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 w-full">
                 {friendsSongsOfTheDay.map((friend) => (
-                  <div 
-                    key={friend.id} 
+                  <div
+                    key={friend.id}
                     className="flex flex-col items-center space-y-3 cursor-pointer group"
                     onClick={() => {
                       setSelectedSong(friend);
@@ -222,7 +222,7 @@ export function HomePage({ onNavigate } = {}) {
                         <Music className="h-4 w-4 text-primary-foreground" />
                       </div>
                     </div>
-                    
+
                     <div className="text-center w-full">
                       <p className="text-sm font-medium mb-1">{friend.shared_by.split(' ')[0]}</p>
                       <div className="text-xs text-muted-foreground space-y-1">
@@ -249,18 +249,18 @@ export function HomePage({ onNavigate } = {}) {
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-white">Communities</h2>
-            <p className="text-sm text-gray-400">Discover music communities and connect with like-minded listeners</p>
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">Communities</h2>
+            <p className="text-sm text-[var(--muted-foreground)]">Discover music communities and connect with like-minded listeners</p>
           </div>
-          <button type="button" onClick={communitiesDialog.open} className="px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/15">
+          <button type="button" onClick={communitiesDialog.open} className="px-4 py-2 bg-[var(--glass-border)] hover:bg-[var(--glass-border-hover)] active:bg-[var(--glass-border-hover)] text-[var(--foreground)] rounded-lg font-medium transition-colors border border-[var(--glass-border)]">
             Browse All
           </button>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {communities.map((community) => (
-            <Card 
-              key={community.id} 
+            <Card
+              key={community.id}
               className="glass-card hover:bg-accent/50 active:bg-accent/50 transition-colors cursor-pointer"
               onClick={() => toast.success(`Joined ${community.name}`)}
             >
