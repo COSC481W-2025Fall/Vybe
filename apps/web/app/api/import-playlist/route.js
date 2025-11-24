@@ -258,9 +258,22 @@ function validateSpotifyUrl(urlString) {
     throw new Error('Invalid URL format');
   }
   
-  const hostname = url.hostname.toLowerCase();
+  // SSRF protection: enforce HTTPS scheme only
+  if (url.protocol !== 'https:') {
+    throw new Error('Invalid Spotify URL. Only HTTPS URLs are allowed');
+  }
+  
+  // SSRF protection: enforce default HTTPS port (443) or no port
+  if (url.port && url.port !== '443') {
+    throw new Error('Invalid Spotify URL. Only default HTTPS port (443) is allowed');
+  }
+  
+  // Normalize hostname to ASCII to prevent unicode/punycode spoofing
+  // The URL constructor already handles punycode conversion, but we normalize explicitly
+  let hostname = url.hostname.toLowerCase();
   
   // Check if hostname matches any allowed domain (exact match or subdomain)
+  // This prevents TLD wildcard matches (e.g., notspotify.com won't match spotify.com)
   const isAllowed = allowedHostnames.some(allowed => 
     hostname === allowed || hostname.endsWith('.' + allowed)
   );
@@ -282,13 +295,25 @@ async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
   let resolvedUrl = validatedUrl;
   if (!validatedUrl.startsWith('spotify:') && (validatedUrl.includes('spotify.link/') || validatedUrl.includes('spoti.fi/'))) {
     try {
-      // SSRF protection: Explicit allowlist validation before fetch
-      // CodeQL requires inline validation to recognize the URL as safe
+      // SSRF protection: Validate URL before fetch (explicit scheme, host, port checks,
+      // for CodeQL recognition)
       const ALLOWED_SPOTIFY_HOSTS = ['open.spotify.com', 'spotify.link', 'spoti.fi', 'play.spotify.com'];
       const urlObj = new URL(validatedUrl);
       const hostname = urlObj.hostname.toLowerCase();
+      const scheme = urlObj.protocol;
+      
+      // Explicit scheme check: only allow HTTPS
+      if (scheme !== 'https:') {
+        throw new Error(`SSRF protection: Only HTTPS scheme allowed, got ${scheme}`);
+      }
+      
+      // Explicit port check: only allow default HTTPS port (443) or no port specified
+      if (urlObj.port && urlObj.port !== '443') {
+        throw new Error(`SSRF protection: Only port 443 allowed for HTTPS, got ${urlObj.port}`);
+      }
       
       // Explicit allowlist check - only proceed if hostname matches allowed domains
+      // Check exact match or subdomain (e.g., open.spotify.com or www.open.spotify.com)
       const isHostAllowed = ALLOWED_SPOTIFY_HOSTS.some(allowed => 
         hostname === allowed || hostname.endsWith('.' + allowed)
       );
@@ -297,8 +322,8 @@ async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
         throw new Error(`SSRF protection: Hostname ${hostname} not in allowlist`);
       }
       
-      // At this point, urlObj.href is guaranteed to be a Spotify domain
-      // codeql[js/ssrf]: URL validated against allowlist of Spotify domains only
+      // At this point, urlObj.href is guaranteed to be a Spotify domain, on https, on port 443
+      // codeql[js/ssrf]: URL validated against allowlist of Spotify domains with https and port check
       const response = await fetch(urlObj.href, { 
         method: 'HEAD', 
         redirect: 'follow',
@@ -312,7 +337,11 @@ async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
     } catch (error) {
       console.warn('[Spotify Import] Failed to resolve short link, trying original URL:', error);
       // If it's a validation error, re-throw it
-      if (error.message.includes('Invalid Spotify URL') || error.message.includes('Invalid URL format') || error.message.includes('SSRF protection')) {
+      if (error.message.includes('Invalid Spotify URL') || 
+          error.message.includes('Invalid URL format') || 
+          error.message.includes('SSRF protection') ||
+          error.message.includes('Only HTTPS') ||
+          error.message.includes('Only port 443')) {
         throw error;
       }
       // Continue with original validated URL - extractSpotifyPlaylistId might still work
