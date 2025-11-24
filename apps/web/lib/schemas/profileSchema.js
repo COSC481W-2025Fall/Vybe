@@ -12,7 +12,7 @@ import { z } from 'zod';
  * @property {string} display_name - User's display name (2-50 chars, alphanumeric + spaces)
  * @property {string} [bio] - User's bio/description (optional, max 200 chars)
  * @property {string} [profile_picture_url] - URL to profile picture (optional, must be valid URL)
- */
+ */ 
 
 /**
  * Display name validation:
