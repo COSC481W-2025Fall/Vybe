@@ -226,12 +226,12 @@ function ProfileSettingsContent() {
               maxLength={200}
               rows={4}
               className={[
-                'w-full px-4 py-2 rounded-lg bg-white/10 [data-theme="light"]:bg-black/10 border resize-none',
+                'w-full px-4 py-2 rounded-lg bg-white/10 [data-theme="light"]:bg-zinc-50/80 border resize-none backdrop-blur-[60px]',
                 'text-[var(--foreground)] placeholder-[var(--muted-foreground)]',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
                 errors.bio
                   ? 'border-red-500/50'
-                  : 'border-white/20 [data-theme="light"]:border-black/30 focus:border-purple-500/50',
+                  : 'border-white/20 [data-theme="light"]:border-black/30 focus:border-purple-500/50 [data-theme="light"]:focus:bg-zinc-100/90',
               ].join(' ')}
               placeholder="Tell us about yourself..."
             />
