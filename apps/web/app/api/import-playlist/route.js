@@ -3,13 +3,19 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { getValidAccessToken } from '@/lib/youtube';
 
+export const dynamic = 'force-dynamic';
+
+async function makeSupabase() {
+  const cookieStore = await cookies();
+  return createRouteHandlerClient({ cookies: () => cookieStore });
+}
+
 export async function POST(request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const supabase = await makeSupabase();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (sessionError || !session) {
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -31,7 +37,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
 
-    const isMember = group.owner_id === session.user.id || await checkGroupMembership(supabase, groupId, session.user.id);
+    const isMember = group.owner_id === user.id || await checkGroupMembership(supabase, groupId, user.id);
 
     if (!isMember) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
@@ -42,7 +48,7 @@ export async function POST(request) {
       .from('group_playlists')
       .select('id')
       .eq('group_id', groupId)
-      .eq('added_by', session.user.id);
+      .eq('added_by', user.id);
 
     // If user already has a playlist, delete it (cascade will delete songs)
     if (existingPlaylists && existingPlaylists.length > 0) {
@@ -59,9 +65,9 @@ export async function POST(request) {
     // Import playlist based on platform
     let playlistData;
     if (platform === 'youtube') {
-      playlistData = await importYouTubePlaylist(supabase, playlistUrl, session.user.id);
+      playlistData = await importYouTubePlaylist(supabase, playlistUrl, user.id);
     } else if (platform === 'spotify') {
-      playlistData = await importSpotifyPlaylist(supabase, playlistUrl, session.user.id);
+      playlistData = await importSpotifyPlaylist(supabase, playlistUrl, user.id);
     } else {
       return NextResponse.json({ error: 'Invalid platform' }, { status: 400 });
     }
@@ -76,7 +82,7 @@ export async function POST(request) {
         playlist_url: playlistUrl,
         playlist_id: playlistData.id,
         track_count: playlistData.tracks.length,
-        added_by: session.user.id,
+        added_by: user.id,
       })
       .select()
       .single();
@@ -108,25 +114,97 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to import songs' }, { status: 500 });
     }
 
-    // Trigger smart sorting automatically (don't fail import if sorting fails)
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : 'http://localhost:3000';
-      
-      // Call smart-sort endpoint asynchronously (fire and forget)
-      fetch(`${baseUrl}/api/groups/${groupId}/smart-sort`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }).catch(error => {
-        console.error('[import-playlist] Error triggering smart sort:', error);
-        // Don't throw - sorting failure shouldn't break import
-      });
-    } catch (error) {
-      console.error('[import-playlist] Error setting up smart sort trigger:', error);
-      // Don't throw - sorting failure shouldn't break import
+    // Run smart sorting synchronously BEFORE returning response
+    // This ensures the user sees the sorted order immediately
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        console.log('[import-playlist] Starting smart sort...');
+        const { analyzeAndSortPlaylists } = await import('@/lib/services/openaiSorting');
+        const { getTrackMetadata } = await import('@/lib/services/musicMetadata');
+        const { updatePlaylistOrder, updateSongOrder } = await import('@/lib/db/smartSorting');
+        
+        // Fetch all playlists and songs
+        const { data: allPlaylists } = await supabase
+          .from('group_playlists')
+          .select('*')
+          .eq('group_id', groupId);
+
+        if (allPlaylists && allPlaylists.length > 0) {
+          const playlistIds = allPlaylists.map(p => p.id);
+          const { data: allSongs } = await supabase
+            .from('playlist_songs')
+            .select('*')
+            .in('playlist_id', playlistIds);
+
+          if (allSongs && allSongs.length > 0) {
+            // Get Spotify tokens
+            const userIds = [...new Set(allPlaylists.map(p => p.added_by))];
+            const { data: spotifyTokens } = await supabase
+              .from('spotify_tokens')
+              .select('user_id, access_token')
+              .in('user_id', userIds);
+
+            const tokenMap = {};
+            spotifyTokens?.forEach(token => {
+              tokenMap[token.user_id] = token.access_token;
+            });
+
+            // Fetch metadata from all sources (Spotify, Last.fm, MusicBrainz)
+            console.log(`[import-playlist] Fetching metadata for ${allSongs.length} songs from Spotify, Last.fm, and MusicBrainz...`);
+            const allSongsMetadata = [];
+            for (const playlist of allPlaylists) {
+              const songs = allSongs.filter(s => s.playlist_id === playlist.id);
+              const spotifyToken = tokenMap[playlist.added_by] || null;
+
+              for (const song of songs) {
+                try {
+                  const metadata = await getTrackMetadata(song, playlist.platform, spotifyToken);
+                  if (metadata) {
+                    allSongsMetadata.push({ 
+                      ...metadata, 
+                      songId: song.id, 
+                      playlistId: playlist.id 
+                    });
+                  }
+                  // Small delay between songs to avoid overwhelming APIs
+                  await new Promise(resolve => setTimeout(resolve, 50));
+                } catch (err) {
+                  console.error(`[import-playlist] Error fetching metadata for song ${song.id}:`, err);
+                  // Continue with basic song info
+                  allSongsMetadata.push({
+                    songId: song.id,
+                    playlistId: playlist.id,
+                    title: song.title,
+                    artist: song.artist || 'Unknown Artist',
+                    genres: [],
+                    popularity: 0,
+                    audioFeatures: {},
+                    sources: [],
+                  });
+                }
+              }
+            }
+
+            console.log(`[import-playlist] Fetched metadata for ${allSongsMetadata.length} songs. Analyzing with OpenAI...`);
+            
+            // Analyze and sort using OpenAI with all metadata
+            const { playlistOrder, songOrders } = await analyzeAndSortPlaylists(
+              groupId,
+              allPlaylists,
+              allSongsMetadata
+            );
+
+            // Update database with sorted order
+            await updatePlaylistOrder(supabase, groupId, playlistOrder);
+            await updateSongOrder(supabase, songOrders);
+            
+            console.log('[import-playlist] Smart sort completed successfully');
+          }
+        }
+      } catch (error) {
+        console.error('[import-playlist] Error in smart sort (non-fatal):', error);
+        // Don't fail the import if sorting fails - user can still use the playlist
+      }
     }
 
     return NextResponse.json({

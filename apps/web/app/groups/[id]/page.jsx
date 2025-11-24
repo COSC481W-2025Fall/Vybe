@@ -192,43 +192,58 @@ export default function GroupDetailPage({ params }) {
         return;
       }
 
-      // Fetch songs in batches to bypass the 1000 row limit
-      let allSongs = [];
-      let rangeStart = 0;
+      // First, get playlists in their smart-sorted order
+      const sortedPlaylists = [...playlists].sort((a, b) => {
+        if (a.smart_sorted_order !== null && b.smart_sorted_order !== null) {
+          return a.smart_sorted_order - b.smart_sorted_order;
+        }
+        if (a.smart_sorted_order !== null) return -1;
+        if (b.smart_sorted_order !== null) return 1;
+        return new Date(a.created_at) - new Date(b.created_at);
+      });
+
+      // Fetch songs from each playlist in order, maintaining playlist order
       const batchSize = 1000;
-      let hasMore = true;
+      let allSongs = [];
+      for (const playlist of sortedPlaylists) {
+        let playlistSongs = [];
+        let rangeStart = 0;
+        let hasMoreSongs = true;
 
-      while (hasMore) {
-        const { data: batch, error: songsError } = await supabase
-          .from('playlist_songs')
-          .select(`
-            *,
-            song_likes (
-              user_id
-            ),
-            group_playlists!inner (
-              id,
-              name,
-              platform
-            )
-          `)
-          .in('playlist_id', playlistIds)
-          .order('smart_sorted_order', { ascending: true, nullsLast: true })
-          .order('created_at', { ascending: true })
-          .range(rangeStart, rangeStart + batchSize - 1);
+        while (hasMoreSongs) {
+          const { data: batch, error: songsError } = await supabase
+            .from('playlist_songs')
+            .select(`
+              *,
+              song_likes (
+                user_id
+              ),
+              group_playlists!inner (
+                id,
+                name,
+                platform
+              )
+            `)
+            .eq('playlist_id', playlist.id)
+            .order('smart_sorted_order', { ascending: true, nullsLast: true })
+            .order('position', { ascending: true })
+            .range(rangeStart, rangeStart + batchSize - 1);
 
-        if (songsError) {
-          console.error('[Groups] Error loading songs:', songsError);
-          break;
+          if (songsError) {
+            console.error('[Groups] Error loading songs:', songsError);
+            break;
+          }
+
+          if (batch && batch.length > 0) {
+            playlistSongs = [...playlistSongs, ...batch];
+            rangeStart += batchSize;
+            hasMoreSongs = batch.length === batchSize;
+          } else {
+            hasMoreSongs = false;
+          }
         }
 
-        if (batch && batch.length > 0) {
-          allSongs = [...allSongs, ...batch];
-          rangeStart += batchSize;
-          hasMore = batch.length === batchSize; // Continue if we got a full batch
-        } else {
-          hasMore = false;
-        }
+        allSongs = [...allSongs, ...playlistSongs];
       }
 
       console.log('[Groups] Loaded songs count:', allSongs?.length);

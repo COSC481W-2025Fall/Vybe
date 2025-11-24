@@ -124,11 +124,15 @@ export async function fetchLastFmTrackInfo(artist, title) {
     const genres = tags
       .filter(tag => tag.name)
       .map(tag => tag.name.toLowerCase())
-      .slice(0, 5); // Top 5 tags
+      .slice(0, 10); // Top 10 tags for better genre coverage
 
+    // Last.fm play count is a strong indicator of popularity and relatability
+    const playCount = parseInt(track.playcount || '0', 10);
+    
     return {
       genres,
-      popularity: parseInt(track.playcount || '0', 10),
+      popularity: playCount, // Keep raw play count for better analysis (can normalize later)
+      playCount: playCount, // Also include as separate field for clarity
       artist: track.artist?.name || artist,
       title: track.name || title,
       source: 'lastfm',
@@ -149,8 +153,13 @@ export async function fetchMusicBrainzMetadata(artist, title) {
   const userAgent = process.env.MUSICBRAINZ_USER_AGENT || 'Vybe/1.0 (https://vybe.app)';
   
   try {
-    // Rate limiting: MusicBrainz requires 1 request per second
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Rate limiting: ensure at least 1 second between requests
+    const now = Date.now();
+    const timeSinceLastRequest = now - musicBrainzLastRequest;
+    if (timeSinceLastRequest < MUSICBRAINZ_MIN_DELAY) {
+      await new Promise(resolve => setTimeout(resolve, MUSICBRAINZ_MIN_DELAY - timeSinceLastRequest));
+    }
+    musicBrainzLastRequest = Date.now();
 
     // Search for recording
     const searchParams = new URLSearchParams({
@@ -260,9 +269,14 @@ export async function getTrackMetadata(song, platform, spotifyToken = null) {
     const newGenres = lastFmData.genres.filter(g => !existingGenres.has(g.toLowerCase()));
     metadata.genres = [...metadata.genres, ...newGenres];
 
-    // Use Last.fm popularity if Spotify popularity is not available or is 0
-    if (metadata.popularity === 0 && lastFmData.popularity > 0) {
-      metadata.popularity = Math.min(lastFmData.popularity / 1000, 100); // Normalize play count to 0-100 scale
+    // Use Last.fm play count for popularity/relatability analysis
+    // Keep raw play count for better comparison - OpenAI can analyze relative popularity
+    if (lastFmData.playCount > 0) {
+      // If we have Spotify popularity (0-100), use it; otherwise use Last.fm play count
+      if (metadata.popularity === 0 || !metadata.sources.includes('spotify')) {
+        metadata.popularity = lastFmData.playCount; // Use raw play count for analysis
+      }
+      metadata.lastFmPlayCount = lastFmData.playCount; // Include for reference
     }
 
     metadata.sources.push('lastfm');
