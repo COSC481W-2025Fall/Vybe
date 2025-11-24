@@ -74,10 +74,17 @@ function PlaylistRow({ playlist }) {
   async function handleExport() {
     try {
       setExporting(true);
-      const res = await fetch('/api/export-playlist', {
+      // Ask the user for a custom playlist name to create on their Spotify account
+      const name = window.prompt('Enter a name for the new Spotify playlist:', playlist.name || 'Vybe playlist');
+      if (!name) {
+        setExporting(false);
+        return;
+      }
+
+      const res = await fetch('/api/spotify/create-playlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playlistId: playlist.id }),
+        body: JSON.stringify({ playlistId: playlist.id, newPlaylistName: name }),
       });
 
       if (!res.ok) {
@@ -88,16 +95,13 @@ function PlaylistRow({ playlist }) {
       const json = await res.json();
       if (!json.success || !json.playlist) throw new Error(json.error || 'Invalid response');
 
-      const filename = `${(json.playlist.name || 'playlist').replace(/[^a-z0-9\-_\. ]/gi, '_')}.json`;
-      const blob = new Blob([JSON.stringify(json.playlist, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      // Open the created playlist in a new tab and inform the user
+      if (json.playlist.url) {
+        window.open(json.playlist.url, '_blank');
+        alert('Playlist created on Spotify: it should open in a new tab.');
+      } else {
+        alert('Playlist created on Spotify.');
+      }
     } catch (err) {
       console.error('Export error', err);
       alert(String(err?.message || err));
