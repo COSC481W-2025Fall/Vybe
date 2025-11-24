@@ -6,6 +6,10 @@ import { CONFIG } from './config/constants.js'
 // Paths that are always public (exclude '/sign-in' so we can handle it explicitly)
 const PUBLIC = new Set([
   '/auth/callback', // Supabase OAuth will hit this
+<<<<<<< HEAD
+=======
+  '/sign-in', // Sign-in page is public
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
   '/favicon.ico',
   '/api/health',
 ])
@@ -36,7 +40,11 @@ export async function middleware(req) {
     return NextResponse.redirect(url)
   }
 
+<<<<<<< HEAD
   // If authenticated and visiting '/sign-in' → bounce to next or home page
+=======
+  // If authenticated and visiting '/sign-in' → bounce to next or dashboard
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
   if (pathname === '/sign-in') {
     const url = req.nextUrl.clone()
     const nextParam = req.nextUrl.searchParams.get('next')
@@ -46,7 +54,11 @@ export async function middleware(req) {
       url.pathname = dest.pathname
       url.search = dest.search
     } else {
+<<<<<<< HEAD
       url.pathname = '/' // Redirect to home instead of library
+=======
+      url.pathname = '/dashboard' // Redirect to dashboard
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
       url.search = ''
     }
     return NextResponse.redirect(url)

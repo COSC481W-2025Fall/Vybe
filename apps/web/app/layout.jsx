@@ -1,9 +1,17 @@
 import './globals.css';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+<<<<<<< HEAD
 import Navbar from '@/components/Navbar';
 import { Toaster } from '@/components/ui/sonner';
 import QueryProvider from '@/components/QueryProvider';
+=======
+import { Suspense } from 'react'
+import Navbar from '@/components/Navbar';
+import { Toaster } from '@/components/ui/sonner';
+import QueryProvider from '@/components/QueryProvider';
+import UrlTokenCleanup from '@/components/UrlTokenCleanup';
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
 
 export const metadata = {
   title: 'Vybe',
@@ -29,6 +37,12 @@ export default async function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <body className="chroma-bg">
         <QueryProvider>
+<<<<<<< HEAD
+=======
+          <Suspense fallback={null}>
+            <UrlTokenCleanup />
+          </Suspense>
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
           <div className="vybe-aurora-fixed" />
           {user && <Navbar />}
           <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">

@@ -3,7 +3,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
+<<<<<<< HEAD
 import { HomePage } from '@/components/HomePage';
+=======
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
 
 export default function Home() {
   const router = useRouter();
@@ -18,6 +21,7 @@ export default function Home() {
     
     if (!session) {
       router.push('/sign-in');
+<<<<<<< HEAD
     }
   };
 
@@ -30,4 +34,12 @@ export default function Home() {
   };
 
   return <HomePage onNavigate={handleNavigate} />;
+=======
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
+  return null; // Will redirect immediately
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
 }

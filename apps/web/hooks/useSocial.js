@@ -37,7 +37,9 @@ export function useSocial() {
           id: 'comm-1',
           name: 'Indie Discoveries',
           description: 'Finding hidden gems in indie music',
+
           member_count: 6767,
+
           //Mock group count
           group_count: 45
         },

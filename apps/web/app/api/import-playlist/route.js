@@ -237,123 +237,13 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
   };
 }
 
-// SSRF protection: validate and return only allowed Spotify URLs
-// This function ensures that only Spotify domains can be accessed, preventing SSRF attacks
-function validateSpotifyUrl(urlString) {
-  const allowedHostnames = ['open.spotify.com', 'spotify.link', 'spoti.fi', 'play.spotify.com'];
-  
-  if (!urlString || typeof urlString !== 'string') {
-    throw new Error('Invalid URL format');
-  }
-  
-  // Handle Spotify URI format (spotify:playlist:...) - these are safe, no network request needed
-  if (urlString.startsWith('spotify:playlist:')) {
-    return urlString; // URIs don't need validation, they're not URLs
-  }
-  
-  let url;
-  try {
-    url = new URL(urlString);
-  } catch (error) {
-    throw new Error('Invalid URL format');
-  }
-  
-  // SSRF protection: enforce HTTPS scheme only
-  if (url.protocol !== 'https:') {
-    throw new Error('Invalid Spotify URL. Only HTTPS URLs are allowed');
-  }
-  
-  // SSRF protection: enforce default HTTPS port (443) or no port
-  if (url.port && url.port !== '443') {
-    throw new Error('Invalid Spotify URL. Only default HTTPS port (443) is allowed');
-  }
-  
-  // Normalize hostname to ASCII to prevent unicode/punycode spoofing
-  // The URL constructor already handles punycode conversion, but we normalize explicitly
-  let hostname = url.hostname.toLowerCase();
-  
-  // Check if hostname matches any allowed domain (exact match or subdomain)
-  // This prevents TLD wildcard matches (e.g., notspotify.com won't match spotify.com)
-  const isAllowed = allowedHostnames.some(allowed => 
-    hostname === allowed || hostname.endsWith('.' + allowed)
-  );
-  
-  if (!isAllowed) {
-    throw new Error(`Invalid Spotify URL. Only Spotify domains are allowed: ${allowedHostnames.join(', ')}`);
-  }
-  
-  // Return validated URL string - safe to use in fetch calls
-  return url.href;
-}
-
 async function importSpotifyPlaylist(supabase, playlistUrl, userId) {
-  // SSRF protection: validate URL before any use
-  const validatedUrl = validateSpotifyUrl(playlistUrl);
-
-  // Handle Spotify short links by following redirects
-  // Skip for Spotify URIs (spotify:playlist:...) as they don't need network requests
-  let resolvedUrl = validatedUrl;
-  if (!validatedUrl.startsWith('spotify:') && (validatedUrl.includes('spotify.link/') || validatedUrl.includes('spoti.fi/'))) {
-    try {
-      // SSRF protection: Validate URL before fetch (explicit scheme, host, port checks,
-      // for CodeQL recognition)
-      const ALLOWED_SPOTIFY_HOSTS = ['open.spotify.com', 'spotify.link', 'spoti.fi', 'play.spotify.com'];
-      const urlObj = new URL(validatedUrl);
-      const hostname = urlObj.hostname.toLowerCase();
-      const scheme = urlObj.protocol;
-      
-      // Explicit scheme check: only allow HTTPS
-      if (scheme !== 'https:') {
-        throw new Error(`SSRF protection: Only HTTPS scheme allowed, got ${scheme}`);
-      }
-      
-      // Explicit port check: only allow default HTTPS port (443) or no port specified
-      if (urlObj.port && urlObj.port !== '443') {
-        throw new Error(`SSRF protection: Only port 443 allowed for HTTPS, got ${urlObj.port}`);
-      }
-      
-      // Explicit allowlist check - only proceed if hostname matches allowed domains
-      // Check exact match or subdomain (e.g., open.spotify.com or www.open.spotify.com)
-      const isHostAllowed = ALLOWED_SPOTIFY_HOSTS.some(allowed => 
-        hostname === allowed || hostname.endsWith('.' + allowed)
-      );
-      
-      if (!isHostAllowed) {
-        throw new Error(`SSRF protection: Hostname ${hostname} not in allowlist`);
-      }
-      
-      // At this point, urlObj.href is guaranteed to be a Spotify domain, on https, on port 443
-      // codeql[js/ssrf]: URL validated against allowlist of Spotify domains with https and port check
-      const response = await fetch(urlObj.href, { 
-        method: 'HEAD', 
-        redirect: 'follow',
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      if (response.ok && response.url) {
-        // Validate the resolved URL as well to prevent SSRF through redirects
-        const validatedResolvedUrl = validateSpotifyUrl(response.url);
-        resolvedUrl = validatedResolvedUrl;
-      }
-    } catch (error) {
-      console.warn('[Spotify Import] Failed to resolve short link, trying original URL:', error);
-      // If it's a validation error, re-throw it
-      if (error.message.includes('Invalid Spotify URL') || 
-          error.message.includes('Invalid URL format') || 
-          error.message.includes('SSRF protection') ||
-          error.message.includes('Only HTTPS') ||
-          error.message.includes('Only port 443')) {
-        throw error;
-      }
-      // Continue with original validated URL - extractSpotifyPlaylistId might still work
-    }
-  }
-
   // Extract playlist ID from URL
-  const playlistId = extractSpotifyPlaylistId(resolvedUrl);
+  const playlistId = extractSpotifyPlaylistId(playlistUrl);
 
   // Validate playlist ID against Spotify spec (typically 22 chars, base62)
   if (!playlistId || !isValidSpotifyPlaylistId(playlistId)) {
-    throw new Error('Invalid Spotify playlist URL or ID. Please provide a valid Spotify playlist link.');
+    throw new Error('Invalid Spotify playlist URL or ID');
   }
 
   // Get Spotify access token
@@ -427,54 +317,15 @@ function extractYouTubePlaylistId(url) {
   return match ? match[1] : null;
 }
 
-
-// Function to extract the Spotify playlist ID from the URL
-// Addded for trending communities on homepage
 function extractSpotifyPlaylistId(url) {
-  if (!url || typeof url !== 'string') {
-    return null;
-  }
-
-  // Trim whitespace
-  url = url.trim();
-
-  // Handle Spotify URI format: spotify:playlist:37i9dQZF1DXcBWIGoYBM5M
-  const uriMatch = url.match(/^spotify:playlist:([a-zA-Z0-9]+)$/);
-  if (uriMatch) {
-    return uriMatch[1];
-  }
-
-  // Handle full URLs: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
-  // Also handles URLs with query params: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M?si=...
-  const urlMatch = url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
-  if (urlMatch) {
-    return urlMatch[1];
-  }
-
-  // Handle alternative URL format: https://play.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
-  const altUrlMatch = url.match(/play\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
-  if (altUrlMatch) {
-    return altUrlMatch[1];
-  }
-
-  // Handle just the ID itself (if it's a valid base62 string)
-  // Spotify playlist IDs are typically 22 characters, but can vary
-  const directIdMatch = url.match(/^([a-zA-Z0-9]{15,25})$/);
-  if (directIdMatch) {
-    return directIdMatch[1];
-  }
-
-  return null;
+  const match = url.match(/playlist\/([a-zA-Z0-9]+)/);
+  return match ? match[1] : null;
 }
 
-// Validate Spotify playlist ID (base62, typically 15-25 chars, most common is 22)
+// Validate Spotify playlist ID (base62, usually length 22)
 function isValidSpotifyPlaylistId(id) {
-  if (!id || typeof id !== "string") {
-    return false;
-  }
-  // Spotify playlist IDs are base62: [A-Za-z0-9], typically 15-25 characters
-  // Most common is 22, but we'll be flexible and let the API validate
-  return /^[A-Za-z0-9]{15,25}$/.test(id);
+  // Spotify playlist IDs are 22 characters, base62: [A-Za-z0-9]
+  return typeof id === "string" && /^[A-Za-z0-9]{22}$/.test(id);
 }
 
 function parseYouTubeDuration(duration) {
