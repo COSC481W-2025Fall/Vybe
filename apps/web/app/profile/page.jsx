@@ -5,11 +5,13 @@ import AddFriendsModal from '@/components/AddFriendsModal';
 import FriendRequestsModal from '@/components/FriendRequestsModal';
 import SongSearchModal from '@/components/SongSearchModal';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { Calendar, Heart, Mail, Music, Settings, UserPlus, Users, X, ExternalLink } from 'lucide-react';
+import { Calendar, Heart, Mail, Music, Settings, UserPlus, Users, X, ExternalLink, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+
+const LOCAL_STORAGE_KEY = 'vybe_profile_local';
 
 export default function ProfilePage() {
   const supabase = supabaseBrowser();
@@ -25,6 +27,10 @@ export default function ProfilePage() {
   const [groupsCount, setGroupsCount] = useState(0);
   const [songOfDay, setSongOfDay] = useState(null);
 
+  // NEW: local profile from settings page  // hold bio, pic, name
+
+  const [localProfile, setLocalProfile] = useState(null);
+
   useEffect(() => {
     loadProfileData();
   }, []);
@@ -39,7 +45,23 @@ export default function ProfilePage() {
 
     setUser(session.user);
 
+    // Load local profile from localStorage (saved by /settings/profile)
+    //Whatever the user changes in /settings/profile (display name, bio, or profile picture) is saved into localStorage →
+    //  then /profile reads that saved data and shows it immediately, without needing Supabase to update first.
+
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+          setLocalProfile(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.warn('[ProfilePage] Could not parse local profile from localStorage', e);
+      }
+    }
+
     // Load all data in parallel
+
     await Promise.all([
       fetchFriends(),
       fetchGroupsCount(),
@@ -152,6 +174,18 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
+  // Prefer local profile from settings; fall back to Supabase user
+
+  const displayName =
+    localProfile?.display_name ??
+    user.user_metadata?.full_name ??
+    user.email?.split('@')[0] ??
+    'Friend';
+
+  const bio = localProfile?.bio ?? '';
+
+  const avatarUrl = localProfile?.profile_picture_url ?? null;
+
   // Get user joined date
   const joinedDate = new Date(user.created_at).toLocaleDateString();
 
@@ -162,17 +196,32 @@ export default function ProfilePage() {
         <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
             {/* Avatar */}
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl sm:text-3xl font-bold flex-shrink-0">
-              {user.email?.charAt(0).toUpperCase() || 'U'}
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20 bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-2xl sm:text-3xl font-bold">
+                  {user.email?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              )}
             </div>
 
             {/* User Info */}
             <div className="flex-1 text-center md:text-left space-y-4">
               <div>
                 <h2 className="page-title text-xl sm:text-2xl">
-                  {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                  {displayName}
                 </h2>
                 <p className="section-subtitle text-xs sm:text-sm">{user.email}</p>
+                {bio && (
+                  <p className="text-xs sm:text-sm text-white/70 mt-1">
+                    {bio}
+                  </p>
+                )}
                 <div className="flex items-center justify-center md:justify-start space-x-2 mt-2">
                   <Calendar className="h-4 w-4 text-white/60" />
                   <span className="text-sm text-white/60">
@@ -235,6 +284,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Song of the Day Section */}
+        {/* (unchanged below) */}
         <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-subtitle flex items-center space-x-2">
@@ -264,11 +314,11 @@ export default function ProfilePage() {
               <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-base sm:text-lg truncate text-white">{songOfDay.song_name}</h4>
                 <p className="text-sm sm:text-base text-white/60 truncate">{songOfDay.artist}</p>
-                <p className="text-xs sm:text-sm text-white/40 truncate">{songOfDay.album}</p>
+                <p className="text-xs sm:text-sm text.white/40 truncate">{songOfDay.album}</p>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3">
                   <button
                     onClick={() => setShowSongSearchModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 text-white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg.white/20 active:bg.white/20 text.white rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 text-sm sm:text-base"
                   >
                     Change Song
                   </button>
@@ -311,6 +361,9 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+
+        {/* Quick Stats */}
+        {/* (rest of file unchanged – keep your Recent Activity, Friends, modals, etc.) */}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -441,7 +494,7 @@ export default function ProfilePage() {
                   setShowRemoveFriendModal(false);
                   setFriendToRemove(null);
                 }}
-                className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
+                className="flex-1 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border.white/20"
               >
                 Cancel
               </button>

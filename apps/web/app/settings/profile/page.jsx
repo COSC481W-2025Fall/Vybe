@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { User, Mail, Calendar, CheckCircle2, XCircle, Music, ExternalLink } from 'lucide-react';
@@ -9,17 +9,15 @@ import { profileSchema } from '@/lib/schemas/profileSchema';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import { useProfileUpdate, useProfile } from '@/hooks/useProfileUpdate';
 
-// Inner component that uses the context (must be inside SettingsPageWrapper)
+const LOCAL_STORAGE_KEY = 'vybe_profile_local';
+
 function ProfileSettingsContent() {
-  const { setHasUnsavedChanges, setFormSubmitHandler, setFormResetHandler } = useSettingsContext();
-  
-  // Fetch profile data using TanStack Query
+  const { setHasUnsavedChanges } = useSettingsContext();
+
   const { data: profileData, isLoading: loading, error: profileError } = useProfile();
-  
-  // Profile update mutation hook
   const profileUpdate = useProfileUpdate();
 
-  const {
+  const { // We created a React Hook Form with Zod validation so we can control and validate the user profile settings.
     register,
     handleSubmit,
     formState: { errors, isDirty },
@@ -35,78 +33,84 @@ function ProfileSettingsContent() {
     },
   });
 
-  const displayName = watch('display_name');
+  const displayName = watch('display_name');//show live character counts & current profile picture URL
   const bio = watch('bio');
 
-  // Update unsaved changes indicator when form is dirty
+  // Track unsaved changes, show a message like “You have unsaved changes”
   useEffect(() => {
     setHasUnsavedChanges(isDirty);
   }, [isDirty, setHasUnsavedChanges]);
 
-  // Store original form values for cancel
-  const [originalValues, setOriginalValues] = useState(null);
+  const [initialized, setInitialized] = useState(false); //The form now starts by showing saved data if there is any, 
+                                                         // otherwise it shows the profile from Supabase, and if nothing exists, it starts empty.
 
-  // Form submission handler using the mutation hook
-  const onSubmit = async (data) => {
-    try {
-      // Use the mutation hook to update profile
-      const updatedProfile = await profileUpdate.mutateAsync(data);
-      
-      // Profile data will be updated via cache invalidation
-      // Update form values with response data
-      const formValues = {
-        display_name: updatedProfile.display_name || '',
-        bio: updatedProfile.bio || '',
-        profile_picture_url: updatedProfile.profile_picture_url || '',
-      };
-      
-      reset(formValues);
-      setOriginalValues(formValues);
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      // Error is handled by the mutation hook (toast notification)
-      // Re-throw to allow form to handle error state if needed
-      throw error;
-    }
-  };
-
-  // Register form submit handler with the wrapper
+  // Initialize from localStorage or backend profile
   useEffect(() => {
-    const submitFn = () => {
-      return handleSubmit(onSubmit)();
-    };
-    setFormSubmitHandler(() => submitFn);
-  }, [handleSubmit, setFormSubmitHandler]);
+    if (initialized) return;
 
-  // Register form reset handler with the wrapper
-  useEffect(() => {
-    const resetFn = () => {
-      if (originalValues) {
-        reset(originalValues);
+    let fromLocal = null;
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored) {
+        try {
+          fromLocal = JSON.parse(stored);
+        } catch (e) {
+          console.warn('[Profile] Could not parse localStorage profile', e);
+        }
       }
-    };
-    setFormResetHandler(() => resetFn);
-  }, [reset, originalValues, setFormResetHandler]);
-
-  // Update form when profile data loads
-  useEffect(() => {
-    if (profileData) {
-      // Set form values
-      const formValues = {
-        display_name: profileData.display_name || '',
-        bio: profileData.bio || '',
-        profile_picture_url: profileData.profile_picture_url || '',
-      };
-      setValue('display_name', formValues.display_name);
-      setValue('bio', formValues.bio);
-      setValue('profile_picture_url', formValues.profile_picture_url);
-      
-      // Store original values for cancel
-      setOriginalValues(formValues);
     }
-  }, [profileData, setValue]);
 
-  // Format date for display
+    const fromBackend = profileData
+      ? {
+          display_name: profileData.display_name || '',
+          bio: profileData.bio || '',
+          profile_picture_url: profileData.profile_picture_url || '',
+        }
+      : null;
+
+    const formValues =
+      fromLocal ||
+      fromBackend || {
+        display_name: '',
+        bio: '',
+        profile_picture_url: '',
+      };
+
+    reset(formValues);
+    setInitialized(true);
+  }, [profileData, reset, initialized]); ///////
+
+  // Save handler: localStorage + try backend/
+  // //single submit handler that saves Display Name, Bio, and Profile Picture URL
+
+  const onSubmit = async (data) => {
+    const localFormValues = {
+      display_name: data.display_name || '',
+      bio: data.bio || '',
+      profile_picture_url: data.profile_picture_url || '',
+    };
+
+    // 1) Save to localStorage so it survives navigation/refresh
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localFormValues));
+      console.log('[Profile] Saved to localStorage:', localFormValues);
+    }
+
+    // 2) Try Supabase backend, but don't break if it fails
+    try {
+      await profileUpdate.mutateAsync(localFormValues);
+    } catch (error) {
+      console.warn(
+        '[Profile] Backend update failed (likely Supabase schema/bucket issue). Using local values only.',
+        error
+      );
+    }
+
+    // 3) Reset form state to saved values
+    reset(localFormValues);
+    setHasUnsavedChanges(false);
+  };///
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -117,7 +121,7 @@ function ProfileSettingsContent() {
     });
   };
 
-  if (loading) {
+  if (!initialized && loading && !profileData) {
     return (
       <>
         <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
@@ -140,7 +144,7 @@ function ProfileSettingsContent() {
     );
   }
 
-  if (profileError) {
+  if (!initialized && profileError && !profileData) {
     return (
       <>
         <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
@@ -165,7 +169,7 @@ function ProfileSettingsContent() {
 
   return (
     <div className="w-full">
-      {/* Section Header */}
+      {/* Header */}
       <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <User className="h-6 w-6 text-purple-400" />
@@ -178,10 +182,11 @@ function ProfileSettingsContent() {
         </div>
       </div>
 
-      {/* Section Content */}
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6 w-full flex-1">
+      {/* Content, save button calls this via handleSubmit(onSubmit) */}  
+      
+     <form onSubmit={handleSubmit(onSubmit)} className="p-6 w-full flex-1">
         <div className="space-y-6 w-full">
-          {/* Display Name Input */}
+          {/* Display Name */}
           <div>
             <label htmlFor="display_name" className="block text-sm font-medium text-white mb-2">
               Display Name <span className="text-red-400">*</span>
@@ -215,7 +220,7 @@ function ProfileSettingsContent() {
             </div>
           </div>
 
-          {/* Bio Textarea */}
+          {/* Bio */}
           <div>
             <label htmlFor="bio" className="block text-sm font-medium text-white mb-2">
               Bio
@@ -249,9 +254,9 @@ function ProfileSettingsContent() {
             </div>
           </div>
 
-          {/* Profile Picture Upload */}
+          {/* Profile Picture (local-only preview, stored in form/localStorage) */}
           <ProfilePictureUpload
-            currentImageUrl={profileData?.profile_picture_url || null}
+            currentImageUrl={watch('profile_picture_url') || null} //<< connected the ProfilePictureUpload component
             onImageChange={(url) => {
               setValue('profile_picture_url', url, { shouldDirty: true });
             }}
@@ -263,11 +268,10 @@ function ProfileSettingsContent() {
           {/* Divider */}
           <div className="border-t border-white/10"></div>
 
-          {/* Account Information (Read-only) */}
+          {/* Account Info (read-only from Supabase if available) */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-white">Account Information</h3>
 
-            {/* Authentication Provider */}
             <div className="flex items-start gap-3">
               <Music className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -285,7 +289,6 @@ function ProfileSettingsContent() {
               </div>
             </div>
 
-            {/* Email */}
             <div className="flex items-start gap-3">
               <Mail className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -301,7 +304,6 @@ function ProfileSettingsContent() {
               </div>
             </div>
 
-            {/* Username (if applicable) */}
             {profileData?.username && (
               <div className="flex items-start gap-3">
                 <User className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -312,7 +314,6 @@ function ProfileSettingsContent() {
               </div>
             )}
 
-            {/* Account Creation Date */}
             <div className="flex items-start gap-3">
               <Calendar className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -329,7 +330,6 @@ function ProfileSettingsContent() {
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-white">Connected Accounts</h3>
 
-            {/* Spotify Connection */}
             <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
               <div className="flex items-center gap-3">
                 <Music className="h-5 w-5 text-green-400" />
@@ -337,7 +337,9 @@ function ProfileSettingsContent() {
                   <div className="text-sm font-medium text-white">Spotify</div>
                   <div className="text-xs text-gray-400">
                     {profileData?.spotify_connected
-                      ? profileData?.spotify_account?.display_name || profileData?.spotify_account?.id || 'Connected'
+                      ? profileData?.spotify_account?.display_name ||
+                        profileData?.spotify_account?.id ||
+                        'Connected'
                       : 'Not connected'}
                   </div>
                 </div>
@@ -357,16 +359,13 @@ function ProfileSettingsContent() {
               )}
             </div>
 
-            {/* YouTube Connection */}
             <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
               <div className="flex items-center gap-3">
                 <Music className="h-5 w-5 text-red-400" />
                 <div>
                   <div className="text-sm font-medium text-white">YouTube</div>
                   <div className="text-xs text-gray-400">
-                    {profileData?.youtube_connected
-                      ? 'Connected'
-                      : 'Not connected'}
+                    {profileData?.youtube_connected ? 'Connected' : 'Not connected'}
                   </div>
                 </div>
               </div>
@@ -386,12 +385,21 @@ function ProfileSettingsContent() {
             </div>
           </div>
         </div>
+
+        {/* Save button */}
+        <div className="mt-6 flex justify-end">
+          <button
+            type="submit"
+            className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500"
+          >
+            Save (local + try Supabase)
+          </button>
+        </div>
       </form>
     </div>
   );
 }
 
-// Outer component that wraps content with SettingsPageWrapper
 export default function ProfileSettingsPage() {
   return (
     <SettingsPageWrapper>
