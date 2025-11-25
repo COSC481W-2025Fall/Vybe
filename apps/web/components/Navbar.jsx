@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, Music2, Library, User as UserIcon, LogOut, Settings, Menu, X } from 'lucide-react';
+import { Home, Users, Library, User as UserIcon, LogOut, Settings, Menu, X } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import VybeLogo from './common/VybeLogo';
 import { useState, useEffect, useRef } from 'react';
@@ -11,7 +11,6 @@ const links = CONFIG.NAV_LINKS.map(link => {
   const iconMap = {
     'Home': Home,
     'Groups': Users,
-    'Playlist': Music2,
     'Library': Library,
     'Profile': UserIcon,
     'Settings': Settings
