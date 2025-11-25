@@ -67,7 +67,9 @@ export default function SettingsPageWrapper({ children }) {
       });
     };
 
-    window.addEventListener('settings-conflict-detected', handleConflictDetected);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('settings-conflict-detected', handleConflictDetected);
+    }
 
     // Also check store for pending conflicts
     if (conflicts) {
@@ -84,7 +86,9 @@ export default function SettingsPageWrapper({ children }) {
     }
 
     return () => {
-      window.removeEventListener('settings-conflict-detected', handleConflictDetected);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('settings-conflict-detected', handleConflictDetected);
+      }
     };
   }, [conflicts, conflictDialog.isOpen]);
 
@@ -187,10 +191,7 @@ export default function SettingsPageWrapper({ children }) {
 
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
             {/* Sidebar Navigation - Desktop */}
-            <SettingsNav
-              sections={SETTINGS_SECTIONS}
-              variant="sidebar"
-            />
+            <SettingsNav sections={SETTINGS_SECTIONS} variant="sidebar" />
 
             {/* Main Content Area */}
             <main className="flex-1 min-w-0" style={{ height: 'auto' }}>
@@ -241,7 +242,7 @@ export default function SettingsPageWrapper({ children }) {
                     >
                       {isSaving ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                           Saving...
                         </>
                       ) : (

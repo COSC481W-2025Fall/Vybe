@@ -3,7 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { User, Mail, Calendar, CheckCircle2, XCircle, Music, ExternalLink } from 'lucide-react';
+import {
+  User,
+  Mail,
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Music,
+  ExternalLink,
+} from 'lucide-react';
 import SettingsPageWrapper, { useSettingsContext } from '@/components/SettingsPageWrapper';
 import { profileSchema } from '@/lib/schemas/profileSchema';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
@@ -12,12 +20,20 @@ import { useProfileUpdate, useProfile } from '@/hooks/useProfileUpdate';
 const LOCAL_STORAGE_KEY = 'vybe_profile_local';
 
 function ProfileSettingsContent() {
-  const { setHasUnsavedChanges } = useSettingsContext();
+  const {
+    setHasUnsavedChanges,
+    setFormSubmitHandler,
+    setFormResetHandler,
+  } = useSettingsContext();
 
-  const { data: profileData, isLoading: loading, error: profileError } = useProfile();
+  const {
+    data: profileData,
+    isLoading: loading,
+    error: profileError,
+  } = useProfile();
   const profileUpdate = useProfileUpdate();
 
-  const { // We created a React Hook Form with Zod validation so we can control and validate the user profile settings.
+  const {
     register,
     handleSubmit,
     formState: { errors, isDirty },
@@ -33,22 +49,21 @@ function ProfileSettingsContent() {
     },
   });
 
-  const displayName = watch('display_name');//show live character counts & current profile picture URL
+  const displayName = watch('display_name');
   const bio = watch('bio');
 
-  // Track unsaved changes, show a message like “You have unsaved changes”
+  // Track unsaved changes (drives the yellow bar + disabled Save button)
   useEffect(() => {
     setHasUnsavedChanges(isDirty);
   }, [isDirty, setHasUnsavedChanges]);
 
-  const [initialized, setInitialized] = useState(false); //The form now starts by showing saved data if there is any, 
-                                                         // otherwise it shows the profile from Supabase, and if nothing exists, it starts empty.
+  const [initialized, setInitialized] = useState(false);
 
-  // Initialize from localStorage or backend profile
+  // Initialize from Supabase profile, then overlay localStorage draft if present
   useEffect(() => {
     if (initialized) return;
 
-    let fromLocal = null;
+    let fromLocal: any = null;
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
@@ -78,11 +93,9 @@ function ProfileSettingsContent() {
 
     reset(formValues);
     setInitialized(true);
-  }, [profileData, reset, initialized]); ///////
+  }, [profileData, reset, initialized]);
 
-  // Save handler: localStorage + try backend/
-  // //single submit handler that saves Display Name, Bio, and Profile Picture URL
-
+  // Submit handler: Save to Supabase (source of truth) + keep local draft in sync if needed
   const onSubmit = async (data) => {
     const localFormValues = {
       display_name: data.display_name || '',
@@ -90,26 +103,73 @@ function ProfileSettingsContent() {
       profile_picture_url: data.profile_picture_url || '',
     };
 
-    // 1) Save to localStorage so it survives navigation/refresh
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localFormValues));
-      console.log('[Profile] Saved to localStorage:', localFormValues);
-    }
-
-    // 2) Try Supabase backend, but don't break if it fails
+    // 1) Try Supabase backend first (source of truth)
     try {
       await profileUpdate.mutateAsync(localFormValues);
+
+      // On success, either clear or sync local draft.
+      // If you want Supabase to be the only truth, clear localStorage:
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+      }
     } catch (error) {
       console.warn(
-        '[Profile] Backend update failed (likely Supabase schema/bucket issue). Using local values only.',
+        '[Profile] Backend update failed. Keeping local draft only.',
         error
       );
+      // If backend fails, keep local draft so user doesn't lose data
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          LOCAL_STORAGE_KEY,
+          JSON.stringify(localFormValues)
+        );
+      }
     }
 
-    // 3) Reset form state to saved values
+    // Reset form state to saved values
     reset(localFormValues);
     setHasUnsavedChanges(false);
-  };///
+  };
+
+  // Hook this page’s submit/reset into the Settings wrapper buttons
+  useEffect(() => {
+    if (!setFormSubmitHandler || !setFormResetHandler) return;
+
+    // Wrapper "Save Changes" will call this
+    setFormSubmitHandler(() => handleSubmit(onSubmit));
+
+    // Wrapper "Cancel" will call this
+    setFormResetHandler(() => () => {
+      // Revert to last known profileData (Supabase) or empty
+      const fromBackend = profileData
+        ? {
+            display_name: profileData.display_name || '',
+            bio: profileData.bio || '',
+            profile_picture_url: profileData.profile_picture_url || '',
+          }
+        : {
+            display_name: '',
+            bio: '',
+            profile_picture_url: '',
+          };
+
+      reset(fromBackend);
+      setHasUnsavedChanges(false);
+    });
+
+    return () => {
+      setFormSubmitHandler(null);
+      setFormResetHandler(null);
+    };
+  }, [
+    handleSubmit,
+    onSubmit,
+    profileData,
+    reset,
+    setFormResetHandler,
+    setFormSubmitHandler,
+    setHasUnsavedChanges,
+  ]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -121,10 +181,11 @@ function ProfileSettingsContent() {
     });
   };
 
+  // Loading state
   if (!initialized && loading && !profileData) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
+        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <User className="h-6 w-6 text-purple-400" />
             <div>
@@ -137,17 +198,18 @@ function ProfileSettingsContent() {
         </div>
         <div className="p-6">
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400" />
           </div>
         </div>
       </>
     );
   }
 
+  // Error state
   if (!initialized && profileError && !profileData) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
+        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <User className="h-6 w-6 text-purple-400" />
             <div>
@@ -160,7 +222,9 @@ function ProfileSettingsContent() {
         </div>
         <div className="p-6">
           <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
-            <p className="text-red-400">Error loading profile: {profileError.message}</p>
+            <p className="text-red-400">
+              Error loading profile: {profileError.message}
+            </p>
           </div>
         </div>
       </>
@@ -169,8 +233,8 @@ function ProfileSettingsContent() {
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+      {/* Section Header */}
+      <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <User className="h-6 w-6 text-purple-400" />
           <div>
@@ -182,13 +246,15 @@ function ProfileSettingsContent() {
         </div>
       </div>
 
-      {/* Content, save button calls this via handleSubmit(onSubmit) */}  
-      
-     <form onSubmit={handleSubmit(onSubmit)} className="p-6 w-full flex-1">
+      {/* Content – wrapper's Save button will trigger handleSubmit(onSubmit) */}
+      <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 w-full flex-1">
         <div className="space-y-6 w-full">
           {/* Display Name */}
           <div>
-            <label htmlFor="display_name" className="block text-sm font-medium text-white mb-2">
+            <label
+              htmlFor="display_name"
+              className="block text-sm font-medium text-white mb-2"
+            >
               Display Name <span className="text-red-400">*</span>
             </label>
             <input
@@ -197,9 +263,10 @@ function ProfileSettingsContent() {
               {...register('display_name')}
               maxLength={50}
               className={[
-                'w-full px-4 py-2 rounded-lg bg-white/5 border',
-                'text-white placeholder-gray-500',
+                'w-full px-4 py-2.5 rounded-lg bg-white/5 border',
+                'text-white placeholder-gray-500 text-base sm:text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
+                'touch-manipulation',
                 errors.display_name
                   ? 'border-red-500/50'
                   : 'border-white/20 focus:border-purple-500/50',
@@ -209,7 +276,9 @@ function ProfileSettingsContent() {
             <div className="mt-1 flex items-center justify-between">
               <div className="text-xs text-gray-500">
                 {errors.display_name ? (
-                  <span className="text-red-400">{errors.display_name.message}</span>
+                  <span className="text-red-400">
+                    {errors.display_name.message}
+                  </span>
                 ) : (
                   <span>2-50 characters, letters, numbers, and spaces only</span>
                 )}
@@ -222,7 +291,10 @@ function ProfileSettingsContent() {
 
           {/* Bio */}
           <div>
-            <label htmlFor="bio" className="block text-sm font-medium text-white mb-2">
+            <label
+              htmlFor="bio"
+              className="block text-sm font-medium text-white mb-2"
+            >
               Bio
             </label>
             <textarea
@@ -231,9 +303,10 @@ function ProfileSettingsContent() {
               maxLength={200}
               rows={4}
               className={[
-                'w-full px-4 py-2 rounded-lg bg-white/5 border resize-none',
-                'text-white placeholder-gray-500',
+                'w-full px-4 py-2.5 rounded-lg bg-white/5 border resize-none',
+                'text-white placeholder-gray-500 text-base sm:text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
+                'touch-manipulation',
                 errors.bio
                   ? 'border-red-500/50'
                   : 'border-white/20 focus:border-purple-500/50',
@@ -245,7 +318,9 @@ function ProfileSettingsContent() {
                 {errors.bio ? (
                   <span className="text-red-400">{errors.bio.message}</span>
                 ) : (
-                  <span>Optional. Share a little about yourself with the community.</span>
+                  <span>
+                    Optional. Share a little about yourself with the community.
+                  </span>
                 )}
               </div>
               <div className="text-xs text-gray-500">
@@ -254,9 +329,9 @@ function ProfileSettingsContent() {
             </div>
           </div>
 
-          {/* Profile Picture (local-only preview, stored in form/localStorage) */}
+          {/* Profile Picture */}
           <ProfilePictureUpload
-            currentImageUrl={watch('profile_picture_url') || null} //<< connected the ProfilePictureUpload component
+            currentImageUrl={watch('profile_picture_url') || null}
             onImageChange={(url) => {
               setValue('profile_picture_url', url, { shouldDirty: true });
             }}
@@ -266,9 +341,9 @@ function ProfileSettingsContent() {
           />
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10" />
 
-          {/* Account Info (read-only from Supabase if available) */}
+          {/* Account Info (read-only) */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-white">Account Information</h3>
 
@@ -294,11 +369,19 @@ function ProfileSettingsContent() {
               <div className="flex-1">
                 <div className="text-sm text-gray-400 mb-1">Email</div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white">{profileData?.email || 'N/A'}</span>
+                  <span className="text-white">
+                    {profileData?.email || 'N/A'}
+                  </span>
                   {profileData?.email_verified ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-400" title="Verified" />
+                    <CheckCircle2
+                      className="h-4 w-4 text-green-400"
+                      title="Verified"
+                    />
                   ) : (
-                    <XCircle className="h-4 w-4 text-yellow-400" title="Not verified" />
+                    <XCircle
+                      className="h-4 w-4 text-yellow-400"
+                      title="Not verified"
+                    />
                   )}
                 </div>
               </div>
@@ -318,13 +401,15 @@ function ProfileSettingsContent() {
               <Calendar className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
                 <div className="text-sm text-gray-400 mb-1">Member Since</div>
-                <span className="text-white">{formatDate(profileData?.created_at)}</span>
+                <span className="text-white">
+                  {formatDate(profileData?.created_at)}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10" />
 
           {/* Connected Accounts */}
           <div className="space-y-4">
@@ -384,16 +469,6 @@ function ProfileSettingsContent() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Save button */}
-        <div className="mt-6 flex justify-end">
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-500"
-          >
-            Save (local + try Supabase)
-          </button>
         </div>
       </form>
     </div>

@@ -1,98 +1,3 @@
-# next / build
-.next/
-out/
-build/
-
-# deps
-node_modules/
-
-# logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env
-.env*
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# misc
-.DS_Store
-.vercel/
-*.tsbuildinfo
-Thumbs.db
-Desktop.ini
-
-# test files
-clean.txt
-bad.txt
-secret.txt
-
-# Python
-venv/
-.venv/
-backend/.venv/
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-
-# pytest
-.pytest_cache/
-.coverage
-htmlcov/
-.mypy_cache/
-.pytest_cache/
-.coverage
-backend/htmlcov/
-backend/coverage.xml
-
-# Playwright
-playwright-report/
-test-results/
-playwright/.cache/
-
-# docs (if you want to ignore extracted wireframes)
-docs/
-
-# Cursor/IDE
-.cursorignore
-.claude/
-
-# Scripts and temporary files
-get-issues.ps1
-update-*.ps1
-issue_*_update.json
-*.ps1
-
-# Sprint/assignee files (if temporary)
-sprint-*-assignee-breakdown.txt
-*-assignee-breakdown.txt
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-.project
-.classpath
-.settings/
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
 # Testing
 coverage/
 *.lcov
@@ -102,11 +7,8 @@ coverage/
 dist/
 *.tsbuildinfo
 
-<<<<<<< HEAD
-issues/
-=======
 # Private planning and documentation folders
+issues/
 old-pbi/
 pbi-77/
 pbi-72/
->>>>>>> feature/pbi-77-simplified-settings
