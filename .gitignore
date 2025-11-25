@@ -101,3 +101,5 @@ coverage/
 # Build outputs
 dist/
 *.tsbuildinfo
+
+issues/
