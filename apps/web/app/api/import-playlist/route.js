@@ -195,11 +195,11 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
       item.snippet?.title !== 'Deleted video'
     );
 
-    // Get video durations (requires separate API call)
+    // Get video durations and categories (requires separate API call)
     if (validItems.length > 0) {
       const videoIds = validItems.map(item => item.contentDetails.videoId).join(',');
       const videosResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoIds}`,
+        `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoIds}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -208,19 +208,36 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
       );
 
       const videosData = await videosResponse.json();
-      const durationMap = {};
+      const videoDetailsMap = {};
       videosData.items?.forEach(video => {
-        durationMap[video.id] = parseYouTubeDuration(video.contentDetails.duration);
+        videoDetailsMap[video.id] = {
+          duration: parseYouTubeDuration(video.contentDetails.duration),
+          categoryId: video.snippet.categoryId,
+        };
       });
 
+      // Filter to only include music videos (categoryId = 10)
+      const musicVideosCount = validItems.filter(item => {
+        const details = videoDetailsMap[item.contentDetails.videoId];
+        return details && details.categoryId === '10';
+      }).length;
+
+      console.log(`[YouTube Import] Filtering: ${validItems.length} total videos, ${musicVideosCount} music videos (categoryId=10)`);
+
       validItems.forEach(item => {
-        tracks.push({
-          id: item.contentDetails.videoId,
-          title: item.snippet.title,
-          artist: item.snippet.videoOwnerChannelTitle || 'Unknown',
-          thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
-          duration: durationMap[item.contentDetails.videoId] || 0,
-        });
+        const videoId = item.contentDetails.videoId;
+        const details = videoDetailsMap[videoId];
+
+        // Only add videos with categoryId = 10 (Music)
+        if (details && details.categoryId === '10') {
+          tracks.push({
+            id: videoId,
+            title: item.snippet.title,
+            artist: item.snippet.videoOwnerChannelTitle || 'Unknown',
+            thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
+            duration: details.duration || 0,
+          });
+        }
       });
     }
 
@@ -229,6 +246,11 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
 
     console.log(`[YouTube Import] Total tracks so far: ${tracks.length}, Next page token: ${nextPageToken ? 'exists' : 'none'}`);
   } while (nextPageToken);
+
+  // Check if any music videos were found
+  if (tracks.length === 0) {
+    throw new Error('No music videos were found in this playlist.');
+  }
 
   return {
     id: playlistId,
