@@ -114,7 +114,7 @@ export default function Navbar() {
       <div className="mx-auto flex h-12 max-w-6xl items-center px-4">
         {/* left: brand (separate, no glass) */}
         <div className="shrink-0">
-          <Link href="/" aria-label="Go to home" className="inline-block" onClick={() => setIsMobileMenuOpen(false)}>
+          <Link href="/dashboard" aria-label="Go to home" className="inline-block" onClick={() => setIsMobileMenuOpen(false)}>
             <VybeLogo />
           </Link>
         </div>
@@ -126,7 +126,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-2" data-testid="desktop-nav">
           {links.map(({ href, label, Icon }) => {
             const active =
-              pathname === href || (href !== '/' && pathname?.startsWith(href));
+              pathname === href || (href !== '/dashboard' && pathname?.startsWith(href)) || (href === '/dashboard' && pathname === '/');
             return (
               <NavPill
                 key={href}
@@ -183,7 +183,7 @@ export default function Navbar() {
             <div className="bg-gray-800 border border-gray-700 rounded-md overflow-hidden">
               {links.map(({ href, label, Icon }) => {
                 const active =
-                  pathname === href || (href !== '/' && pathname?.startsWith(href));
+                  pathname === href || (href !== '/dashboard' && pathname?.startsWith(href)) || (href === '/dashboard' && pathname === '/');
                 return (
                   <Link
                     key={href}

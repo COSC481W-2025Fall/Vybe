@@ -3,8 +3,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { HomePage } from '@/components/HomePage';
 
-export default function Home() {
+export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
@@ -17,10 +18,17 @@ export default function Home() {
     
     if (!session) {
       router.push('/sign-in');
-    } else {
-      router.push('/dashboard');
     }
   };
 
-  return null; // Will redirect immediately
+  const handleNavigate = (screen, params) => {
+    if (screen === 'groups' && params?.groupId) {
+      router.push(`/groups/${params.groupId}`);
+    } else {
+      router.push(`/${screen}`);
+    }
+  };
+
+  return <HomePage onNavigate={handleNavigate} />;
 }
+
