@@ -63,7 +63,7 @@ function ProfileSettingsContent() {
   useEffect(() => {
     if (initialized) return;
 
-    let fromLocal: any = null;
+    let fromLocal =  null;
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
