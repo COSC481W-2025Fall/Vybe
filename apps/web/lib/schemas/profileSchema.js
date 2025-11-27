@@ -131,10 +131,13 @@ const baseProfileSchema = z.object({
   display_name: displayNameSchema.optional(),
   bio: bioSchema,
   profile_picture_url: profilePictureUrlSchema,
+  is_public: z.boolean().default(false),
+   
 }, {
   required_error: 'Profile data is required',
   invalid_type_error: 'Profile data must be an object',
 });
+
 
 export const profileSchema = baseProfileSchema.superRefine((data, ctx) => {
   // Override error messages for missing or invalid fields

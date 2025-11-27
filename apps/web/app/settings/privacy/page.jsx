@@ -50,11 +50,6 @@ function PrivacySettingsContent() {
     setHasUnsavedChanges(isDirty);
   }, [isDirty, setHasUnsavedChanges]);
 
-  // Set form handlers for parent wrapper
-  useEffect(() => {
-    setFormSubmitHandler(() => handleSubmit(onSubmit));
-    setFormResetHandler(() => reset());
-  }, [handleSubmit, reset, setFormSubmitHandler, setFormResetHandler]);
 
   const onSubmit = async (data) => {
     updatePrivacy(data, {
@@ -63,6 +58,48 @@ function PrivacySettingsContent() {
       },
     });
   };
+
+  // Set form handlers for parent wrapper
+useEffect(() => {
+  if (!setFormSubmitHandler || !setFormResetHandler) return;
+
+  // Wrapper "Save Changes" button will call this
+  setFormSubmitHandler(() => handleSubmit(onSubmit));
+
+  // Wrapper "Cancel" button will call this
+  setFormResetHandler(() => () => {
+    // Reset back to current backend values (or defaults)
+    if (privacySettings) {
+      reset({
+        searchable: privacySettings.searchable ?? true,
+        song_of_day_visibility: privacySettings.song_of_day_visibility || 'public',
+      });
+    } else {
+      reset({
+        searchable: true,
+        song_of_day_visibility: 'public',
+      });
+    }
+
+    setHasUnsavedChanges(false);
+  });
+
+  // Cleanup when page unmounts
+  return () => {
+    setFormSubmitHandler(null);
+    setFormResetHandler(null);
+  };
+}, [
+  handleSubmit,
+  onSubmit,
+  reset,
+  setFormSubmitHandler,
+  setFormResetHandler,
+  privacySettings,
+  setHasUnsavedChanges,
+]);
+
+  
 
   const searchable = watch('searchable');
   const songOfDayVisibility = watch('song_of_day_visibility');

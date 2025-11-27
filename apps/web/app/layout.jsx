@@ -29,7 +29,7 @@ export default async function RootLayout({ children }) {
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="chroma-bg">
+      <body className="chroma-bg" suppressHydrationWarning>
         <QueryProvider>
           <Suspense fallback={null}>
             <UrlTokenCleanup />

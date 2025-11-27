@@ -15,9 +15,7 @@ import {
 import SettingsPageWrapper, { useSettingsContext } from '@/components/SettingsPageWrapper';
 import { profileSchema } from '@/lib/schemas/profileSchema';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
-import { useProfileUpdate, useProfile } from '@/hooks/useProfileUpdate';
-
-const LOCAL_STORAGE_KEY = 'vybe_profile_local';
+import { useProfile } from '@/hooks/useProfileUpdate';
 
 function ProfileSettingsContent() {
   const {
@@ -31,7 +29,6 @@ function ProfileSettingsContent() {
     isLoading: loading,
     error: profileError,
   } = useProfile();
-  const profileUpdate = useProfileUpdate();
 
   const {
     register,
@@ -46,111 +43,137 @@ function ProfileSettingsContent() {
       display_name: '',
       bio: '',
       profile_picture_url: '',
+      is_public: false, // default private
     },
   });
 
   const displayName = watch('display_name');
   const bio = watch('bio');
 
-  // Track unsaved changes (drives the yellow bar + disabled Save button)
+  // Track unsaved changes (drives yellow bar + Save button state)
   useEffect(() => {
     setHasUnsavedChanges(isDirty);
   }, [isDirty, setHasUnsavedChanges]);
 
   const [initialized, setInitialized] = useState(false);
 
-  // Initialize from Supabase profile, then overlay localStorage draft if present
+  // Initialize from Supabase profile only
   useEffect(() => {
     if (initialized) return;
+    if (!profileData) return; // wait until we actually have data
 
-    let fromLocal =  null;
-    if (typeof window !== 'undefined') {
-      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
-        try {
-          fromLocal = JSON.parse(stored);
-        } catch (e) {
-          console.warn('[Profile] Could not parse localStorage profile', e);
-        }
-      }
-    }
-
-    const fromBackend = profileData
-      ? {
-          display_name: profileData.display_name || '',
-          bio: profileData.bio || '',
-          profile_picture_url: profileData.profile_picture_url || '',
-        }
-      : null;
-
-    const formValues =
-      fromLocal ||
-      fromBackend || {
-        display_name: '',
-        bio: '',
-        profile_picture_url: '',
-      };
+    const formValues = {
+      display_name: profileData.display_name || '',
+      bio: profileData.bio || '',
+      profile_picture_url: profileData.profile_picture_url || '',
+      is_public: profileData.is_public ?? false,
+    };
 
     reset(formValues);
     setInitialized(true);
   }, [profileData, reset, initialized]);
 
-  // Submit handler: Save to Supabase (source of truth) + keep local draft in sync if needed
+  // Submit handler: update Supabase users table directly
   const onSubmit = async (data) => {
-    const localFormValues = {
+    const payload = {
       display_name: data.display_name || '',
       bio: data.bio || '',
       profile_picture_url: data.profile_picture_url || '',
+      is_public: data.is_public ?? false,
     };
 
-    // 1) Try Supabase backend first (source of truth)
     try {
-      await profileUpdate.mutateAsync(localFormValues);
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-      // On success, either clear or sync local draft.
-      // If you want Supabase to be the only truth, clear localStorage:
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+      if (!res.ok) {
+        // Log details so we can see what Supabase complained about
+        let errorBody = null;
+        try {
+          errorBody = await res.json();
+        } catch (e) {
+          // ignore parse error
+        }
+
+        console.error(
+          '[Profile] Failed to update profile in Supabase. Status:',
+          res.status,
+          'Body:',
+          errorBody
+        );
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('show-toast', {
+              detail: {
+                type: 'error',
+                message:
+                  (errorBody && errorBody.error) ||
+                  'Failed to save profile. Please try again.',
+              },
+            })
+          );
+        }
+        return;
       }
-    } catch (error) {
-      console.warn(
-        '[Profile] Backend update failed. Keeping local draft only.',
-        error
-      );
-      // If backend fails, keep local draft so user doesn't lose data
+
+      // Success: Supabase is now the truth
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(
-          LOCAL_STORAGE_KEY,
-          JSON.stringify(localFormValues)
+        window.dispatchEvent(
+          new CustomEvent('show-toast', {
+            detail: {
+              type: 'success',
+              message: 'Profile updated successfully!',
+            },
+          })
+        );
+      }
+
+      // keep the form in sync with what we just saved
+      reset(payload);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('[Profile] Network/unknown error updating profile:', error);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('show-toast', {
+            detail: {
+              type: 'error',
+              message: 'Unable to reach server. Please try again later.',
+            },
+          })
         );
       }
     }
-
-    // Reset form state to saved values
-    reset(localFormValues);
-    setHasUnsavedChanges(false);
   };
 
   // Hook this page’s submit/reset into the Settings wrapper buttons
   useEffect(() => {
+    if (!initialized) return;
     if (!setFormSubmitHandler || !setFormResetHandler) return;
 
-    // Wrapper "Save Changes" will call this
+    // Wrapper "Save Changes" button will call this
     setFormSubmitHandler(() => handleSubmit(onSubmit));
 
-    // Wrapper "Cancel" will call this
+    // Wrapper "Cancel" button will call this
     setFormResetHandler(() => () => {
-      // Revert to last known profileData (Supabase) or empty
       const fromBackend = profileData
         ? {
             display_name: profileData.display_name || '',
             bio: profileData.bio || '',
             profile_picture_url: profileData.profile_picture_url || '',
+            is_public: profileData.is_public ?? false,
           }
         : {
             display_name: '',
             bio: '',
             profile_picture_url: '',
+            is_public: false,
           };
 
       reset(fromBackend);
@@ -161,15 +184,8 @@ function ProfileSettingsContent() {
       setFormSubmitHandler(null);
       setFormResetHandler(null);
     };
-  }, [
-    handleSubmit,
-    onSubmit,
-    profileData,
-    reset,
-    setFormResetHandler,
-    setFormSubmitHandler,
-    setHasUnsavedChanges,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -326,6 +342,29 @@ function ProfileSettingsContent() {
               <div className="text-xs text-gray-500">
                 {bio?.length || 0}/200
               </div>
+            </div>
+          </div>
+
+          {/* Public / Private toggle */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <label className="block text-sm font-medium text-white mb-1">
+                Profile Visibility
+              </label>
+              <p className="text-xs text-gray-400">
+                When public, other users can view your profile.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="is_public"
+                type="checkbox"
+                {...register('is_public')}
+                className="h-4 w-4 rounded border-white/30 bg-transparent"
+              />
+              <label htmlFor="is_public" className="text-sm text-gray-200">
+                Public profile
+              </label>
             </div>
           </div>
 
