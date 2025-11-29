@@ -30,34 +30,24 @@ export function useSocial() {
       // For now, using empty array
       setFriendsSongsOfTheDay([]);
 
-      // TODO: Query communities table
-      // For now, using mock communities
-      setCommunities([
-        {
-          id: 'comm-1',
-          name: 'Indie Discoveries',
-          description: 'Finding hidden gems in indie music',
-          member_count: 1240,
-          //Mock group count
-          group_count: 45
-        },
-        {
-          id: 'comm-2',
-          name: 'Jazz Lounge',
-          description: 'Classic and modern jazz appreciation',
-          member_count: 892,
-          //Mock group count
-          group_count: 32
-        },
-        {
-          id: 'comm-3',
-          name: 'Electronic Pulse',
-          description: 'Latest electronic and dance tracks',
-          member_count: 2156,
-          //Mock group count
-          group_count: 78
+      // Query communities table
+      const { data: communitiesData, error: communitiesError } = await supabase
+        .from('communities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (communitiesError) {
+        // Check if it's a "relation does not exist" error (table not created)
+        if (communitiesError.code === '42P01' || communitiesError.message?.includes('does not exist')) {
+          console.warn('Communities table does not exist. Please run the migration: apps/web/supabase/migrations/009_create_communities_table.sql');
+          setCommunities([]);
+        } else {
+          console.error('Error fetching communities:', communitiesError);
+          setCommunities([]);
         }
-      ]);
+      } else {
+        setCommunities(communitiesData || []);
+      }
     } catch (err) {
       console.error('Error loading social data:', err);
       setError(err.message || 'Failed to load social data');

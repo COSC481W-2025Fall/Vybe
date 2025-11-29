@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Users, Plus, TrendingUp, ChevronRight, Music, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "./ui/dialog";
 import { useGroups } from "../hooks/useGroups";
@@ -21,6 +22,7 @@ import { toast } from "sonner";
  * @param {Function} props.onNavigate - Optional navigation handler for routing
  */
 export function HomePage({ onNavigate } = {}) {
+  const router = useRouter();
   const { groups, createGroup, loading: groupsLoading, error: groupsError } = useGroups();
   const { friendsSongsOfTheDay, communities, loading: socialLoading, error: socialError } = useSocial();
   const createGroupDialog = useDialog();
@@ -36,6 +38,43 @@ export function HomePage({ onNavigate } = {}) {
   const [createError, setCreateError] = useState("");
   const [selectedSong, setSelectedSong] = useState(null);
   const [songDialogOpen, setSongDialogOpen] = useState(false);
+
+  // Admin access easter egg
+  const [adminClickCount, setAdminClickCount] = useState(0);
+  const adminClickTimeoutRef = useRef(null);
+  const ADMIN_CLICKS_REQUIRED = 10;
+  const ADMIN_CLICK_TIMEOUT = 3000; // 3 seconds to complete all clicks
+
+  const handleAdminClick = () => {
+    // Clear existing timeout
+    if (adminClickTimeoutRef.current) {
+      clearTimeout(adminClickTimeoutRef.current);
+    }
+
+    const newCount = adminClickCount + 1;
+    setAdminClickCount(newCount);
+
+    if (newCount >= ADMIN_CLICKS_REQUIRED) {
+      // Success! Redirect to admin console
+      setAdminClickCount(0);
+      router.push('/admin/communities');
+      toast.success('Admin access granted');
+    } else {
+      // Set timeout to reset counter if user doesn't click fast enough
+      adminClickTimeoutRef.current = setTimeout(() => {
+        setAdminClickCount(0);
+      }, ADMIN_CLICK_TIMEOUT);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (adminClickTimeoutRef.current) {
+        clearTimeout(adminClickTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
@@ -310,9 +349,22 @@ export function HomePage({ onNavigate } = {}) {
               </div> */}
 
               <div className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--muted-foreground)]">{community.member_count.toLocaleString()} members</span>
+                <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                  <Music className="h-4 w-4" />
+                  <span>
+                    {community.playlist_links?.length > 0 
+                      ? `${community.playlist_links.length} playlist${community.playlist_links.length !== 1 ? 's' : ''}`
+                      : 'No playlists'
+                    }
+                  </span>
+                </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--muted-foreground)]">{community.group_count?.toLocaleString() || 0} groups</span>
+                  <span className="text-sm text-[var(--muted-foreground)]">
+                    {community.playlist_links?.reduce((total, link) => {
+                      // This would need to be calculated from curated_songs, but for now show playlist count
+                      return total;
+                    }, 0) || 0} songs
+                  </span>
                   <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
                 </div>
               </div>
@@ -356,6 +408,21 @@ export function HomePage({ onNavigate } = {}) {
         open={shareSongDialog.isOpen}
         onOpenChange={shareSongDialog.setIsOpen}
       />
+
+      {/* Hidden admin access button - click 10 times quickly in bottom right corner */}
+      <button
+        onClick={handleAdminClick}
+        className="fixed bottom-4 right-4 w-12 h-12 opacity-0 pointer-events-auto cursor-pointer z-50"
+        aria-label=""
+        title=""
+        style={{ 
+          backgroundColor: 'transparent',
+          border: 'none',
+          outline: 'none'
+        }}
+      >
+        {/* Invisible clickable area for admin access easter egg */}
+      </button>
     </div>
   );
 }
