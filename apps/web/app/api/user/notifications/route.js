@@ -50,9 +50,10 @@ export async function GET() {
     if (notificationError) {
       // PGRST116 = no rows returned (table exists but no record)
       // 42P01 = relation does not exist (table doesn't exist)
-      if (notificationError.code === 'PGRST116' || notificationError.code === '42P01') {
+      // PGRST205 = table not found in schema cache (table doesn't exist)
+      if (notificationError.code === 'PGRST116' || notificationError.code === '42P01' || notificationError.code === 'PGRST205') {
         // Table doesn't exist yet or no record exists - return defaults
-        console.log('[notifications API] No notification preferences found, returning defaults');
+        // Don't log as error - this is expected if migrations haven't run
         const defaults = getDefaultNotificationPreferences();
         return NextResponse.json(defaults);
       }

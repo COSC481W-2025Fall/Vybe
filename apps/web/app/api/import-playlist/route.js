@@ -43,23 +43,22 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
     }
 
-    // Check if user already has a playlist in this group
-    const { data: existingPlaylists } = await supabase
+    // Check if user already has a playlist in this group (users can only have one)
+    const { data: existingPlaylist } = await supabase
       .from('group_playlists')
       .select('id')
       .eq('group_id', groupId)
-      .eq('added_by', user.id);
+      .eq('added_by', user.id)
+      .maybeSingle();
 
     // If user already has a playlist, delete it (cascade will delete songs)
-    if (existingPlaylists && existingPlaylists.length > 0) {
-      console.log(`[import-playlist] User already has ${existingPlaylists.length} playlist(s), removing old ones...`);
-
-      for (const oldPlaylist of existingPlaylists) {
-        await supabase
-          .from('group_playlists')
-          .delete()
-          .eq('id', oldPlaylist.id);
-      }
+    // Since users can only have one playlist, we can use a single delete query
+    if (existingPlaylist) {
+      console.log(`[import-playlist] Replacing existing playlist...`);
+      await supabase
+        .from('group_playlists')
+        .delete()
+        .eq('id', existingPlaylist.id);
     }
 
     // Import playlist based on platform

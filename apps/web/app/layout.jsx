@@ -74,7 +74,8 @@ export default async function RootLayout({ children }) {
               <UrlTokenCleanup />
             </Suspense>
             <div className="vybe-aurora-fixed" />
-            {user && <Navbar />}
+            {/* Always render Navbar; it will hide itself on sign-in/landing routes */}
+            <Navbar />
             <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
               <div className="w-full max-w-6xl">
                 {children}

@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Users, Heart, MoreVertical, Plus } from 'lucide-react';
+import { Users, Heart, MoreVertical, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
@@ -21,6 +22,7 @@ export default function GroupDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [isSorting, setIsSorting] = useState(false);
 
   useEffect(() => {
     // Unwrap params Promise
@@ -54,18 +56,76 @@ export default function GroupDetailPage({ params }) {
     setUser(session.user);
   }
 
+  async function handleSmartSort() {
+    if (!groupId || isSorting) return;
+    
+    setIsSorting(true);
+    toast.info('Starting AI smart sort... This may take a minute.', { duration: 3000 });
+    
+    try {
+      const response = await fetch(`/api/groups/${groupId}/smart-sort`, {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Extract more detailed error message
+        const errorMessage = data.error || data.message || 'Failed to sort playlists';
+        
+        // Check for specific error types
+        if (errorMessage.includes('quota') || errorMessage.includes('billing')) {
+          throw new Error('OpenAI API quota exceeded. Please check your OpenAI account billing and plan settings to enable smart sorting.');
+        } else if (errorMessage.includes('rate limit')) {
+          throw new Error('Rate limit reached. Please wait a moment and try again.');
+        } else {
+          throw new Error(errorMessage);
+        }
+      }
+      
+      toast.success(`Successfully sorted ${data.songsProcessed || 0} songs!`, { duration: 5000 });
+      
+      // Reload data to show sorted order
+      await loadGroupData();
+      // Always reload songs after sorting - loadGroupData sets selectedPlaylist to 'all'
+      // Reload songs directly to ensure the new order is displayed
+      await loadPlaylistSongs('all');
+    } catch (error) {
+      console.error('[Groups] Error sorting:', error);
+      toast.error(error.message || 'Failed to sort playlists. Please try again.', { duration: 7000 });
+    } finally {
+      setIsSorting(false);
+    }
+  }
+
   async function loadGroupData() {
     setLoading(true);
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !groupId) return;
 
-    // Get group details
-    const { data: groupData, error: groupError } = await supabase
-      .from('groups')
-      .select('*')
-      .eq('id', groupId)
-      .single();
+    // Fetch group, members, and playlists in parallel
+    const [groupResult, memberResult, playlistResult] = await Promise.all([
+      supabase
+        .from('groups')
+        .select('*')
+        .eq('id', groupId)
+        .single(),
+      supabase
+        .from('group_members')
+        .select('user_id, joined_at')
+        .eq('group_id', groupId),
+      supabase
+        .from('group_playlists')
+        .select('*')
+        .eq('group_id', groupId)
+        .order('smart_sorted_order', { ascending: true, nullsLast: true })
+        .order('created_at', { ascending: true })
+    ]);
+
+    const { data: groupData, error: groupError } = groupResult;
+    const { data: memberData } = memberResult;
+    const { data: playlistData } = playlistResult;
 
     if (groupError || !groupData) {
       console.error('Error loading group:', groupError);
@@ -74,21 +134,33 @@ export default function GroupDetailPage({ params }) {
     }
 
     setGroup(groupData);
+    setPlaylists(playlistData || []);
 
-    // Get group members (owner + members)
-    const { data: memberData } = await supabase
-      .from('group_members')
-      .select('user_id, joined_at')
-      .eq('group_id', groupId);
+    // Fetch owner and member users in parallel
+    const memberUserIds = (memberData || []).map(m => m.user_id);
+    const userFetchPromises = [
+      supabase
+        .from('users')
+        .select('id, username, profile_picture_url')
+        .eq('id', groupData.owner_id)
+        .maybeSingle()
+    ];
 
-    // Fetch owner user data - only select fields that exist in the users table
+    if (memberUserIds.length > 0) {
+      userFetchPromises.push(
+        supabase
+          .from('users')
+          .select('id, username, profile_picture_url')
+          .in('id', memberUserIds)
+      );
+    }
+
+    const userResults = await Promise.all(userFetchPromises);
+    const { data: ownerUserData, error: ownerError } = userResults[0];
+    const { data: memberUsersData, error: memberUsersError } = memberUserIds.length > 0 ? userResults[1] : { data: [], error: null };
+
+    // Handle owner user data
     let ownerUser = null;
-    const { data: ownerUserData, error: ownerError } = await supabase
-      .from('users')
-      .select('id, username, profile_picture_url')
-      .eq('id', groupData.owner_id)
-      .maybeSingle();
-
     if (ownerError) {
       console.error('Error fetching owner user:', ownerError);
       // Fallback: use session user data if it's the current user
@@ -103,23 +175,13 @@ export default function GroupDetailPage({ params }) {
       ownerUser = ownerUserData;
     }
 
-    // Fetch all member users data
-    const memberUserIds = (memberData || []).map(m => m.user_id);
+    // Handle member users data
     let memberUsers = [];
-
-    if (memberUserIds.length > 0) {
-      const { data: memberUsersData, error: memberUsersError } = await supabase
-        .from('users')
-        .select('id, username, profile_picture_url')
-        .in('id', memberUserIds);
-
-      if (memberUsersError) {
-        console.error('Error fetching member users:', memberUsersError);
-        // Continue without member user data rather than failing
-        memberUsers = [];
-      } else {
-        memberUsers = memberUsersData || [];
-      }
+    if (memberUsersError) {
+      console.error('Error fetching member users:', memberUsersError);
+      memberUsers = [];
+    } else {
+      memberUsers = memberUsersData || [];
     }
 
     // Combine owner and members with full user data
@@ -145,29 +207,23 @@ export default function GroupDetailPage({ params }) {
       .filter(m => m.users); // Only filter out non-owner members without user data
 
     const allMembers = [ownerMember, ...otherMembers];
-
     setMembers(allMembers);
 
-    // Get playlists associated with this group, ordered by smart_sorted_order if available
-    const { data: playlistData } = await supabase
-      .from('group_playlists')
-      .select('*')
-      .eq('group_id', groupId)
-      .order('smart_sorted_order', { ascending: true, nullsLast: true })
-      .order('created_at', { ascending: true });
-
-    setPlaylists(playlistData || []);
-
-    // Get actual song counts for each playlist
+    // Get actual song counts for all playlists in parallel
     if (playlistData && playlistData.length > 0) {
-      const counts = {};
-      for (const playlist of playlistData) {
-        const { count } = await supabase
+      const countPromises = playlistData.map(playlist =>
+        supabase
           .from('playlist_songs')
           .select('*', { count: 'exact', head: true })
-          .eq('playlist_id', playlist.id);
-        counts[playlist.id] = count || 0;
-      }
+          .eq('playlist_id', playlist.id)
+          .then(result => ({ playlistId: playlist.id, count: result.count || 0 }))
+      );
+
+      const countResults = await Promise.all(countPromises);
+      const counts = {};
+      countResults.forEach(({ playlistId, count }) => {
+        counts[playlistId] = count;
+      });
       setActualTrackCounts(counts);
     }
 
@@ -202,51 +258,53 @@ export default function GroupDetailPage({ params }) {
         return new Date(a.created_at) - new Date(b.created_at);
       });
 
-      // Fetch songs from each playlist in order, maintaining playlist order
-      const batchSize = 1000;
-      let allSongs = [];
-      for (const playlist of sortedPlaylists) {
-        let playlistSongs = [];
-        let rangeStart = 0;
-        let hasMoreSongs = true;
+      // Create a map of playlist order for sorting
+      const playlistOrderMap = new Map();
+      sortedPlaylists.forEach((playlist, idx) => {
+        playlistOrderMap.set(playlist.id, playlist.smart_sorted_order ?? idx + 1000);
+      });
 
-        while (hasMoreSongs) {
-          const { data: batch, error: songsError } = await supabase
-            .from('playlist_songs')
-            .select(`
-              *,
-              song_likes (
-                user_id
-              ),
-              group_playlists!inner (
-                id,
-                name,
-                platform
-              )
-            `)
-            .eq('playlist_id', playlist.id)
-            .order('smart_sorted_order', { ascending: true, nullsLast: true })
-            .order('position', { ascending: true })
-            .range(rangeStart, rangeStart + batchSize - 1);
+      // Fetch all songs from all playlists in parallel (much faster)
+      const { data: allSongsData, error: songsError } = await supabase
+        .from('playlist_songs')
+        .select(`
+          *,
+          song_likes (
+            user_id
+          ),
+          group_playlists!inner (
+            id,
+            name,
+            platform,
+            smart_sorted_order
+          )
+        `)
+        .in('playlist_id', playlistIds)
+        .order('smart_sorted_order', { ascending: true, nullsLast: true })
+        .order('position', { ascending: true });
 
-          if (songsError) {
-            console.error('[Groups] Error loading songs:', songsError);
-            break;
-          }
-
-          if (batch && batch.length > 0) {
-            playlistSongs = [...playlistSongs, ...batch];
-            rangeStart += batchSize;
-            hasMoreSongs = batch.length === batchSize;
-          } else {
-            hasMoreSongs = false;
-          }
-        }
-
-        allSongs = [...allSongs, ...playlistSongs];
+      if (songsError) {
+        console.error('[Groups] Error loading songs:', songsError);
+        setPlaylistSongs([]);
+        return;
       }
 
-      console.log('[Groups] Loaded songs count:', allSongs?.length);
+      // Sort songs: first by playlist order, then by song order within playlist
+      const allSongs = (allSongsData || []).sort((a, b) => {
+        const playlistA = playlistOrderMap.get(a.playlist_id) ?? 1000;
+        const playlistB = playlistOrderMap.get(b.playlist_id) ?? 1000;
+        
+        // If same playlist, sort by song order
+        if (playlistA === playlistB) {
+          const orderA = a.smart_sorted_order ?? a.position ?? 0;
+          const orderB = b.smart_sorted_order ?? b.position ?? 0;
+          return orderA - orderB;
+        }
+        
+        // Otherwise sort by playlist order
+        return playlistA - playlistB;
+      });
+
       songs = allSongs;
     } else {
       // Get songs from specific playlist - also use batching
@@ -273,6 +331,8 @@ export default function GroupDetailPage({ params }) {
           .order('smart_sorted_order', { ascending: true, nullsLast: true })
           .order('position', { ascending: true })
           .range(rangeStart, rangeStart + batchSize - 1);
+        
+        console.log(`[Groups] Loaded batch: ${batch?.length || 0} songs (smart_sorted_order used)`);
 
         if (playlistError) {
           console.error('[Groups] Error loading playlist songs:', playlistError);
@@ -369,22 +429,39 @@ export default function GroupDetailPage({ params }) {
               {/* Playlist Selector */}
               {playlists.length > 0 ? (
                 <>
-                  {/* Smart Sort Indicator */}
-                  {playlists.some(p => p.smart_sorted_order !== null) && (
-                    <div className="mb-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2">
-                      <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      <span className="text-sm text-[var(--foreground)]">
-                        <span className="font-medium">AI Smart Sort Active</span>
-                        {playlists[0]?.last_sorted_at && (
-                          <span className="text-[var(--muted-foreground)] ml-2">
-                            (Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
+                  {/* Smart Sort Section */}
+                  <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    {playlists.some(p => p.smart_sorted_order !== null) && (
+                      <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2 flex-1">
+                        <Sparkles className="w-5 h-5 text-purple-400" />
+                        <span className="text-sm text-[var(--foreground)]">
+                          <span className="font-medium">AI Smart Sort Active</span>
+                          {playlists[0]?.last_sorted_at && (
+                            <span className="text-[var(--muted-foreground)] ml-2">
+                              (Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleSmartSort}
+                      disabled={isSorting || playlists.length === 0}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                    >
+                      {isSorting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Sorting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          <span>AI Smart Sort</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-[var(--muted-foreground)] mb-2">
                       Select Playlist
@@ -592,8 +669,11 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   const [userExistingPlaylist, setUserExistingPlaylist] = useState(null);
 
   useEffect(() => {
-    checkConnectedAccounts();
-    checkUserExistingPlaylist();
+    // Run these checks in parallel
+    Promise.all([
+      checkConnectedAccounts(),
+      checkUserExistingPlaylist()
+    ]);
   }, []);
 
   useEffect(() => {
