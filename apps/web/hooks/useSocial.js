@@ -3,6 +3,57 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 
+/**
+ * Helper function to populate communities with song counts from curated_songs table
+ * @param {Array} communities - Array of community objects
+ * @param {Object} supabase - Supabase client instance
+ * @returns {Promise<Array>} Communities with song counts added
+ */
+async function populateCommunitiesWithSongCounts(communities, supabase) {
+  if (!communities || communities.length === 0) {
+    return communities;
+  }
+
+  try {
+    // Get all community IDs
+    const communityIds = communities.map(c => c.id);
+
+    // Query curated_songs to count approved songs per community
+    // Only count approved songs (pending/removed are not shown to users)
+    const { data: songCounts, error: countError } = await supabase
+      .from('curated_songs')
+      .select('community_id, status')
+      .in('community_id', communityIds)
+      .eq('status', 'approved');
+
+    if (countError) {
+      // If curated_songs table doesn't exist, just return communities without counts
+      if (countError.code === '42P01' || countError.message?.includes('does not exist')) {
+        console.warn('curated_songs table does not exist. Song counts will not be available.');
+        return communities.map(c => ({ ...c, song_count: 0 }));
+      }
+      console.error('Error fetching song counts:', countError);
+      return communities.map(c => ({ ...c, song_count: 0 }));
+    }
+
+    // Count songs per community
+    const countMap = {};
+    songCounts?.forEach(song => {
+      countMap[song.community_id] = (countMap[song.community_id] || 0) + 1;
+    });
+
+    // Add song_count to each community
+    return communities.map(community => ({
+      ...community,
+      song_count: countMap[community.id] || 0
+    }));
+  } catch (error) {
+    console.error('Error populating communities with song counts:', error);
+    // Return communities with 0 counts on error
+    return communities.map(c => ({ ...c, song_count: 0 }));
+  }
+}
+
 export function useSocial() {
   const [songOfTheDay, setSongOfTheDay] = useState(null);
   const [friendsSongsOfTheDay, setFriendsSongsOfTheDay] = useState([]);
@@ -46,7 +97,12 @@ export function useSocial() {
           setCommunities([]);
         }
       } else {
-        setCommunities(communitiesData || []);
+        // Populate communities with song counts from curated_songs
+        const communitiesWithCounts = await populateCommunitiesWithSongCounts(
+          communitiesData || [],
+          supabase
+        );
+        setCommunities(communitiesWithCounts);
       }
     } catch (err) {
       console.error('Error loading social data:', err);

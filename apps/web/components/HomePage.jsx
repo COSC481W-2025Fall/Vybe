@@ -361,10 +361,7 @@ export function HomePage({ onNavigate } = {}) {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[var(--muted-foreground)]">
-                    {community.playlist_links?.reduce((total, link) => {
-                      // This would need to be calculated from curated_songs, but for now show playlist count
-                      return total;
-                    }, 0) || 0} songs
+                    {community.song_count || 0} curated song{(community.song_count || 0) !== 1 ? 's' : ''}
                   </span>
                   <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
                 </div>
