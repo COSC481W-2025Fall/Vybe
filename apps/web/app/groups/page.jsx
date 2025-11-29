@@ -261,8 +261,8 @@ function JoinGroupModal({ onClose, onSuccess }) {
               type="text"
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value)}
-              placeholder="Enter 6-character code"
-              maxLength={6}
+              placeholder="Enter 6 or 8-character code"
+              maxLength={8}
               className="w-full px-4 py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/20 [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm sm:text-base"
               required
             />
@@ -284,7 +284,7 @@ function JoinGroupModal({ onClose, onSuccess }) {
             </button>
             <button
               type="submit"
-              disabled={loading || joinCode.length !== 6}
+              disabled={loading || (joinCode.length !== 6 && joinCode.length !== 8)}
               className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? 'Joining...' : 'Join Group'}
