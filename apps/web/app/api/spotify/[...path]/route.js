@@ -29,6 +29,10 @@ async function handler(req, context) {
   } catch (e) {
     // Log full error details on the server for debugging
     console.error('[proxy] token error:', e);
+<<<<<<< HEAD
+    // Respond with a generic error message to the client
+    return new NextResponse(JSON.stringify({ error: 'token_error', message: 'An unexpected error occurred.' }), { status: 401 });
+=======
     
     // Return a more helpful error message to the client
     const errorMessage = e.code === 'NO_TOKENS' 
@@ -46,6 +50,7 @@ async function handler(req, context) {
         headers: { 'Content-Type': 'application/json' }
       }
     );
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
   }
 
   const params = await context.params;

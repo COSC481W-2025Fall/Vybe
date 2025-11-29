@@ -68,7 +68,11 @@ export async function GET() {
     if (spotifyToken) {
       // Try to fetch Spotify account info if token is valid
       try {
+<<<<<<< HEAD
+        const { getValidAccessToken } = await import('../../../lib/spotify.js');
+=======
         const { getValidAccessToken } = await import('../../../../lib/spotify.js');
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
         const accessToken = await getValidAccessToken(supabase, user.id);
         const spotifyRes = await fetch('https://api.spotify.com/v1/me', {
           headers: { 'Authorization': `Bearer ${accessToken}` },

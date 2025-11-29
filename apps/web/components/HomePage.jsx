@@ -17,7 +17,7 @@ import { ShareSongDialog } from "./shared/ShareSongDialog";
 import { toast } from "sonner";
 /**
  * HomePage component - Main dashboard view for authenticated users
- * Displays groups, friends' songs, and music communities
+ * Displays groups, friends' songs, and music communities (tehe)
  * @param {Object} props
  * @param {Function} props.onNavigate - Optional navigation handler for routing
  */
@@ -28,6 +28,7 @@ export function HomePage({ onNavigate } = {}) {
   const createGroupDialog = useDialog();
   const communitiesDialog = useDialog();
   const shareSongDialog = useDialog();
+  
   // Added dialogue hook and state (delete this comment later)
   const communityDetailDialog = useDialog();
   const [selectedCommunity, setSelectedCommunity] = useState(null);

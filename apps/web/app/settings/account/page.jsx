@@ -73,9 +73,15 @@ function AccountSettingsContent() {
           },
         }));
         
+<<<<<<< HEAD
+        // Redirect to home after a short delay
+        setTimeout(() => {
+          window.location.href = '/';
+=======
         // Redirect to dashboard after a short delay
         setTimeout(() => {
           window.location.href = '/dashboard';
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
         }, 2000);
       }
     } catch (error) {

@@ -15,22 +15,39 @@ yarn-error.log*
 
 # env
 .env*
+<<<<<<< HEAD
+=======
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
 
 # misc
 .DS_Store
 .vercel/
 *.tsbuildinfo
+<<<<<<< HEAD
+# test files
+clean.txt
+bad.txt
+secret.txt
+=======
 Thumbs.db
 Desktop.ini
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
 
 # test files
 clean.txt
 bad.txt
 secret.txt
+<<<<<<< HEAD
+playwright-report/
+
+.cursorignore
+sprint-1-assignee-breakdown.txt
+get-issues.ps1
+=======
 
 # Python
 venv/
@@ -103,3 +120,4 @@ dist/
 *.tsbuildinfo
 
 issues/
+>>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
