@@ -296,7 +296,7 @@ export default function LibraryView() {
               const txt = await (res && typeof res.text === 'function' ? res.text().catch(() => '') : Promise.resolve(''));
               errorData = { message: txt };
             }
-            const errorMessage = errorData.message || `HTTP ${res.status}`;
+            const errorMessage = errorData && errorData.message ? `HTTP ${res.status} ${errorData.message}` : `HTTP ${res.status}`;
             // If it's a token error, provide a helpful message
             if (errorData.code === 'NO_TOKENS' || res.status === 401) {
               throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
@@ -412,7 +412,7 @@ export default function LibraryView() {
               const txt = await (res && typeof res.text === 'function' ? res.text().catch(() => '') : Promise.resolve(''));
               errorData = { message: txt };
             }
-            const errorMessage = errorData.message || `HTTP ${res.status}`;
+            const errorMessage = errorData && errorData.message ? `HTTP ${res.status} ${errorData.message}` : `HTTP ${res.status}`;
             // If it's a token error, provide a helpful message
             if (errorData.code === 'NO_TOKENS' || res.status === 401) {
               throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
@@ -464,7 +464,7 @@ export default function LibraryView() {
             const txt = await (res && typeof res.text === 'function' ? res.text().catch(() => '') : Promise.resolve(''));
             errorData = { message: txt };
           }
-          const errorMessage = errorData.message || `HTTP ${res.status}`;
+          const errorMessage = errorData && errorData.message ? `HTTP ${res.status} ${errorData.message}` : `HTTP ${res.status}`;
         // If it's a token error, provide a helpful message
         if (errorData.code === 'NO_TOKENS' || res.status === 401) {
           throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
@@ -502,7 +502,7 @@ export default function LibraryView() {
             const txt = await (res && typeof res.text === 'function' ? res.text().catch(() => '') : Promise.resolve(''));
             errorData = { message: txt };
           }
-          const errorMessage = errorData.message || `HTTP ${res.status}`;
+          const errorMessage = errorData && errorData.message ? `HTTP ${res.status} ${errorData.message}` : `HTTP ${res.status}`;
           // If it's a token error, provide a helpful message
           if (errorData.code === 'NO_TOKENS' || res.status === 401) {
             throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
