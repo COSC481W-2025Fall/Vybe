@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Users, Heart, MoreVertical, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import ExportPlaylistButton from '@/components/ExportPlaylistButton';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
@@ -22,6 +23,7 @@ export default function GroupDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [hasYouTube, setHasYouTube] = useState(false);
   const [isSorting, setIsSorting] = useState(false);
 
   useEffect(() => {
@@ -54,6 +56,13 @@ export default function GroupDetailPage({ params }) {
     }
 
     setUser(session.user);
+
+    // Check if user has YouTube/Google connected
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.identities) {
+      const hasGoogle = user.identities.some(id => id.provider === 'google');
+      setHasYouTube(hasGoogle);
+    }
   }
 
   async function handleSmartSort() {
@@ -490,12 +499,29 @@ export default function GroupDetailPage({ params }) {
 
                   {/* Playlist Header */}
                   <div className="mb-6">
-                    <h2 className="section-title mb-1">
-                      {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
-                    </h2>
-                    <p className="section-subtitle">
-                      {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
-                    </p>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="section-title mb-1">
+                          {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
+                        </h2>
+                        <p className="section-subtitle">
+                          {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
+                        </p>
+                      </div>
+                      {/* Export to YouTube Button - Only shown for YouTube-connected users */}
+                      {hasYouTube && (
+                        <ExportPlaylistButton
+                          sourceType="group"
+                          sourceId={groupId}
+                          playlistId={selectedPlaylist}
+                          defaultName={
+                            selectedPlaylist === 'all'
+                              ? group?.name || 'Group Playlist'
+                              : playlists.find(p => p.id === selectedPlaylist)?.name || 'Playlist'
+                          }
+                        />
+                      )}
+                    </div>
                   </div>
 
                   {/* Songs List */}

@@ -31,7 +31,8 @@ export async function GET(request) {
     let scope = null;
 
     // Now exchange the code with Supabase to create the session
-    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession();
+    // Pass the code explicitly - required for PKCE flow in newer Supabase versions
+    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
     if (exchangeError) {
       console.error('[callback] Error exchanging code for session:', exchangeError);

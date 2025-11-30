@@ -119,5 +119,13 @@ coverage/
 dist/
 *.tsbuildinfo
 
+# Private planning and documentation folders
+old-pbi/
+pbi-77/
+pbi-72/
+memory-bank/
+.cursorrules
+
+# Issues folder
 issues/
 >>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad

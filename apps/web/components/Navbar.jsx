@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, Users, Music2, Library, User as UserIcon, LogOut, Settings, Menu, X } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import VybeLogo from './common/VybeLogo';
+import NotificationBell from './NotificationBell';
 import ThemeToggle from './ThemeToggle';
 import { useState, useEffect, useRef } from 'react';
 
@@ -148,43 +149,43 @@ export default function Navbar() {
 
         {/* spacer right of center */}
         <div className="flex-1 hidden md:block" />
-
-        <div className="hidden md:flex items-center gap-2 mr-2">
+        
+        {/* Notification Bell, Theme Toggle, and Sign out button - desktop only */}
+        <div className="hidden md:flex items-center gap-3">
+          <NotificationBell />
           <ThemeToggle />
+          <button
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="group items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition nav-item backdrop-blur-sm border border-[var(--glass-border)] text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--glass-border-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-100'}`} />
+            <span suppressHydrationWarning>
+              {isSigningOut ? 'Logging out...' : 'Log out'}
+            </span>
+          </button>
         </div>
 
-        {/* Sign out button - desktop only */}
-        <button
-          onClick={handleSignOut}
-          disabled={isSigningOut}
-          className="hidden md:flex group items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition nav-item backdrop-blur-sm border border-[var(--glass-border)] text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--glass-border-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Sign out"
-          title="Sign out"
-        >
-          <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-100'}`} />
-          <span suppressHydrationWarning>
-            {isSigningOut ? 'Logging out...' : 'Log out'}
-          </span>
-        </button>
-
-        <div className="md:hidden mr-2">
+        {/* Mobile: Notification Bell, Theme Toggle, and hamburger menu button */}
+        <div className="md:hidden ml-auto flex items-center gap-2">
+          <NotificationBell />
           <ThemeToggle />
+          <button
+            ref={hamburgerButtonRef}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="flex items-center justify-center w-10 h-10 rounded-lg text-[var(--foreground)] hover:bg-[var(--glass-border)] transition-colors"
+            aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
         </div>
-
-        {/* Mobile hamburger menu button */}
-        <button
-          ref={hamburgerButtonRef}
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden ml-auto flex items-center justify-center w-10 h-10 rounded-lg text-[var(--foreground)] hover:bg-[var(--glass-border)] transition-colors"
-          aria-label="Toggle menu"
-          aria-expanded={isMobileMenuOpen}
-        >
-          {isMobileMenuOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
-        </button>
       </div>
 
       {/* Mobile dropdown menu */}

@@ -468,3 +468,6 @@ export async function canSendFriendRequest(supabase, requesterId, targetUserId) 
   return false;
 }
 
+
+
+

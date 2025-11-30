@@ -28,9 +28,12 @@ export async function middleware(req) {
 
   // If not authenticated:
   // - allow access to '/sign-in'
+  // - allow API routes to handle their own auth (return JSON errors)
   // - otherwise redirect to '/sign-in?next=...'
   if (!session) {
     if (pathname === '/sign-in') return res
+    // Let API routes handle their own authentication
+    if (pathname.startsWith('/api/')) return res
     const url = req.nextUrl.clone()
     url.pathname = CONFIG.AUTH_REDIRECT_PATH
     url.searchParams.set('next', pathname + req.nextUrl.search)

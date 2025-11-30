@@ -169,3 +169,6 @@ EXECUTE FUNCTION create_default_notification_preferences();
 -- 4. Verify security alerts cannot be disabled
 -- ============================================
 
+
+
+

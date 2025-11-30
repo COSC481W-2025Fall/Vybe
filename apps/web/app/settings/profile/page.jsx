@@ -166,7 +166,7 @@ function ProfileSettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <User className="h-6 w-6 text-purple-400" />
           <div>
@@ -179,7 +179,7 @@ function ProfileSettingsContent() {
       </div>
 
       {/* Section Content */}
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6 w-full flex-1">
+      <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 w-full flex-1">
         <div className="space-y-6 w-full">
           {/* Display Name Input */}
           <div>
@@ -192,9 +192,10 @@ function ProfileSettingsContent() {
               {...register('display_name')}
               maxLength={50}
               className={[
-                'w-full px-4 py-2 rounded-lg bg-white/10 [data-theme="light"]:bg-gray-100 border backdrop-blur-[60px]',
-                'text-[var(--foreground)] placeholder-[var(--muted-foreground)]',
+                'w-full px-4 py-2.5 rounded-lg bg-white/10 [data-theme="light"]:bg-gray-100 border backdrop-blur-[60px]',
+                'text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-base sm:text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
+                'touch-manipulation', // Better mobile touch handling
                 errors.display_name
                   ? 'border-red-500/50'
                   : 'border-white/20 [data-theme="light"]:border-gray-300 focus:border-purple-500/50 [data-theme="light"]:focus:bg-gray-200',
@@ -226,9 +227,10 @@ function ProfileSettingsContent() {
               maxLength={200}
               rows={4}
               className={[
-                'w-full px-4 py-2 rounded-lg bg-white/10 [data-theme="light"]:bg-gray-100 border resize-none backdrop-blur-[60px]',
-                'text-[var(--foreground)] placeholder-[var(--muted-foreground)]',
+                'w-full px-4 py-2.5 rounded-lg bg-white/10 [data-theme="light"]:bg-gray-100 border resize-none backdrop-blur-[60px]',
+                'text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-base sm:text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
+                'touch-manipulation', // Better mobile touch handling
                 errors.bio
                   ? 'border-red-500/50'
                   : 'border-white/20 [data-theme="light"]:border-gray-300 focus:border-purple-500/50 [data-theme="light"]:focus:bg-gray-200',
