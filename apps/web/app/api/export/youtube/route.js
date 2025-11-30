@@ -5,6 +5,78 @@ import { getValidAccessToken } from '@/lib/youtube';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Helper function to pause execution
+ * @param {number} ms - Milliseconds to sleep
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Add a video to a YouTube playlist with retry logic
+ * @param {string} accessToken - YouTube API access token
+ * @param {string} youtubePlaylistId - The playlist to add to
+ * @param {string} videoId - The video ID to add
+ * @param {number} maxRetries - Maximum number of retries (default: 1)
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function addVideoToPlaylistWithRetry(accessToken, youtubePlaylistId, videoId, maxRetries = 1) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const addVideoResponse = await fetch(
+        'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            snippet: {
+              playlistId: youtubePlaylistId,
+              resourceId: {
+                kind: 'youtube#video',
+                videoId: videoId,
+              },
+            },
+          }),
+        }
+      );
+
+      if (addVideoResponse.ok) {
+        return { success: true };
+      }
+
+      const errorText = await addVideoResponse.text();
+      const statusCode = addVideoResponse.status;
+
+      // Check if this is a retryable error (409 ABORTED, 503 SERVICE_UNAVAILABLE, 429 TOO_MANY_REQUESTS)
+      const isRetryable = statusCode === 409 || statusCode === 503 || statusCode === 429;
+
+      if (isRetryable && attempt < maxRetries) {
+        console.log(`[Export YouTube] Retryable error (${statusCode}) for video ${videoId}, waiting 2s before retry...`);
+        await sleep(2000); // Wait 2 seconds before retry
+        continue;
+      }
+
+      // Final failure
+      console.error(`[Export YouTube] Failed to add video ${videoId} after ${attempt + 1} attempt(s):`, errorText);
+      return { success: false, error: errorText };
+
+    } catch (error) {
+      if (attempt < maxRetries) {
+        console.log(`[Export YouTube] Network error for video ${videoId}, waiting 2s before retry...`);
+        await sleep(2000);
+        continue;
+      }
+      return { success: false, error: error.message };
+    }
+  }
+
+  return { success: false, error: 'Max retries exceeded' };
+}
+
 async function makeSupabase() {
   const cookieStore = await cookies();
   return createRouteHandlerClient({ cookies: () => cookieStore });
@@ -318,9 +390,7 @@ export async function POST(request) {
       skipped: []
     };
 
-    for (let i = 0; i < songs.length; i++) {
-      const song = songs[i];
-
+    for (const song of songs) {
       try {
         // Build search query: "artist - title" or just "title" if no artist
         const searchQuery = song.artist 
@@ -345,6 +415,8 @@ export async function POST(request) {
             reason: 'Search failed',
             error: errorText
           });
+          // Throttle even on failure to avoid hammering the API
+          await sleep(1000);
           continue;
         }
 
@@ -356,51 +428,38 @@ export async function POST(request) {
             song: `${song.artist} - ${song.title}`,
             reason: 'No YouTube results found'
           });
+          // Throttle even on failure
+          await sleep(1000);
           continue;
         }
 
         const videoId = searchData.items[0].id.videoId;
 
-        // Add the video to the playlist
-        const addVideoResponse = await fetch(
-          'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet',
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              snippet: {
-                playlistId: youtubePlaylistId,
-                resourceId: {
-                  kind: 'youtube#video',
-                  videoId: videoId,
-                },
-              },
-            }),
-          }
+        // Add the video to the playlist with retry logic
+        const addResult = await addVideoToPlaylistWithRetry(
+          accessToken,
+          youtubePlaylistId,
+          videoId,
+          1 // maxRetries: retry once on failure
         );
 
-        if (!addVideoResponse.ok) {
-          const errorText = await addVideoResponse.text();
-          console.error(`[Export YouTube] Failed to add video ${videoId}:`, errorText);
+        if (addResult.success) {
+          addResults.successful.push({
+            song: `${song.artist} - ${song.title}`,
+            videoId
+          });
+        } else {
           addResults.failed.push({
             song: `${song.artist} - ${song.title}`,
             videoId,
             reason: 'Failed to add to playlist',
-            error: errorText
+            error: addResult.error
           });
-          continue;
         }
 
-        addResults.successful.push({
-          song: `${song.artist} - ${song.title}`,
-          videoId
-        });
-
-        // Small delay to avoid rate limits (100ms between requests)
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Throttle: wait 1 second between each request to avoid rate limits
+        // Reliability > Speed
+        await sleep(1000);
 
       } catch (error) {
         console.error(`[Export YouTube] Error processing song "${song.title}":`, error);
@@ -409,6 +468,8 @@ export async function POST(request) {
           reason: 'Unexpected error',
           error: error.message
         });
+        // Throttle even on unexpected errors
+        await sleep(1000);
       }
     }
 
