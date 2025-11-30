@@ -658,9 +658,10 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
 
 function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   const supabase = supabaseBrowser();
-  const [platform, setPlatform] = useState('spotify'); // 'youtube' or 'spotify'
+  const [platform, setPlatform] = useState(null); // 'youtube', 'spotify', or null for 'all'
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
-  const [playlists, setPlaylists] = useState([]);
+  const [selectedPlaylistPlatform, setSelectedPlaylistPlatform] = useState(null);
+  const [playlists, setPlaylists] = useState([]); // Array of { playlist, platform }
   const [loading, setLoading] = useState(false);
   const [fetchingPlaylists, setFetchingPlaylists] = useState(false);
   const [error, setError] = useState('');
@@ -677,12 +678,11 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   }, []);
 
   useEffect(() => {
-    if (platform === 'spotify' && hasSpotify) {
-      fetchSpotifyPlaylists();
-    } else if (platform === 'youtube' && hasYoutube) {
-      fetchYoutubePlaylists();
+    // Load playlists from all connected platforms
+    if (hasSpotify || hasYoutube) {
+      loadAllPlaylists();
     }
-  }, [platform]);
+  }, [hasSpotify, hasYoutube]);
 
   async function checkUserExistingPlaylist() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -751,77 +751,66 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
     console.log('[Groups] Final determined provider:', provider);
 
-    if (provider === 'google') {
-      console.log('[Groups] Setting YouTube as available');
-      setHasYoutube(true);
-      setHasSpotify(hasSpotify);
+    // Set availability flags for both platforms
+    setHasSpotify(hasSpotify);
+    setHasYoutube(hasGoogle);
+
+    // Set default platform: if both available, show all (null), otherwise show the only available one
+    if (hasGoogle && hasSpotify) {
+      // Both available, show all playlists by default
+      setPlatform(null);
+    } else if (hasGoogle && !hasSpotify) {
       setPlatform('youtube');
-      fetchYoutubePlaylists();
-    } else if (provider === 'spotify') {
-      console.log('[Groups] Setting Spotify as available');
-      setHasSpotify(true);
-      setHasYoutube(hasGoogle);
+    } else if (hasSpotify && !hasGoogle) {
       setPlatform('spotify');
-      fetchSpotifyPlaylists();
-    } else {
-      console.log('[Groups] No provider determined, using fallback');
-      // Fallback: if we have identities but no provider was determined,
-      // still set the flags so the user can access their accounts
-      if (hasGoogle) {
-        console.log('[Groups] Fallback: Setting YouTube as available');
-        setHasYoutube(true);
-        setPlatform('youtube');
-        fetchYoutubePlaylists();
-      }
-      if (hasSpotify) {
-        console.log('[Groups] Fallback: Setting Spotify as available');
-        setHasSpotify(true);
-        if (!hasGoogle) {
-          setPlatform('spotify');
-          fetchSpotifyPlaylists();
+    }
+  }
+
+  async function loadAllPlaylists() {
+    setFetchingPlaylists(true);
+    setError('');
+    const allPlaylists = [];
+    const errors = [];
+
+    // Load Spotify playlists if connected
+    if (hasSpotify) {
+      try {
+        const response = await fetch('/api/spotify/me/playlists?limit=50');
+        const data = await response.json();
+
+        if (!response.ok) {
+          errors.push('Spotify: ' + (data.error || 'Failed to fetch Spotify playlists'));
+        } else {
+          const items = (data.items || []).map(playlist => ({ playlist, platform: 'spotify' }));
+          allPlaylists.push(...items);
         }
+      } catch (err) {
+        console.error('Error fetching Spotify playlists:', err);
+        errors.push('Spotify: Failed to load playlists. Please try reconnecting your account.');
       }
     }
-  }
 
-  async function fetchSpotifyPlaylists() {
-    setFetchingPlaylists(true);
-    setError('');
-    try {
-      const response = await fetch('/api/spotify/me/playlists?limit=50');
-      const data = await response.json();
+    // Load YouTube playlists if connected
+    if (hasYoutube) {
+      try {
+        const response = await fetch('/api/youtube/youtube/v3/playlists?part=snippet&mine=true&maxResults=50');
+        const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch Spotify playlists');
+        if (!response.ok) {
+          errors.push('YouTube: ' + (data.error || 'Failed to fetch YouTube playlists'));
+        } else {
+          const items = (data.items || []).map(playlist => ({ playlist, platform: 'youtube' }));
+          allPlaylists.push(...items);
+        }
+      } catch (err) {
+        console.error('Error fetching YouTube playlists:', err);
+        errors.push('YouTube: Failed to load playlists. Please try reconnecting your account.');
       }
-
-      setPlaylists(data.items || []);
-    } catch (err) {
-      console.error('Error fetching Spotify playlists:', err);
-      setError('Failed to load Spotify playlists. Please try reconnecting your account.');
-    } finally {
-      setFetchingPlaylists(false);
     }
-  }
 
-  async function fetchYoutubePlaylists() {
-    setFetchingPlaylists(true);
-    setError('');
-    try {
-      const response = await fetch('/api/youtube/youtube/v3/playlists?part=snippet&mine=true&maxResults=50');
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch YouTube playlists');
-      }
-
-      setPlaylists(data.items || []);
-    } catch (err) {
-      console.error('Error fetching YouTube playlists:', err);
-      setError('Failed to load YouTube playlists. Please try reconnecting your account.');
-    } finally {
-      setFetchingPlaylists(false);
-    }
+    setPlaylists(allPlaylists);
+    setError(errors.length > 0 ? errors.join('; ') : '');
+    setFetchingPlaylists(false);
   }
 
   async function handleAddPlaylist(e) {
@@ -833,17 +822,24 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
     if (!session) return;
 
     try {
-      const selectedPlaylist = playlists.find(p =>
-        platform === 'spotify' ? p.id === selectedPlaylistId : p.id === selectedPlaylistId
-      );
-
-      if (!selectedPlaylist) {
+      if (!selectedPlaylistId || !selectedPlaylistPlatform) {
         throw new Error('Please select a playlist');
       }
 
+      const selectedPlaylistData = playlists.find(p => 
+        p.playlist.id === selectedPlaylistId && p.platform === selectedPlaylistPlatform
+      );
+
+      if (!selectedPlaylistData) {
+        throw new Error('Selected playlist not found');
+      }
+
+      const selectedPlaylist = selectedPlaylistData.playlist;
+      const playlistPlatform = selectedPlaylistData.platform;
+
       // Generate playlist URL based on platform
       let playlistUrl;
-      if (platform === 'spotify') {
+      if (playlistPlatform === 'spotify') {
         playlistUrl = selectedPlaylist.external_urls?.spotify || `https://open.spotify.com/playlist/${selectedPlaylist.id}`;
       } else {
         playlistUrl = `https://www.youtube.com/playlist?list=${selectedPlaylist.id}`;
@@ -855,7 +851,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           groupId,
-          platform,
+          platform: playlistPlatform,
           playlistUrl,
           userId: session.user.id,
         }),
@@ -920,41 +916,83 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
         )}
 
         <form onSubmit={handleAddPlaylist}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-              Platform
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setPlatform('youtube')}
-                disabled={!hasYoutube}
-                className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
-                  platform === 'youtube'
-                    ? 'bg-red-600 text-white border-red-500/30'
-                    : hasYoutube
-                    ? 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
-                    : 'bg-white/5 [data-theme=\'light\']:bg-black/5 text-[var(--muted-foreground)] cursor-not-allowed border-white/10 [data-theme=\'light\']:border-black/10'
-                }`}
-              >
-                YouTube {!hasYoutube && '(Not Connected)'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlatform('spotify')}
-                disabled={!hasSpotify}
-                className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
-                  platform === 'spotify'
-                    ? 'bg-green-600 text-white border-green-500/30'
-                    : hasSpotify
-                    ? 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
-                    : 'bg-white/5 [data-theme=\'light\']:bg-black/5 text-[var(--muted-foreground)] cursor-not-allowed border-white/10 [data-theme=\'light\']:border-black/10'
-                }`}
-              >
-                Spotify {!hasSpotify && '(Not Connected)'}
-              </button>
+          {hasSpotify && hasYoutube && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Filter by Platform
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPlatform(null)}
+                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                    platform === null
+                      ? 'bg-purple-600 text-white border-purple-500/30'
+                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlatform('youtube')}
+                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                    platform === 'youtube'
+                      ? 'bg-red-600 text-white border-red-500/30'
+                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                  }`}
+                >
+                  YouTube
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlatform('spotify')}
+                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                    platform === 'spotify'
+                      ? 'bg-green-600 text-white border-green-500/30'
+                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                  }`}
+                >
+                  Spotify
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+          {((hasSpotify && !hasYoutube) || (!hasSpotify && hasYoutube)) && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Platform
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {hasYoutube && (
+                  <button
+                    type="button"
+                    onClick={() => setPlatform('youtube')}
+                    className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                      platform === 'youtube'
+                        ? 'bg-red-600 text-white border-red-500/30'
+                        : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                    }`}
+                  >
+                    YouTube
+                  </button>
+                )}
+                {hasSpotify && (
+                  <button
+                    type="button"
+                    onClick={() => setPlatform('spotify')}
+                    className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                      platform === 'spotify'
+                        ? 'bg-green-600 text-white border-green-500/30'
+                        : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                    }`}
+                  >
+                    Spotify
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
@@ -966,42 +1004,57 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
               </div>
             ) : playlists.length > 0 ? (
               <div className="max-h-64 overflow-y-auto bg-white/5 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-md modal-scroll">
-                {playlists.map((playlist) => {
-                  const playlistName = platform === 'spotify'
-                    ? playlist.name
-                    : playlist.snippet?.title;
-                  const playlistImage = platform === 'spotify'
-                    ? playlist.images?.[0]?.url
-                    : playlist.snippet?.thumbnails?.default?.url;
-                  const trackCount = platform === 'spotify'
-                    ? playlist.tracks?.total
-                    : null;
+                {playlists
+                  .filter(p => platform === null || p.platform === platform)
+                  .map(({ playlist, platform: playlistPlatform }) => {
+                    const playlistName = playlistPlatform === 'spotify'
+                      ? playlist.name
+                      : playlist.snippet?.title;
+                    const playlistImage = playlistPlatform === 'spotify'
+                      ? playlist.images?.[0]?.url
+                      : playlist.snippet?.thumbnails?.default?.url;
+                    const trackCount = playlistPlatform === 'spotify'
+                      ? playlist.tracks?.total
+                      : playlist.contentDetails?.itemCount;
+                    const isSelected = selectedPlaylistId === playlist.id && selectedPlaylistPlatform === playlistPlatform;
 
-                  return (
-                    <button
-                      key={playlist.id}
-                      type="button"
-                      onClick={() => setSelectedPlaylistId(playlist.id)}
-                      className={`w-full flex items-center gap-3 p-3 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors border border-transparent hover:border-white/10 [data-theme='light']:hover:border-black/10 ${
-                        selectedPlaylistId === playlist.id ? 'bg-white/10 [data-theme=\'light\']:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20' : ''
-                      }`}
-                    >
-                      {playlistImage && (
-                        <img
-                          src={playlistImage}
-                          alt={playlistName}
-                          className="w-12 h-12 rounded object-cover"
-                        />
-                      )}
-                      <div className="flex-1 text-left">
-                        <p className="text-[var(--foreground)] font-medium truncate">{playlistName}</p>
-                        {trackCount !== null && (
-                          <p className="text-sm text-[var(--muted-foreground)]">{trackCount} tracks</p>
+                    return (
+                      <button
+                        key={`${playlistPlatform}-${playlist.id}`}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPlaylistId(playlist.id);
+                          setSelectedPlaylistPlatform(playlistPlatform);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors border border-transparent hover:border-white/10 [data-theme='light']:hover:border-black/10 ${
+                          isSelected ? 'bg-white/10 [data-theme=\'light\']:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20' : ''
+                        }`}
+                      >
+                        {playlistImage && (
+                          <img
+                            src={playlistImage}
+                            alt={playlistName}
+                            className="w-12 h-12 rounded object-cover"
+                          />
                         )}
-                      </div>
-                      {selectedPlaylistId === playlist.id && (
-                        <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="flex-1 text-left">
+                          <div className="flex items-center gap-2">
+                            <p className="text-[var(--foreground)] font-medium truncate">{playlistName}</p>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                              playlistPlatform === 'spotify' 
+                                ? 'bg-green-600/20 text-green-400 border border-green-500/30' 
+                                : 'bg-red-600/20 text-red-400 border border-red-500/30'
+                            }`}>
+                              {playlistPlatform === 'spotify' ? 'Spotify' : 'YouTube'}
+                            </span>
+                          </div>
+                          {trackCount !== null && trackCount !== undefined && (
+                            <p className="text-sm text-[var(--muted-foreground)]">{trackCount} tracks</p>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         </div>
