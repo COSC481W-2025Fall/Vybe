@@ -88,7 +88,6 @@ sprint-*-assignee-breakdown.txt
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-
 # Testing
 coverage/
 *.lcov
@@ -98,6 +97,7 @@ coverage/
 dist/
 
 # Private planning and documentation folders
+issues/
 old-pbi/
 pbi-77/
 pbi-72/

@@ -1,23 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { User, Mail, Calendar, CheckCircle2, XCircle, Music, ExternalLink } from 'lucide-react';
+import {
+  User,
+  Mail,
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Music,
+  ExternalLink,
+} from 'lucide-react';
 import SettingsPageWrapper, { useSettingsContext } from '@/components/SettingsPageWrapper';
 import { profileSchema } from '@/lib/schemas/profileSchema';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
-import { useProfileUpdate, useProfile } from '@/hooks/useProfileUpdate';
+import { useProfile } from '@/hooks/useProfileUpdate';
 
-// Inner component that uses the context (must be inside SettingsPageWrapper)
 function ProfileSettingsContent() {
-  const { setHasUnsavedChanges, setFormSubmitHandler, setFormResetHandler } = useSettingsContext();
-  
-  // Fetch profile data using TanStack Query
-  const { data: profileData, isLoading: loading, error: profileError } = useProfile();
-  
-  // Profile update mutation hook
-  const profileUpdate = useProfileUpdate();
+  const {
+    setHasUnsavedChanges,
+    setFormSubmitHandler,
+    setFormResetHandler,
+  } = useSettingsContext();
+
+  const {
+    data: profileData,
+    isLoading: loading,
+    error: profileError,
+  } = useProfile();
 
   const {
     register,
@@ -32,81 +43,150 @@ function ProfileSettingsContent() {
       display_name: '',
       bio: '',
       profile_picture_url: '',
+      is_public: false, // default private
     },
   });
 
   const displayName = watch('display_name');
   const bio = watch('bio');
 
-  // Update unsaved changes indicator when form is dirty
+  // Track unsaved changes (drives yellow bar + Save button state)
   useEffect(() => {
     setHasUnsavedChanges(isDirty);
   }, [isDirty, setHasUnsavedChanges]);
 
-  // Store original form values for cancel
-  const [originalValues, setOriginalValues] = useState(null);
+  const [initialized, setInitialized] = useState(false);
 
-  // Form submission handler using the mutation hook
+  // Initialize from Supabase profile only
+  useEffect(() => {
+    if (initialized) return;
+    if (!profileData) return; // wait until we actually have data
+
+    const formValues = {
+      display_name: profileData.display_name || '',
+      bio: profileData.bio || '',
+      profile_picture_url: profileData.profile_picture_url || '',
+      is_public: profileData.is_public ?? false,
+    };
+
+    reset(formValues);
+    setInitialized(true);
+  }, [profileData, reset, initialized]);
+
+  // Submit handler: update Supabase users table directly
   const onSubmit = async (data) => {
+    const payload = {
+      display_name: data.display_name || '',
+      bio: data.bio || '',
+      profile_picture_url: data.profile_picture_url || '',
+      is_public: data.is_public ?? false,
+    };
+
     try {
-      // Use the mutation hook to update profile
-      const updatedProfile = await profileUpdate.mutateAsync(data);
-      
-      // Profile data will be updated via cache invalidation
-      // Update form values with response data
-      const formValues = {
-        display_name: updatedProfile.display_name || '',
-        bio: updatedProfile.bio || '',
-        profile_picture_url: updatedProfile.profile_picture_url || '',
-      };
-      
-      reset(formValues);
-      setOriginalValues(formValues);
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        // Log details so we can see what Supabase complained about
+        let errorBody = null;
+        try {
+          errorBody = await res.json();
+        } catch (e) {
+          // ignore parse error
+        }
+
+        console.error(
+          '[Profile] Failed to update profile in Supabase. Status:',
+          res.status,
+          'Body:',
+          errorBody
+        );
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('show-toast', {
+              detail: {
+                type: 'error',
+                message:
+                  (errorBody && errorBody.error) ||
+                  'Failed to save profile. Please try again.',
+              },
+            })
+          );
+        }
+        return;
+      }
+
+      // Success: Supabase is now the truth
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('show-toast', {
+            detail: {
+              type: 'success',
+              message: 'Profile updated successfully!',
+            },
+          })
+        );
+      }
+
+      // keep the form in sync with what we just saved
+      reset(payload);
       setHasUnsavedChanges(false);
     } catch (error) {
-      // Error is handled by the mutation hook (toast notification)
-      // Re-throw to allow form to handle error state if needed
-      throw error;
+      console.error('[Profile] Network/unknown error updating profile:', error);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('show-toast', {
+            detail: {
+              type: 'error',
+              message: 'Unable to reach server. Please try again later.',
+            },
+          })
+        );
+      }
     }
   };
 
-  // Register form submit handler with the wrapper
+  // Hook this page’s submit/reset into the Settings wrapper buttons
   useEffect(() => {
-    const submitFn = () => {
-      return handleSubmit(onSubmit)();
+    if (!initialized) return;
+    if (!setFormSubmitHandler || !setFormResetHandler) return;
+
+    // Wrapper "Save Changes" button will call this
+    setFormSubmitHandler(() => handleSubmit(onSubmit));
+
+    // Wrapper "Cancel" button will call this
+    setFormResetHandler(() => () => {
+      const fromBackend = profileData
+        ? {
+            display_name: profileData.display_name || '',
+            bio: profileData.bio || '',
+            profile_picture_url: profileData.profile_picture_url || '',
+            is_public: profileData.is_public ?? false,
+          }
+        : {
+            display_name: '',
+            bio: '',
+            profile_picture_url: '',
+            is_public: false,
+          };
+
+      reset(fromBackend);
+      setHasUnsavedChanges(false);
+    });
+
+    return () => {
+      setFormSubmitHandler(null);
+      setFormResetHandler(null);
     };
-    setFormSubmitHandler(() => submitFn);
-  }, [handleSubmit, setFormSubmitHandler]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized]);
 
-  // Register form reset handler with the wrapper
-  useEffect(() => {
-    const resetFn = () => {
-      if (originalValues) {
-        reset(originalValues);
-      }
-    };
-    setFormResetHandler(() => resetFn);
-  }, [reset, originalValues, setFormResetHandler]);
-
-  // Update form when profile data loads
-  useEffect(() => {
-    if (profileData) {
-      // Set form values
-      const formValues = {
-        display_name: profileData.display_name || '',
-        bio: profileData.bio || '',
-        profile_picture_url: profileData.profile_picture_url || '',
-      };
-      setValue('display_name', formValues.display_name);
-      setValue('bio', formValues.bio);
-      setValue('profile_picture_url', formValues.profile_picture_url);
-      
-      // Store original values for cancel
-      setOriginalValues(formValues);
-    }
-  }, [profileData, setValue]);
-
-  // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -117,10 +197,11 @@ function ProfileSettingsContent() {
     });
   };
 
-  if (loading) {
+  // Loading state
+  if (!initialized && loading && !profileData) {
     return (
       <>
-        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <User className="h-6 w-6 text-purple-400" />
             <div>
@@ -133,17 +214,18 @@ function ProfileSettingsContent() {
         </div>
         <div className="p-6">
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400" />
           </div>
         </div>
       </>
     );
   }
 
-  if (profileError) {
+  // Error state
+  if (!initialized && profileError && !profileData) {
     return (
       <>
-        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <User className="h-6 w-6 text-purple-400" />
             <div>
@@ -156,7 +238,9 @@ function ProfileSettingsContent() {
         </div>
         <div className="p-6">
           <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
-            <p className="text-red-400">Error loading profile: {profileError.message}</p>
+            <p className="text-red-400">
+              Error loading profile: {profileError.message}
+            </p>
           </div>
         </div>
       </>
@@ -178,10 +262,10 @@ function ProfileSettingsContent() {
         </div>
       </div>
 
-      {/* Section Content */}
+      {/* Content – wrapper's Save button will trigger handleSubmit(onSubmit) */}
       <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 w-full flex-1">
         <div className="space-y-6 w-full">
-          {/* Display Name Input */}
+          {/* Display Name */}
           <div>
             <label htmlFor="display_name" className="block text-sm font-medium text-[var(--foreground)] mb-2">
               Display Name <span className="text-red-400">*</span>
@@ -195,7 +279,7 @@ function ProfileSettingsContent() {
                 'w-full px-4 py-2.5 rounded-lg bg-white/10 [data-theme="light"]:bg-gray-100 border backdrop-blur-[60px]',
                 'text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-base sm:text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
-                'touch-manipulation', // Better mobile touch handling
+                'touch-manipulation',
                 errors.display_name
                   ? 'border-red-500/50'
                   : 'border-white/20 [data-theme="light"]:border-gray-300 focus:border-purple-500/50 [data-theme="light"]:focus:bg-gray-200',
@@ -205,7 +289,9 @@ function ProfileSettingsContent() {
             <div className="mt-1 flex items-center justify-between">
               <div className="text-xs text-[var(--muted-foreground)]">
                 {errors.display_name ? (
-                  <span className="text-red-400">{errors.display_name.message}</span>
+                  <span className="text-red-400">
+                    {errors.display_name.message}
+                  </span>
                 ) : (
                   <span>2-50 characters, letters, numbers, and spaces only</span>
                 )}
@@ -216,7 +302,7 @@ function ProfileSettingsContent() {
             </div>
           </div>
 
-          {/* Bio Textarea */}
+          {/* Bio */}
           <div>
             <label htmlFor="bio" className="block text-sm font-medium text-[var(--foreground)] mb-2">
               Bio
@@ -230,7 +316,7 @@ function ProfileSettingsContent() {
                 'w-full px-4 py-2.5 rounded-lg bg-white/10 [data-theme="light"]:bg-gray-100 border resize-none backdrop-blur-[60px]',
                 'text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-base sm:text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
-                'touch-manipulation', // Better mobile touch handling
+                'touch-manipulation',
                 errors.bio
                   ? 'border-red-500/50'
                   : 'border-white/20 [data-theme="light"]:border-gray-300 focus:border-purple-500/50 [data-theme="light"]:focus:bg-gray-200',
@@ -242,7 +328,9 @@ function ProfileSettingsContent() {
                 {errors.bio ? (
                   <span className="text-red-400">{errors.bio.message}</span>
                 ) : (
-                  <span>Optional. Share a little about yourself with the community.</span>
+                  <span>
+                    Optional. Share a little about yourself with the community.
+                  </span>
                 )}
               </div>
               <div className="text-xs text-[var(--muted-foreground)]">
@@ -251,9 +339,32 @@ function ProfileSettingsContent() {
             </div>
           </div>
 
-          {/* Profile Picture Upload */}
+          {/* Public / Private toggle */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <label className="block text-sm font-medium text-white mb-1">
+                Profile Visibility
+              </label>
+              <p className="text-xs text-gray-400">
+                When public, other users can view your profile.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="is_public"
+                type="checkbox"
+                {...register('is_public')}
+                className="h-4 w-4 rounded border-white/30 bg-transparent"
+              />
+              <label htmlFor="is_public" className="text-sm text-gray-200">
+                Public profile
+              </label>
+            </div>
+          </div>
+
+          {/* Profile Picture */}
           <ProfilePictureUpload
-            currentImageUrl={profileData?.profile_picture_url || null}
+            currentImageUrl={watch('profile_picture_url') || null}
             onImageChange={(url) => {
               setValue('profile_picture_url', url, { shouldDirty: true });
             }}
@@ -265,11 +376,10 @@ function ProfileSettingsContent() {
           {/* Divider */}
           <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
-          {/* Account Information (Read-only) */}
+          {/* Account Info (read-only) */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium text-[var(--foreground)]">Account Information</h3>
 
-            {/* Authentication Provider */}
             <div className="flex items-start gap-3">
               <Music className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -287,7 +397,6 @@ function ProfileSettingsContent() {
               </div>
             </div>
 
-            {/* Email */}
             <div className="flex items-start gap-3">
               <Mail className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -295,15 +404,20 @@ function ProfileSettingsContent() {
                 <div className="flex items-center gap-2">
                   <span className="text-[var(--foreground)]">{profileData?.email || 'N/A'}</span>
                   {profileData?.email_verified ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-400" title="Verified" />
+                    <CheckCircle2
+                      className="h-4 w-4 text-green-400"
+                      title="Verified"
+                    />
                   ) : (
-                    <XCircle className="h-4 w-4 text-yellow-400" title="Not verified" />
+                    <XCircle
+                      className="h-4 w-4 text-yellow-400"
+                      title="Not verified"
+                    />
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Username (if applicable) */}
             {profileData?.username && (
               <div className="flex items-start gap-3">
                 <User className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
@@ -314,7 +428,6 @@ function ProfileSettingsContent() {
               </div>
             )}
 
-            {/* Account Creation Date */}
             <div className="flex items-start gap-3">
               <Calendar className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -339,7 +452,9 @@ function ProfileSettingsContent() {
                   <div className="text-sm font-medium text-[var(--foreground)]">Spotify</div>
                   <div className="text-xs text-[var(--muted-foreground)]">
                     {profileData?.spotify_connected
-                      ? profileData?.spotify_account?.display_name || 'Connected to Spotify'
+                      ? profileData?.spotify_account?.display_name ||
+                        profileData?.spotify_account?.id ||
+                        'Connected'
                       : 'Not connected'}
                   </div>
                 </div>
@@ -366,9 +481,7 @@ function ProfileSettingsContent() {
                 <div>
                   <div className="text-sm font-medium text-[var(--foreground)]">YouTube</div>
                   <div className="text-xs text-[var(--muted-foreground)]">
-                    {profileData?.youtube_connected
-                      ? 'Connected'
-                      : 'Not connected'}
+                    {profileData?.youtube_connected ? 'Connected' : 'Not connected'}
                   </div>
                 </div>
               </div>
@@ -393,7 +506,6 @@ function ProfileSettingsContent() {
   );
 }
 
-// Outer component that wraps content with SettingsPageWrapper
 export default function ProfileSettingsPage() {
   return (
     <SettingsPageWrapper>

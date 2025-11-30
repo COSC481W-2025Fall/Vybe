@@ -67,15 +67,14 @@ export default async function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="chroma-bg">
+      <body className="chroma-bg" suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>
             <Suspense fallback={null}>
               <UrlTokenCleanup />
             </Suspense>
             <div className="vybe-aurora-fixed" />
-            {/* Always render Navbar; it will hide itself on sign-in/landing routes */}
-            <Navbar />
+            {user && <Navbar />}
             <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
               <div className="w-full max-w-6xl">
                 {children}
