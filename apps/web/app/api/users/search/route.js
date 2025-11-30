@@ -71,7 +71,7 @@ export async function GET(request) {
 
         return {
           id: u.id,
-          email: u.email || '',
+          email: '', // Email not included in query for privacy
           name: u.display_name || u.username || 'User',
           username: u.username || '',
           friendship_status: friendship?.status || null
@@ -143,7 +143,7 @@ export async function GET(request) {
 
       return {
         id: u.id,
-        email: u.email || '',
+        email: '', // Email not included in query for privacy
         name: u.display_name || u.username || 'User',
         username: u.username || '',
         friendship_status: friendship?.status || null

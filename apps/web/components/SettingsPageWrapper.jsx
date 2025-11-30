@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext } from 'react';
-import { usePathname } from 'next/navigation';
+import { useState, useEffect, createContext, useContext, useMemo } from 'react';
 import { User, Shield, Settings as SettingsIcon, Save, AlertCircle } from 'lucide-react';
 import SettingsNav from '@/components/SettingsNav';
 import SettingsConflictDialog from '@/components/SettingsConflictDialog';
@@ -39,7 +38,6 @@ const SETTINGS_SECTIONS = [
 ];
 
 export default function SettingsPageWrapper({ children }) {
-  const pathname = usePathname();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formSubmitHandler, setFormSubmitHandler] = useState(null);
@@ -67,12 +65,14 @@ export default function SettingsPageWrapper({ children }) {
       });
     };
 
-    window.addEventListener('settings-conflict-detected', handleConflictDetected);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('settings-conflict-detected', handleConflictDetected);
+    }
 
     // Also check store for pending conflicts
     if (conflicts) {
       Object.entries(conflicts).forEach(([type, conflict]) => {
-        if (conflict && conflict.needsResolution && !conflictDialog.isOpen) {
+        if (conflict?.needsResolution && !conflictDialog.isOpen) {
           setConflictDialog({
             isOpen: true,
             type,
@@ -84,7 +84,9 @@ export default function SettingsPageWrapper({ children }) {
     }
 
     return () => {
-      window.removeEventListener('settings-conflict-detected', handleConflictDetected);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('settings-conflict-detected', handleConflictDetected);
+      }
     };
   }, [conflicts, conflictDialog.isOpen]);
 
@@ -164,14 +166,28 @@ export default function SettingsPageWrapper({ children }) {
     setHasUnsavedChanges(false);
   };
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      hasUnsavedChanges,
+      setHasUnsavedChanges,
+      isSaving,
+      handleSaveChanges,
+      handleCancel,
+      setFormSubmitHandler,
+      setFormResetHandler,
+    }),
+    [hasUnsavedChanges, isSaving, handleSaveChanges, handleCancel, setFormSubmitHandler, setFormResetHandler]
+  );
+
   return (
-    <SettingsContext.Provider value={{ hasUnsavedChanges, setHasUnsavedChanges, isSaving, handleSaveChanges, handleCancel, setFormSubmitHandler, setFormResetHandler }}>
+    <SettingsContext.Provider value={contextValue}>
       <div className="min-h-screen w-full">
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         {/* Mobile Navigation - Hamburger Menu */}
         <div className="lg:hidden mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-white">Settings</h1>
+          <h1 className="text-xl font-semibold text-[var(--foreground)]">Settings</h1>
           <SettingsNav
             sections={SETTINGS_SECTIONS}
             variant="mobile"

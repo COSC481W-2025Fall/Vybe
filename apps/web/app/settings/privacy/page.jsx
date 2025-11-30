@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Shield, Info, Globe, Users, Lock, Eye, EyeOff, Search, Rss } from 'lucide-react';
+import { Shield, Info } from 'lucide-react';
 import SettingsPageWrapper, { useSettingsContext } from '@/components/SettingsPageWrapper';
 import { PrivacyToggle, PrivacyRadioGroup } from '@/components/PrivacyToggle';
 import { privacySchema, getDefaultPrivacySettings } from '@/lib/schemas/privacySchema';
@@ -22,7 +22,7 @@ function PrivacySettingsContent() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty },
+    formState: { isDirty },
     setValue,
     watch,
     reset,
@@ -99,6 +99,7 @@ function PrivacySettingsContent() {
     } catch (error) {
       // Error is handled by the mutation hook (toast notification)
       // Re-throw to allow form to handle error state if needed
+      console.error('Error submitting privacy settings:', error);
       throw error;
     }
   };
