@@ -214,7 +214,20 @@ export default function LibraryView() {
             throw new Error(errorMessage);
           }
           const me = await res.json();
-          setUserInfo(me);
+          
+          // Spotify can return display_name as null or the user ID if no display name is set
+          // Check if display_name looks like an ID (all alphanumeric, no spaces, typical Spotify ID pattern)
+          const isLikelyId = me.display_name && /^[a-zA-Z0-9]{22,}$/.test(me.display_name) && !/\s/.test(me.display_name);
+          
+          // Use a better fallback if display_name is null or looks like an ID
+          const displayName = me.display_name && !isLikelyId 
+            ? me.display_name 
+            : user.email?.split('@')[0] || 'Spotify User';
+          
+          setUserInfo({
+            ...me,
+            display_name: displayName
+          });
         } else if (finalProvider === 'google') {
           console.log('[LibraryView] Setting up Google profile...');
           console.log('[LibraryView] Google user metadata:', user.user_metadata);

@@ -75,8 +75,16 @@ export async function GET() {
         });
         if (spotifyRes.ok) {
           const spotifyData = await spotifyRes.json();
+          
+          // Spotify can return display_name as null or the user ID if no display name is set
+          // Check if display_name looks like an ID (all alphanumeric, no spaces, typical Spotify ID pattern)
+          const isLikelyId = spotifyData.display_name && /^[a-zA-Z0-9]{22,}$/.test(spotifyData.display_name) && !/\s/.test(spotifyData.display_name);
+          
+          // Use null if display_name is missing or looks like an ID (we'll show a fallback in the UI)
+          const displayName = spotifyData.display_name && !isLikelyId ? spotifyData.display_name : null;
+          
           spotifyAccountInfo = {
-            display_name: spotifyData.display_name || null,
+            display_name: displayName,
             id: spotifyData.id || null,
           };
         }
