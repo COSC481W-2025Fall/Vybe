@@ -170,12 +170,12 @@ function PrivacySettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <Shield className="h-6 w-6 text-purple-400" />
           <div>
-            <h2 className="text-xl font-semibold text-white">Privacy</h2>
-            <p className="text-sm text-gray-400 mt-0.5">
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">Privacy</h2>
+            <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
               Control who can see your activity and playlists
             </p>
           </div>

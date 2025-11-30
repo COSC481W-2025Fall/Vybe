@@ -15,39 +15,22 @@ yarn-error.log*
 
 # env
 .env*
-<<<<<<< HEAD
-=======
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
->>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
 
 # misc
 .DS_Store
 .vercel/
 *.tsbuildinfo
-<<<<<<< HEAD
-# test files
-clean.txt
-bad.txt
-secret.txt
-=======
 Thumbs.db
 Desktop.ini
->>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
 
 # test files
 clean.txt
 bad.txt
 secret.txt
-<<<<<<< HEAD
-playwright-report/
-
-.cursorignore
-sprint-1-assignee-breakdown.txt
-get-issues.ps1
-=======
 
 # Python
 venv/
@@ -64,8 +47,6 @@ __pycache__/
 .coverage
 htmlcov/
 .mypy_cache/
-.pytest_cache/
-.coverage
 backend/htmlcov/
 backend/coverage.xml
 
@@ -102,13 +83,11 @@ sprint-*-assignee-breakdown.txt
 .settings/
 
 # OS
-.DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db
 
 # Testing
 coverage/
@@ -117,7 +96,6 @@ coverage/
 
 # Build outputs
 dist/
-*.tsbuildinfo
 
 # Private planning and documentation folders
 old-pbi/
@@ -128,4 +106,3 @@ memory-bank/
 
 # Issues folder
 issues/
->>>>>>> 2cf79ae775545c31935108f06979a795fe08bdad
