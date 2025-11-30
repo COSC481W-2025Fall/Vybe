@@ -2,6 +2,35 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getValidAccessToken } from '@/lib/youtube';
+
+// Get app-level Spotify access token (client credentials flow)
+async function getSpotifyAppToken() {
+  const clientId = process.env.SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Spotify credentials not configured');
+  }
+
+  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${basic}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to get Spotify app token');
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
 
 /**
  * GET /api/communities/[id]/playlist-songs
@@ -127,15 +156,35 @@ async function fetchSpotifyPlaylistSongs(playlistUrl, userId, supabase) {
     throw new Error('Invalid Spotify playlist URL');
   }
 
-  // Get Spotify access token
-  const { data: tokenData } = await supabase
-    .from('spotify_tokens')
-    .select('access_token')
-    .eq('user_id', userId)
-    .single();
+  // Try to get access token - prefer app-level token for public playlists
+  let accessToken = null;
+  let useAppToken = true;
 
-  if (!tokenData?.access_token) {
-    throw new Error('Spotify not connected. Please connect your Spotify account.');
+  try {
+    // First, try app-level token (works for public playlists, available to all users)
+    accessToken = await getSpotifyAppToken();
+  } catch (appTokenError) {
+    console.log('[fetchSpotifyPlaylistSongs] App token failed, trying user token:', appTokenError.message);
+    useAppToken = false;
+    
+    // Fallback to user token if available (needed for private playlists)
+    const { data: tokenData } = await supabase
+      .from('spotify_tokens')
+      .select('access_token')
+      .eq('user_id', userId)
+      .single();
+
+    if (tokenData?.access_token) {
+      accessToken = tokenData.access_token;
+    } else {
+      // If no user token, try app token one more time as last resort
+      try {
+        accessToken = await getSpotifyAppToken();
+        useAppToken = true;
+      } catch (e) {
+        throw new Error('Unable to access Spotify playlist. Public playlists should be accessible to all users.');
+      }
+    }
   }
 
   // Fetch playlist tracks
@@ -145,11 +194,29 @@ async function fetchSpotifyPlaylistSongs(playlistUrl, userId, supabase) {
   while (nextUrl) {
     const response = await fetch(nextUrl, {
       headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
     if (!response.ok) {
+      // If app token failed and we have a user token, try with user token
+      if (useAppToken && response.status === 403) {
+        const { data: tokenData } = await supabase
+          .from('spotify_tokens')
+          .select('access_token')
+          .eq('user_id', userId)
+          .single();
+
+        if (tokenData?.access_token) {
+          accessToken = tokenData.access_token;
+          useAppToken = false;
+          // Retry with user token
+          continue;
+        }
+      }
+      
+      const errorText = await response.text();
+      console.error('[fetchSpotifyPlaylistSongs] Failed to fetch playlist tracks:', response.status, errorText);
       throw new Error('Failed to fetch Spotify playlist tracks');
     }
 
@@ -182,15 +249,17 @@ async function fetchYouTubePlaylistSongs(playlistUrl, userId, supabase) {
     throw new Error('Invalid YouTube playlist URL');
   }
 
-  // Get YouTube access token
-  const { data: tokenData } = await supabase
-    .from('youtube_tokens')
-    .select('access_token')
-    .eq('user_id', userId)
-    .single();
+  // Try to use API key first (works for public playlists, available to all users)
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  let useApiKey = !!apiKey;
+  let userAccessToken = null;
 
-  if (!tokenData?.access_token) {
-    throw new Error('YouTube not connected. Please connect your YouTube account.');
+  // Try to get user token as fallback (for private playlists)
+  try {
+    userAccessToken = await getValidAccessToken(supabase, userId);
+  } catch (e) {
+    // User token not available - that's okay, we'll use API key
+    console.log('[fetchYouTubePlaylistSongs] User token not available, using API key only');
   }
 
   // Fetch playlist items
@@ -198,15 +267,32 @@ async function fetchYouTubePlaylistSongs(playlistUrl, userId, supabase) {
   let nextPageToken = null;
 
   do {
-    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${playlistId}&maxResults=50${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`;
+    let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${playlistId}&maxResults=50${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`;
     
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-      },
-    });
+    let headers = {};
+    
+    if (useApiKey && apiKey) {
+      // Use API key for public playlists
+      url += `&key=${apiKey}`;
+    } else if (userAccessToken) {
+      // Fallback to user token if API key not available or failed
+      headers.Authorization = `Bearer ${userAccessToken}`;
+    } else {
+      throw new Error('Unable to access YouTube playlist. Public playlists should be accessible to all users.');
+    }
+    
+    const response = await fetch(url, { headers });
 
     if (!response.ok) {
+      // If API key failed (might be private playlist), try user token
+      if (useApiKey && response.status === 403 && userAccessToken) {
+        useApiKey = false;
+        // Retry this request with user token
+        continue;
+      }
+      
+      const errorText = await response.text();
+      console.error('[fetchYouTubePlaylistSongs] Failed to fetch playlist items:', response.status, errorText);
       throw new Error('Failed to fetch YouTube playlist items');
     }
 
