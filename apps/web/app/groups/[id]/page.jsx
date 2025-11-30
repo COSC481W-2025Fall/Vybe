@@ -933,7 +933,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
         {userExistingPlaylist && (
           <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded text-yellow-400 text-sm">
-            <p className="font-semibold mb-1">⚠️ You already have a playlist in this group</p>
+            <p className="font-semibold mb-1">Warning: You already have a playlist in this group</p>
             <p>
               Your current playlist "<strong>{userExistingPlaylist.name}</strong>" ({userExistingPlaylist.platform})
               will be removed and replaced with your new selection.

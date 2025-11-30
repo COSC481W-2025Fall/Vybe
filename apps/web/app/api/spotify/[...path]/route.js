@@ -8,7 +8,7 @@ const BASE = 'https://api.spotify.com';
 export const dynamic = 'force-dynamic'; // avoid caching during dev
 
 async function makeSupabase() {
-  // ✅ Next 15+: await cookies() and pass a *function* that returns the store
+  // Next 15+: await cookies() and pass a *function* that returns the store
   const cookieStore = await cookies();
   return createRouteHandlerClient({ cookies: () => cookieStore });
 }

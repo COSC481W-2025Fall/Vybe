@@ -73,7 +73,7 @@ export async function GET(request) {
       expiresIn = supabaseExpiresIn;
       scope = supabaseScope;
     } else {
-      console.warn('[callback] ⚠️ No provider tokens found in Supabase session');
+      console.warn('[callback] No provider tokens found in Supabase session');
     }
 
     console.log('[callback] has provider_token:', !!accessToken);
@@ -133,9 +133,9 @@ export async function GET(request) {
           .upsert(tokenPayload, { onConflict: 'user_id' });
 
         if (tokenError) {
-          console.error('[callback] ❌ Failed to save Spotify tokens:', tokenError.code, tokenError.message);
+          console.error('[callback] Failed to save Spotify tokens:', tokenError.code, tokenError.message);
         } else {
-          console.log('[callback] ✅ Spotify tokens saved successfully');
+          console.log('[callback] Spotify tokens saved successfully');
         }
       } else if (provider === 'google' && accessToken && refreshToken) {
         console.log('[callback] Storing Google tokens:', {

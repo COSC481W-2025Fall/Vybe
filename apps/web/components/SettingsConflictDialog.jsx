@@ -187,14 +187,14 @@ export default function SettingsConflictDialog({
               {dataLossAnalysis.local.willLoseData && (
                 <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
                   <p className="text-xs text-red-300">
-                    ⚠️ Keeping remote version will lose {dataLossAnalysis.local.lostFieldsCount} local change{dataLossAnalysis.local.lostFieldsCount > 1 ? 's' : ''}
+                    Warning: Keeping remote version will lose {dataLossAnalysis.local.lostFieldsCount} local change{dataLossAnalysis.local.lostFieldsCount > 1 ? 's' : ''}
                   </p>
                 </div>
               )}
               {dataLossAnalysis.remote.willLoseData && (
                 <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
                   <p className="text-xs text-red-300">
-                    ⚠️ Keeping local version will lose {dataLossAnalysis.remote.lostFieldsCount} remote change{dataLossAnalysis.remote.lostFieldsCount > 1 ? 's' : ''}
+                    Warning: Keeping local version will lose {dataLossAnalysis.remote.lostFieldsCount} remote change{dataLossAnalysis.remote.lostFieldsCount > 1 ? 's' : ''}
                   </p>
                 </div>
               )}

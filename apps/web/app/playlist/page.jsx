@@ -10,7 +10,7 @@ export default function PlaylistPage() {
         </header>
         <div className="glass-card rounded-xl sm:rounded-2xl p-8 sm:p-12 text-center text-[var(--foreground)]">
           <div className="mx-auto h-32 w-32 rounded-full bg-white/5 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 flex items-center justify-center">
-            <span className="text-lg text-[var(--muted-foreground)]">🎵</span>
+            <span className="text-lg text-[var(--muted-foreground)]">♪</span>
           </div>
         </div>
       </div>

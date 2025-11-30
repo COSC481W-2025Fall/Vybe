@@ -144,7 +144,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to send friend request', details: friendshipError }, { status: 500 });
     }
 
-    console.log('✅ Friend request created successfully in database:', {
+    console.log('Friend request created successfully in database:', {
       id: friendship.id,
       user_id: friendship.user_id,
       friend_id: friendship.friend_id,
@@ -158,7 +158,7 @@ export async function POST(request) {
       .eq('id', friendship.id)
       .single();
 
-    console.log('🔍 Verified in database:', verify ? 'EXISTS' : 'NOT FOUND');
+    console.log('Verified in database:', verify ? 'EXISTS' : 'NOT FOUND');
 
     return NextResponse.json({
       success: true,
