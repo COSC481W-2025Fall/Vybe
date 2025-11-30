@@ -57,7 +57,8 @@ async function fetchPrivacySettings(supabase, userId, forceRefresh = false) {
       .eq('user_id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
+    // Handle missing table or no record - return defaults
+    if (error && error.code !== 'PGRST116' && error.code !== '42P01' && error.code !== 'PGRST205') {
       console.error('[privacy/enforcer] Error fetching privacy settings:', error);
       return null;
     }

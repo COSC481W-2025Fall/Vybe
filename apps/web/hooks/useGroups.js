@@ -85,8 +85,12 @@ export function useGroups() {
         throw new Error('Not authenticated');
       }
 
-      // Generate join code
-      const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      // Generate join code (6 characters)
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed similar looking chars (I, O, 0, 1)
+      let joinCode = '';
+      for (let i = 0; i < 6; i++) {
+        joinCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
 
       const { data, error } = await supabase
         .from('groups')

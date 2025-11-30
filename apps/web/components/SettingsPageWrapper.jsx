@@ -196,13 +196,13 @@ export default function SettingsPageWrapper({ children }) {
               </div>
 
               {/* Action Buttons - Always visible at bottom */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mt-6 pt-4 sm:pt-6 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-white/10 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mt-6 pt-4 sm:pt-6 px-4 sm:px-6 pb-4 sm:pb-6 border-t border-white/10 [data-theme='light']:border-black/10 flex-shrink-0">
                 <button
                   onClick={handleCancel}
                   disabled={!hasUnsavedChanges}
                   className={[
                     'px-4 py-2.5 rounded-lg text-sm font-medium transition-all',
-                    'border border-white/20 text-gray-400 hover:bg-white/5 hover:text-white',
+                    'border border-white/20 [data-theme="light"]:border-black/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 hover:text-[var(--foreground)]',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
                     'w-full sm:w-auto'
                   ].join(' ')}
@@ -219,7 +219,7 @@ export default function SettingsPageWrapper({ children }) {
                       'flex items-center justify-center gap-2 min-w-[140px] w-full sm:w-auto',
                       hasUnsavedChanges && !isSaving
                         ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 cursor-pointer shadow-lg shadow-purple-500/20'
-                        : 'bg-white/10 text-gray-300 border border-white/20 cursor-not-allowed',
+                        : 'bg-white/10 [data-theme="light"]:bg-black/5 text-[var(--muted-foreground)] border border-white/20 [data-theme="light"]:border-black/20 cursor-not-allowed',
                     ].join(' ')}
                   >
                     {isSaving ? (
@@ -234,7 +234,7 @@ export default function SettingsPageWrapper({ children }) {
                       </>
                     )}
                   </button>
-                  <p className="text-xs text-gray-500 text-center sm:text-right hidden sm:block">
+                  <p className="text-xs text-[var(--muted-foreground)] text-center sm:text-right hidden sm:block">
                     {hasUnsavedChanges ? 'Click to save your settings' : 'No changes to save'}
                   </p>
                 </div>

@@ -17,10 +17,10 @@ export function TextField({
 }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="text-white">
+      <Label htmlFor={id} className="text-[var(--foreground)]">
         {label}{required && <span className="text-red-400 ml-1">*</span>}
       </Label>
-      {description && <p className="text-sm text-gray-400">{description}</p>}
+      {description && <p className="text-sm text-[var(--muted-foreground)]">{description}</p>}
       <Input
         id={id}
         type={type}
@@ -46,16 +46,16 @@ export function TextareaField({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label htmlFor={id} className="text-white">
+        <Label htmlFor={id} className="text-[var(--foreground)]">
           {label}{required && <span className="text-red-400 ml-1">*</span>}
         </Label>
         {maxLength && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-[var(--muted-foreground)]">
             {value.length}/{maxLength}
           </span>
         )}
       </div>
-      {description && <p className="text-sm text-gray-400">{description}</p>}
+      {description && <p className="text-sm text-[var(--muted-foreground)]">{description}</p>}
       <Textarea
         id={id}
         value={value}
@@ -78,9 +78,9 @@ export function SwitchField({
   return (
     <div className="flex items-center justify-between">
       <div className="space-y-0.5 flex-1">
-        <Label htmlFor={id} className="text-white">{label}</Label>
+        <Label htmlFor={id} className="text-[var(--foreground)]">{label}</Label>
         {description && (
-          <p className="text-sm text-gray-400">{description}</p>
+          <p className="text-sm text-[var(--muted-foreground)]">{description}</p>
         )}
       </div>
       <Switch

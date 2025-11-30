@@ -130,7 +130,7 @@ export default function SettingsNav({
             'touch-manipulation min-h-[48px]', // Better touch target for mobile
             isActive
               ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 shadow-lg'
-              : 'text-gray-400 hover:bg-white/10 active:bg-white/15 hover:text-white border border-transparent',
+              : 'text-[var(--muted-foreground)] hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 hover:text-[var(--foreground)] border border-transparent',
           ].join(' ')}
           aria-current={isActive ? 'page' : undefined}
           aria-label={`${section.label} settings`}
@@ -146,12 +146,12 @@ export default function SettingsNav({
             <div
               className={[
                 'text-sm font-medium transition-colors',
-                isActive ? 'text-white' : 'text-gray-300',
+                isActive ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]',
               ].join(' ')}
             >
               {section.label}
             </div>
-            <div className="text-xs text-gray-500 mt-0.5 transition-colors">
+            <div className="text-xs text-[var(--muted-foreground)] opacity-70 mt-0.5 transition-colors">
               {section.description}
             </div>
           </div>
@@ -178,7 +178,7 @@ export default function SettingsNav({
         {/* Hamburger Menu Button */}
         <button
           onClick={handleToggleMenu}
-          className="lg:hidden rounded-lg p-2.5 text-gray-400 hover:bg-white/10 hover:text-white active:bg-white/15 transition-all touch-manipulation"
+          className="lg:hidden rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition touch-manipulation"
           aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={isMobileMenuOpen}
           aria-controls="mobile-settings-menu"
@@ -202,17 +202,17 @@ export default function SettingsNav({
             <div 
               ref={menuRef}
               id="mobile-settings-menu"
-              className="fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-[#0f0f0f] border-l border-white/10 overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-300"
+              className="fixed inset-y-0 left-0 w-80 max-w-[85vw] glass-card border-r border-white/10 [data-theme='light']:border-black/10 overflow-y-auto"
             >
               <div className="p-5">
                 {/* Menu Header */}
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-                  <h2 id="mobile-menu-title" className="text-xl font-semibold text-white">
-                    Settings
+                <div className="flex items-center justify-between mb-6">
+                  <h2 id="mobile-menu-title" className="text-lg font-semibold text-[var(--foreground)]">
+                    Settings Menu
                   </h2>
                   <button
                     onClick={handleToggleMenu}
-                    className="rounded-lg p-2.5 text-gray-400 hover:bg-white/10 hover:text-white active:bg-white/15 transition-all touch-manipulation focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    className="rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition focus:outline-none focus:ring-2 focus:ring-purple-500/50 touch-manipulation"
                     aria-label="Close menu"
                   >
                     <X className="h-5 w-5" aria-hidden="true" />

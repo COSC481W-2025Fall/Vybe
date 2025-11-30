@@ -40,7 +40,7 @@ export async function middleware(req) {
     return NextResponse.redirect(url)
   }
 
-  // If authenticated and visiting '/sign-in' → bounce to next or dashboard
+  // If authenticated and visiting '/sign-in' → bounce to next or home page
   if (pathname === '/sign-in') {
     const url = req.nextUrl.clone()
     const nextParam = req.nextUrl.searchParams.get('next')
@@ -50,7 +50,7 @@ export async function middleware(req) {
       url.pathname = dest.pathname
       url.search = dest.search
     } else {
-      url.pathname = '/dashboard' // Redirect to dashboard
+      url.pathname = '/' // Redirect to home instead of library
       url.search = ''
     }
     return NextResponse.redirect(url)

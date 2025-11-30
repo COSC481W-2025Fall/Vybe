@@ -73,9 +73,9 @@ function AccountSettingsContent() {
           },
         }));
         
-        // Redirect to dashboard after a short delay
+        // Redirect to home after a short delay
         setTimeout(() => {
-          window.location.href = '/dashboard';
+          window.location.href = '/';
         }, 2000);
       }
     } catch (error) {
@@ -95,12 +95,12 @@ function AccountSettingsContent() {
   if (loading) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <SettingsIcon className="h-6 w-6 text-purple-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">Account</h2>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Account</h2>
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
                 Account settings and data management
               </p>
             </div>
@@ -118,7 +118,7 @@ function AccountSettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <SettingsIcon className="h-6 w-6 text-purple-400" />
           <div>
@@ -134,13 +134,13 @@ function AccountSettingsContent() {
       <div className="p-4 sm:p-6 w-full space-y-6 sm:space-y-8">
         {/* Account Information Section */}
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-white">Account Information</h3>
+          <h3 className="text-lg font-medium text-[var(--foreground)]">Account Information</h3>
           
-          <div className="rounded-lg border border-white/10 bg-white/5 p-6 space-y-4">
+          <div className="rounded-lg border border-white/10 [data-theme='light']:border-black/20 bg-white/10 [data-theme='light']:bg-black/10 p-6 space-y-4">
             <div className="flex items-start gap-3">
               <Info className="h-5 w-5 text-blue-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm text-gray-300 mb-3">
+                <p className="text-sm text-[var(--muted-foreground)] mb-3">
                   Manage your account settings, export your data, or permanently delete your account.
                 </p>
                 
@@ -243,7 +243,7 @@ function AccountSettingsContent() {
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-400" />
-            <h3 className="text-lg font-medium text-white">Danger Zone</h3>
+            <h3 className="text-lg font-medium text-[var(--foreground)]">Danger Zone</h3>
           </div>
 
           <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-6 space-y-4">
@@ -254,11 +254,11 @@ function AccountSettingsContent() {
                   <h4 className="text-base font-semibold text-red-300 mb-2">
                     Delete Your Account
                   </h4>
-                  <p className="text-sm text-gray-300 mb-4">
+                  <p className="text-sm text-[var(--muted-foreground)] mb-4">
                     This action cannot be undone. Deleting your account will permanently remove:
                   </p>
                   
-                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-400 mb-4 ml-4">
+                  <ul className="list-disc list-inside space-y-1 text-sm text-[var(--muted-foreground)] mb-4 ml-4">
                     <li>Your profile and all associated data</li>
                     <li>All playlists you&apos;ve created</li>
                     <li>Your listening history and activity</li>

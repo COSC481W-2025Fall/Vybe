@@ -50,10 +50,11 @@ export async function GET() {
     if (privacyError) {
       // PGRST116 = no rows returned (table exists but no record)
       // 42P01 = relation does not exist (table doesn't exist)
+      // PGRST205 = table not found in schema cache (table doesn't exist)
       // P0001 = other errors
-      if (privacyError.code === 'PGRST116' || privacyError.code === '42P01') {
+      if (privacyError.code === 'PGRST116' || privacyError.code === '42P01' || privacyError.code === 'PGRST205') {
         // Table doesn't exist yet or no record exists - return defaults
-        console.log('[privacy API] No privacy settings found, returning defaults');
+        // Don't log as error - this is expected if migrations haven't run
         const defaults = getDefaultPrivacySettings();
         return NextResponse.json(defaults);
       }

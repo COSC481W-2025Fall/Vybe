@@ -31,10 +31,11 @@ export async function GET(request) {
     let scope = null;
 
     // Now exchange the code with Supabase to create the session
-    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession();
 
     if (exchangeError) {
-      console.error('[callback] ❌ Supabase exchange failed:', exchangeError.message);
+      console.error('[callback] Error exchanging code for session:', exchangeError);
+      console.error('[callback] Error details:', JSON.stringify(exchangeError, null, 2));
       const errorUrl = new URL('/sign-in', request.url);
       errorUrl.searchParams.set('error', 'auth_failed');
       errorUrl.searchParams.set('message', exchangeError.message || 'Failed to authenticate');
@@ -46,12 +47,18 @@ export async function GET(request) {
     const session = sessionData?.session || (await supabase.auth.getSession()).data?.session;
     
     if (!session || !session.user) {
-      console.error('[callback] ❌ No session after exchange');
+      console.error('[callback] No session found after exchangeCodeForSession');
+      console.error('[callback] sessionData:', sessionData);
       const errorUrl = new URL('/sign-in', request.url);
       errorUrl.searchParams.set('error', 'no_session');
       errorUrl.searchParams.set('message', 'Failed to create session. Please try again.');
       return NextResponse.redirect(errorUrl);
     }
+
+    console.log('[callback] session user:', session?.user?.id);
+    console.log('[callback] provider:', session?.user?.app_metadata?.provider);
+    console.log('[callback] exchangeCodeForSession has session:', !!sessionData?.session);
+    console.log('[callback] exchangeCodeForSession provider_token:', !!sessionData?.session?.provider_token);
 
     // Get tokens from Supabase session (Supabase handles the OAuth exchange with PKCE)
     const supabaseAccessToken = sessionData?.session?.provider_token || session?.provider_token || null;
@@ -68,12 +75,18 @@ export async function GET(request) {
       console.warn('[callback] ⚠️ No provider tokens found in Supabase session');
     }
 
+    console.log('[callback] has provider_token:', !!accessToken);
+    console.log('[callback] has provider_refresh_token:', !!refreshToken);
+
     if (session?.user) {
       const userId = session.user.id;
 
       // Use the provider parameter from the URL (set by the login button that was clicked)
       // This is the most reliable way to know which provider the user intended to use
       const provider = intendedProvider || session.user?.app_metadata?.provider || null;
+
+      console.log('[callback] Intended provider from button click:', intendedProvider);
+      console.log('[callback] Using provider:', provider);
 
       // Extract profile picture from OAuth user metadata
       const avatarUrl = session.user?.user_metadata?.avatar_url ||
@@ -99,6 +112,8 @@ export async function GET(request) {
 
       if (updateError) {
         console.error('[callback] Error updating user:', updateError.message);
+      } else {
+        console.log('[callback] Successfully updated last_used_provider to:', provider);
       }
 
       // Store OAuth tokens in appropriate table based on provider
@@ -122,6 +137,14 @@ export async function GET(request) {
           console.log('[callback] ✅ Spotify tokens saved successfully');
         }
       } else if (provider === 'google' && accessToken && refreshToken) {
+        console.log('[callback] Storing Google tokens:', {
+          userId,
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          expiresIn,
+          scope
+        });
+
         const { error: tokenError } = await supabase.from('youtube_tokens').upsert({
           user_id: userId,
           access_token: accessToken,
@@ -133,12 +156,16 @@ export async function GET(request) {
 
         if (tokenError) {
           console.error('[callback] Error storing YouTube tokens:', tokenError.message);
+        } else {
+          console.log('[callback] Successfully stored YouTube tokens');
         }
       }
 
       // Add provider to redirect URL so the library knows which service to use
       if (provider) {
         const nextUrl = new URL(next, request.url);
+
+        // Always add the 'from' parameter to track which provider they logged in with
         nextUrl.searchParams.set('from', provider);
 
         // Security: Ensure no sensitive tokens are in the redirect URL
@@ -146,12 +173,14 @@ export async function GET(request) {
           nextUrl.searchParams.delete(param);
         }
 
+        console.log('[callback] Redirecting to:', nextUrl.toString());
         return NextResponse.redirect(nextUrl);
       }
     }
   }
 
   // Fallback redirect without provider parameter
+  console.log('[callback] No provider found, redirecting to:', next);
   const fallbackUrl = new URL(next, request.url);
   for (const param of sensitiveParams) {
     fallbackUrl.searchParams.delete(param);
