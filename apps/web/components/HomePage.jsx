@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Plus, TrendingUp, ChevronRight, Music, AlertCircle, ExternalLink } from "lucide-react";
+import { Users, Plus, TrendingUp, ChevronRight, Music, AlertCircle, ExternalLink, Youtube } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "./ui/dialog";
 import { useGroups } from "../hooks/useGroups";
 import { useSocial } from "../hooks/useSocial";
@@ -15,6 +15,8 @@ import { SongDetailsDialog } from "./shared/SongDetailsDialog";
 import { CommunitiesDialog } from "./shared/CommunitiesDialog";
 import { ShareSongDialog } from "./shared/ShareSongDialog";
 import { toast } from "sonner";
+import ExportPlaylistButton from "./ExportPlaylistButton";
+import { supabaseBrowser } from "@/lib/supabase/client";
 /**
  * HomePage component - Main dashboard view for authenticated users
  * Displays groups, friends' songs, and music communities (tehe)
@@ -41,6 +43,7 @@ export function HomePage({ onNavigate } = {}) {
   const [songDialogOpen, setSongDialogOpen] = useState(false);
   const [communitySongs, setCommunitySongs] = useState([]);
   const [loadingSongs, setLoadingSongs] = useState(false);
+  const [hasYouTube, setHasYouTube] = useState(false);
 
   // Admin access easter egg
   const [adminClickCount, setAdminClickCount] = useState(0);
@@ -77,6 +80,19 @@ export function HomePage({ onNavigate } = {}) {
         clearTimeout(adminClickTimeoutRef.current);
       }
     };
+  }, []);
+
+  // Check if user has YouTube/Google connected
+  useEffect(() => {
+    const checkYouTubeConnection = async () => {
+      const supabase = supabaseBrowser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.identities) {
+        const hasGoogle = user.identities.some(id => id.provider === 'google');
+        setHasYouTube(hasGoogle);
+      }
+    };
+    checkYouTubeConnection();
   }, []);
 
   const handleCreateGroup = async (e) => {
@@ -410,10 +426,21 @@ export function HomePage({ onNavigate } = {}) {
       <Dialog open={communityDetailDialog.isOpen} onOpenChange={communityDetailDialog.setIsOpen}>
         <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:max-w-4xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-4 sm:p-6">
           <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl sm:text-2xl">{selectedCommunity?.name || 'Community'}</DialogTitle>
-            <DialogDescription className="text-sm sm:text-base mt-2">
-              {selectedCommunity?.description || 'Music community'}
-            </DialogDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-xl sm:text-2xl">{selectedCommunity?.name || 'Community'}</DialogTitle>
+                <DialogDescription className="text-sm sm:text-base mt-2">
+                  {selectedCommunity?.description || 'Music community'}
+                </DialogDescription>
+              </div>
+              {hasYouTube && selectedCommunity && (
+                <ExportPlaylistButton
+                  sourceType="community"
+                  sourceId={selectedCommunity.id}
+                  defaultName={selectedCommunity.name}
+                />
+              )}
+            </div>
           </DialogHeader>
           
           <div className="space-y-4 sm:space-y-6 flex-1 overflow-y-auto modal-scroll pr-2">

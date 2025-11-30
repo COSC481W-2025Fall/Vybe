@@ -3,11 +3,10 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Users, Heart, MoreVertical, Plus, Youtube, Sparkles, Loader2 } from 'lucide-react';
+import { Users, Heart, MoreVertical, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import ExportPlaylistButton from '@/components/ExportPlaylistButton';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
@@ -25,61 +24,7 @@ export default function GroupDetailPage({ params }) {
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [hasYouTube, setHasYouTube] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [customPlaylistName, setCustomPlaylistName] = useState('');
   const [isSorting, setIsSorting] = useState(false);
-
-  // Export to YouTube mutation
-  const exportToYouTubeMutation = useMutation({
-    mutationFn: async ({ playlistId, groupId, customName }) => {
-      const response = await fetch('/api/export/youtube', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          playlistId,
-          groupId,
-          customName: customName || undefined,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to export playlist to YouTube');
-      }
-
-      return data;
-    },
-    onSuccess: (data) => {
-      const { youtubePlaylistUrl, playlistTitle, songsAdded, songsFailed, totalSongs } = data;
-      
-      // Close dialog on success
-      setShowExportDialog(false);
-      setCustomPlaylistName('');
-      
-      let message = `Playlist exported successfully!`;
-      if (songsAdded && totalSongs) {
-        message = `Exported "${playlistTitle}" to YouTube: ${songsAdded}/${totalSongs} songs added`;
-        if (songsFailed > 0) {
-          message += ` (${songsFailed} failed)`;
-        }
-      }
-
-      toast.success(message, {
-        duration: 5000,
-        action: youtubePlaylistUrl ? {
-          label: 'Open Playlist',
-          onClick: () => window.open(youtubePlaylistUrl, '_blank'),
-        } : undefined,
-      });
-    },
-    onError: (error) => {
-      console.error('[Export YouTube] Error:', error);
-      toast.error(error.message || 'Failed to export playlist to YouTube. Please try again.');
-    },
-  });
 
   useEffect(() => {
     // Unwrap params Promise
@@ -427,16 +372,6 @@ export default function GroupDetailPage({ params }) {
     setPlaylistSongs(songsWithLikes);
   }
 
-  function handleExportConfirm() {
-    if (exportToYouTubeMutation.isPending) return;
-    
-    exportToYouTubeMutation.mutate({
-      playlistId: selectedPlaylist,
-      groupId: groupId,
-      customName: customPlaylistName.trim() || undefined,
-    });
-  }
-
   async function toggleLikeSong(songId, isCurrentlyLiked) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -575,23 +510,16 @@ export default function GroupDetailPage({ params }) {
                       </div>
                       {/* Export to YouTube Button - Only shown for YouTube-connected users */}
                       {hasYouTube && (
-                        <button
-                          onClick={() => setShowExportDialog(true)}
-                          disabled={exportToYouTubeMutation.isPending}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed disabled:opacity-70 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
-                        >
-                          {exportToYouTubeMutation.isPending ? (
-                            <>
-                              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              Exporting...
-                            </>
-                          ) : (
-                            <>
-                              <Youtube className="h-4 w-4" />
-                              Export to YouTube
-                            </>
-                          )}
-                        </button>
+                        <ExportPlaylistButton
+                          sourceType="group"
+                          sourceId={groupId}
+                          playlistId={selectedPlaylist}
+                          defaultName={
+                            selectedPlaylist === 'all'
+                              ? group?.name || 'Group Playlist'
+                              : playlists.find(p => p.id === selectedPlaylist)?.name || 'Playlist'
+                          }
+                        />
                       )}
                     </div>
                   </div>
@@ -667,66 +595,6 @@ export default function GroupDetailPage({ params }) {
           }}
         />
       )}
-
-      {/* Export to YouTube Dialog */}
-      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Export to YouTube</DialogTitle>
-            <DialogDescription>
-              Enter a custom name for your YouTube playlist, or leave blank to use the default name.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Playlist Name
-            </label>
-            <input
-              type="text"
-              value={customPlaylistName}
-              onChange={(e) => setCustomPlaylistName(e.target.value)}
-              placeholder={
-                selectedPlaylist === 'all'
-                  ? `Enter a name (Default: [Vybe Export] ${group?.name || 'Group Playlist'})`
-                  : `Enter a name (Default: [Vybe Export] ${playlists.find(p => p.id === selectedPlaylist)?.name || 'Playlist'})`
-              }
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              disabled={exportToYouTubeMutation.isPending}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !exportToYouTubeMutation.isPending) {
-                  handleExportConfirm();
-                }
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <button
-              onClick={() => {
-                setShowExportDialog(false);
-                setCustomPlaylistName('');
-              }}
-              disabled={exportToYouTubeMutation.isPending}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 active:bg-gray-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleExportConfirm}
-              disabled={exportToYouTubeMutation.isPending}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {exportToYouTubeMutation.isPending ? (
-                <>
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Exporting...
-                </>
-              ) : (
-                'Confirm Export'
-              )}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Embedded Player */}
       {currentlyPlaying && (

@@ -14,10 +14,16 @@ async function makeSupabase() {
  * POST /api/export/youtube
  * Export a playlist to YouTube
  * 
- * Request Body:
+ * Request Body (new format):
+ * - sourceType: 'group' | 'community' (default: 'group')
+ * - sourceId: string (ID of the group or community)
+ * - playlistId: string (optional for groups - ID of specific playlist, or 'all')
+ * - customName: string (optional) - Custom name for the exported playlist
+ * 
+ * Request Body (legacy format - still supported):
  * - playlistId: string (ID of the playlist to export, or 'all' for combined playlists)
  * - groupId: string (ID of the group containing the playlist)
- * - customName: string (optional) - Custom name for the exported playlist. If provided and not empty, this will be used instead of the default name.
+ * - customName: string (optional)
  * 
  * Returns:
  * - 200: Success with songs data
@@ -42,61 +48,82 @@ export async function POST(request) {
 
     // Step 2: Parse and validate request body
     const body = await request.json();
-    const { playlistId, groupId, customName } = body;
-
-    if (!playlistId) {
-      return NextResponse.json(
-        { error: 'Missing required field: playlistId' },
-        { status: 400 }
-      );
+    
+    // Support both new format (sourceType/sourceId) and legacy format (groupId/playlistId)
+    let sourceType = body.sourceType || 'group';
+    let sourceId = body.sourceId;
+    let playlistId = body.playlistId;
+    const customName = body.customName;
+    
+    // Legacy format support: if groupId is provided but not sourceId, use groupId
+    if (!sourceId && body.groupId) {
+      sourceId = body.groupId;
+      sourceType = 'group';
     }
 
-    if (!groupId) {
-      return NextResponse.json(
-        { error: 'Missing required field: groupId' },
-        { status: 400 }
-      );
-    }
-
-    // Step 3: Fetch playlist songs from database
-    let songs = [];
-
-    if (playlistId === 'all') {
-      // Fetch all playlists in the group first
-      const { data: groupPlaylists, error: playlistsError } = await supabase
-        .from('group_playlists')
-        .select('id')
-        .eq('group_id', groupId);
-
-      if (playlistsError) {
-        console.error('[Export YouTube] Error fetching group playlists:', playlistsError);
+    // Validate required fields based on sourceType
+    if (sourceType === 'group') {
+      if (!playlistId) {
         return NextResponse.json(
-          { error: 'Failed to fetch group playlists' },
-          { status: 500 }
+          { error: 'Missing required field: playlistId' },
+          { status: 400 }
         );
       }
-
-      if (!groupPlaylists || groupPlaylists.length === 0) {
+      if (!sourceId) {
         return NextResponse.json(
-          { error: 'No playlists found in this group' },
+          { error: 'Missing required field: sourceId (or groupId)' },
+          { status: 400 }
+        );
+      }
+    } else if (sourceType === 'community') {
+      if (!sourceId) {
+        return NextResponse.json(
+          { error: 'Missing required field: sourceId (community ID)' },
+          { status: 400 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        { error: `Invalid sourceType: ${sourceType}. Must be 'group' or 'community'` },
+        { status: 400 }
+      );
+    }
+
+    // Step 3: Fetch songs based on sourceType
+    let songs = [];
+    let sourceName = '';
+
+    if (sourceType === 'community') {
+      // Fetch approved songs from the community's curated_songs table
+      const { data: community, error: communityError } = await supabase
+        .from('communities')
+        .select('id, name')
+        .eq('id', sourceId)
+        .single();
+
+      if (communityError || !community) {
+        console.error('[Export YouTube] Community not found:', communityError);
+        return NextResponse.json(
+          { error: 'Community not found' },
           { status: 404 }
         );
       }
 
-      const playlistIds = groupPlaylists.map(p => p.id);
+      sourceName = community.name;
 
-      // Fetch all songs from all playlists in the group
-      const { data: allSongs, error: songsError } = await supabase
-        .from('playlist_songs')
-        .select('id, title, artist, duration, thumbnail_url, external_id, playlist_id, position, created_at')
-        .in('playlist_id', playlistIds)
+      // Fetch approved curated songs for this community
+      const { data: curatedSongs, error: songsError } = await supabase
+        .from('curated_songs')
+        .select('id, song_id, song_title, song_artist, song_thumbnail, song_duration, platform, created_at')
+        .eq('community_id', sourceId)
+        .eq('status', 'approved')
         .order('created_at', { ascending: true });
 
       if (songsError) {
-        console.error('[Export YouTube] Error fetching songs:', songsError);
+        console.error('[Export YouTube] Error fetching curated songs:', songsError);
         return NextResponse.json(
           { 
-            error: 'Failed to fetch playlist songs',
+            error: 'Failed to fetch community songs',
             details: songsError.message,
             code: songsError.code
           },
@@ -104,28 +131,93 @@ export async function POST(request) {
         );
       }
 
-      songs = allSongs || [];
+      if (!curatedSongs || curatedSongs.length === 0) {
+        return NextResponse.json(
+          { error: 'No approved songs found in this community' },
+          { status: 404 }
+        );
+      }
+
+      // Map curated_songs fields to the common format used for export
+      songs = curatedSongs.map(song => ({
+        id: song.id,
+        title: song.song_title,
+        artist: song.song_artist,
+        duration: song.song_duration,
+        thumbnail_url: song.song_thumbnail,
+        external_id: song.song_id,
+        platform: song.platform,
+        created_at: song.created_at
+      }));
+
     } else {
-      // Fetch songs from a specific playlist
-      const { data: playlistSongs, error: songsError } = await supabase
-        .from('playlist_songs')
-        .select('id, title, artist, duration, thumbnail_url, external_id, playlist_id, position, created_at')
-        .eq('playlist_id', playlistId)
-        .order('position', { ascending: true });
+      // sourceType === 'group' - existing logic
+      if (playlistId === 'all') {
+        // Fetch all playlists in the group first
+        const { data: groupPlaylists, error: playlistsError } = await supabase
+          .from('group_playlists')
+          .select('id')
+          .eq('group_id', sourceId);
 
-      if (songsError) {
-        console.error('[Export YouTube] Error fetching songs:', songsError);
-        return NextResponse.json(
-          { 
-            error: 'Failed to fetch playlist songs',
-            details: songsError.message,
-            code: songsError.code
-          },
-          { status: 500 }
-        );
+        if (playlistsError) {
+          console.error('[Export YouTube] Error fetching group playlists:', playlistsError);
+          return NextResponse.json(
+            { error: 'Failed to fetch group playlists' },
+            { status: 500 }
+          );
+        }
+
+        if (!groupPlaylists || groupPlaylists.length === 0) {
+          return NextResponse.json(
+            { error: 'No playlists found in this group' },
+            { status: 404 }
+          );
+        }
+
+        const playlistIds = groupPlaylists.map(p => p.id);
+
+        // Fetch all songs from all playlists in the group
+        const { data: allSongs, error: songsError } = await supabase
+          .from('playlist_songs')
+          .select('id, title, artist, duration, thumbnail_url, external_id, playlist_id, position, created_at')
+          .in('playlist_id', playlistIds)
+          .order('created_at', { ascending: true });
+
+        if (songsError) {
+          console.error('[Export YouTube] Error fetching songs:', songsError);
+          return NextResponse.json(
+            { 
+              error: 'Failed to fetch playlist songs',
+              details: songsError.message,
+              code: songsError.code
+            },
+            { status: 500 }
+          );
+        }
+
+        songs = allSongs || [];
+      } else {
+        // Fetch songs from a specific playlist
+        const { data: playlistSongs, error: songsError } = await supabase
+          .from('playlist_songs')
+          .select('id, title, artist, duration, thumbnail_url, external_id, playlist_id, position, created_at')
+          .eq('playlist_id', playlistId)
+          .order('position', { ascending: true });
+
+        if (songsError) {
+          console.error('[Export YouTube] Error fetching songs:', songsError);
+          return NextResponse.json(
+            { 
+              error: 'Failed to fetch playlist songs',
+              details: songsError.message,
+              code: songsError.code
+            },
+            { status: 500 }
+          );
+        }
+
+        songs = playlistSongs || [];
       }
-
-      songs = playlistSongs || [];
     }
 
     // Step 4: Create YouTube playlist
@@ -135,14 +227,17 @@ export async function POST(request) {
     // If customName is provided and not empty, use it
     if (customName && customName.trim() !== '') {
       playlistTitle = customName.trim();
+    } else if (sourceType === 'community') {
+      // For communities, use the community name
+      playlistTitle = `[Vybe Export] ${sourceName || 'Community Playlist'}`;
     } else {
-      // Otherwise, use the default naming logic
+      // For groups, use the default naming logic
       if (playlistId === 'all') {
         // For combined playlists, get the group name
         const { data: groupData } = await supabase
           .from('groups')
           .select('name')
-          .eq('id', groupId)
+          .eq('id', sourceId)
           .single();
         
         playlistTitle = `[Vybe Export] ${groupData?.name || 'Group Playlist'}`;
@@ -321,8 +416,11 @@ export async function POST(request) {
     return NextResponse.json(
       { 
         message: 'YouTube playlist export completed',
-        playlistId,
-        groupId,
+        sourceType,
+        sourceId,
+        playlistId: playlistId || null,
+        // Legacy field for backward compatibility
+        groupId: sourceType === 'group' ? sourceId : undefined,
         youtubePlaylistId,
         youtubePlaylistUrl: `https://www.youtube.com/playlist?list=${youtubePlaylistId}`,
         playlistTitle,
