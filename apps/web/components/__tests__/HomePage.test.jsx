@@ -58,7 +58,7 @@ describe('HomePage', () => {
 
       expect(screen.getByText('My Groups')).toBeInTheDocument()
       expect(screen.getByText("Friends' Song of the Day")).toBeInTheDocument()
-      expect(screen.getByText('Trending Communities')).toBeInTheDocument()
+      expect(screen.getByText('Our Favorites')).toBeInTheDocument()
     })
 
     it('renders create group button', () => {

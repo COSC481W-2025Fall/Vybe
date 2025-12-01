@@ -78,7 +78,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm [data-theme='light']:bg-black/40"
       role="dialog"
       aria-modal="true"
       aria-labelledby="delete-account-modal-title"
@@ -90,20 +90,20 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
       }}
     >
       <div 
-        className="relative w-full max-w-2xl bg-[#0f0f0f] rounded-xl border border-red-500/30 shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="relative w-full max-w-2xl glass-card rounded-xl border border-red-500/30 shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-red-500/30 bg-[#0f0f0f]">
+        <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-red-500/30 glass-card">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-red-500/20 p-2">
               <AlertTriangle className="h-6 w-6 text-red-400" />
             </div>
             <div>
-              <h2 id="delete-account-modal-title" className="text-xl font-semibold text-white">
+              <h2 id="delete-account-modal-title" className="text-xl font-semibold text-[var(--foreground)]">
                 Delete Your Account
               </h2>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
                 Step {currentStep} of 4
               </p>
             </div>
@@ -111,7 +111,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
           {!isDeleting && (
             <button
               onClick={handleClose}
-              className="rounded-lg p-2 text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+              className="rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition-colors"
               aria-label="Close modal"
             >
               <X className="h-5 w-5" />
@@ -131,7 +131,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
                     <h3 className="text-base font-semibold text-red-300 mb-2">
                       This action cannot be undone
                     </h3>
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-[var(--foreground)]">
                       Deleting your account will permanently remove all of your data from Vybe. 
                       This includes your profile, playlists, listening history, and all social connections.
                     </p>
@@ -140,8 +140,8 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-white">What will be deleted:</h4>
-                <ul className="list-disc list-inside space-y-2 text-sm text-gray-300 ml-4">
+                <h4 className="text-sm font-medium text-[var(--foreground)]">What will be deleted:</h4>
+                <ul className="list-disc list-inside space-y-2 text-sm text-[var(--foreground)] ml-4">
                   <li>Your profile and all associated data</li>
                   <li>All playlists you&apos;ve created</li>
                   <li>Your listening history and activity</li>
@@ -169,17 +169,17 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
           {currentStep === 2 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-base font-semibold text-white mb-2">
+                <h3 className="text-base font-semibold text-[var(--foreground)] mb-2">
                   Why are you deleting your account?
                 </h3>
-                <p className="text-sm text-gray-400 mb-4">
+                <p className="text-sm text-[var(--muted-foreground)] mb-4">
                   Your feedback helps us improve. This is optional and can be left blank.
                 </p>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Tell us why you're leaving... (optional)"
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 resize-none"
+                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 resize-none [data-theme='light']:bg-black/5 [data-theme='light']:border-black/20"
                   rows={5}
                   disabled={isDeleting}
                 />
@@ -200,14 +200,14 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
           {currentStep === 3 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-base font-semibold text-white mb-2">
+                <h3 className="text-base font-semibold text-[var(--foreground)] mb-2">
                   Type the confirmation phrase
                 </h3>
-                <p className="text-sm text-gray-400 mb-4">
+                <p className="text-sm text-[var(--muted-foreground)] mb-4">
                   To confirm you understand this action cannot be undone, please type:
                 </p>
-                <div className="rounded-lg border border-white/20 bg-white/5 p-3 mb-4">
-                  <code className="text-lg font-mono font-semibold text-white">
+                <div className="rounded-lg border border-white/20 bg-white/5 p-3 mb-4 [data-theme='light']:bg-black/5 [data-theme='light']:border-black/20">
+                  <code className="text-lg font-mono font-semibold text-[var(--foreground)]">
                     {CONFIRMATION_PHRASE}
                   </code>
                 </div>
@@ -222,7 +222,8 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
                   }}
                   placeholder={CONFIRMATION_PHRASE}
                   className={[
-                    'w-full px-4 py-3 rounded-lg bg-white/5 border text-white placeholder-gray-500 focus:outline-none focus:ring-2',
+                    'w-full px-4 py-3 rounded-lg bg-white/5 border text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2',
+                    "[data-theme='light']:bg-black/5 [data-theme='light']:border-black/20",
                     errors.confirmationPhrase
                       ? 'border-red-500/50 focus:ring-red-500/50'
                       : 'border-white/20 focus:ring-red-500/50 focus:border-red-500/50',
@@ -241,10 +242,10 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
           {currentStep === 4 && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-base font-semibold text-white mb-2">
+                <h3 className="text-base font-semibold text-[var(--foreground)] mb-2">
                   Re-enter your password
                 </h3>
-                <p className="text-sm text-gray-400 mb-4">
+                <p className="text-sm text-[var(--muted-foreground)] mb-4">
                   For security, please enter your password to confirm account deletion.
                 </p>
                 <div className="relative">
@@ -259,7 +260,8 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
                     }}
                     placeholder="Enter your password"
                     className={[
-                      'w-full px-4 py-3 pl-12 rounded-lg bg-white/5 border text-white placeholder-gray-500 focus:outline-none focus:ring-2',
+                      'w-full px-4 py-3 pl-12 rounded-lg bg-white/5 border text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2',
+                      "[data-theme='light']:bg-black/5 [data-theme='light']:border-black/20",
                       errors.password
                         ? 'border-red-500/50 focus:ring-red-500/50'
                         : 'border-white/20 focus:ring-red-500/50 focus:border-red-500/50',
@@ -267,7 +269,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
                     disabled={isDeleting}
                     autoFocus
                   />
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[var(--muted-foreground)]" />
                 </div>
                 {errors.password && (
                   <p className="mt-2 text-sm text-red-400">{errors.password}</p>
@@ -281,7 +283,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
                     <p className="text-sm font-medium text-red-300 mb-1">
                       Final Warning
                     </p>
-                    <p className="text-xs text-gray-300">
+                    <p className="text-xs text-[var(--foreground)]">
                       Once you confirm, your account and all associated data will be permanently deleted. 
                       This cannot be undone or recovered.
                     </p>
@@ -311,13 +313,14 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
         </div>
 
         {/* Modal Footer */}
-        <div className="sticky bottom-0 flex items-center justify-between gap-4 p-6 border-t border-red-500/30 bg-[#0f0f0f]">
+        <div className="sticky bottom-0 flex items-center justify-between gap-4 p-6 border-t border-red-500/30 glass-card">
           <button
             onClick={handleBack}
             disabled={currentStep === 1 || isDeleting}
             className={[
               'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-              'border border-white/20 text-gray-400 hover:bg-white/5 hover:text-white',
+              "border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)]",
+              "[data-theme='light']:border-black/20",
               (currentStep === 1 || isDeleting) && 'opacity-50 cursor-not-allowed',
             ].join(' ')}
           >
@@ -328,7 +331,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
             {!isDeleting && (
               <button
                 onClick={handleClose}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-white/20 text-gray-400 hover:bg-white/5 hover:text-white"
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] [data-theme='light']:border-black/20"
               >
                 Cancel
               </button>
@@ -371,4 +374,8 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
     </div>
   );
 }
+
+
+
+
 

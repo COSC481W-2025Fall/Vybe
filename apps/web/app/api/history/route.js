@@ -8,7 +8,7 @@ export async function GET(req) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
     const before = searchParams.get('before'); // ISO string or timestamp
 
-    const sb = supabaseRoute();
+    const sb = await supabaseRoute();
     const { data: { session } } = await sb.auth.getSession();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

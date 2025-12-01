@@ -19,6 +19,7 @@ export async function GET(request) {
 
     // If no query, return all users (for browsing)
     if (!query || query.trim().length === 0) {
+      // First get all users
       const { data: allUsers, error: allUsersError } = await supabase
         .from('users')
         .select('id, username, display_name')
@@ -37,13 +38,32 @@ export async function GET(request) {
         });
       }
 
+      // Get privacy settings for these users to filter by searchable
+      const userIds = allUsers.map(u => u.id);
+      const { data: privacySettings } = await supabase
+        .from('user_privacy_settings')
+        .select('user_id, searchable')
+        .in('user_id', userIds);
+
+      // Create a map of user_id -> searchable (default to true if no settings exist)
+      const searchableMap = new Map();
+      privacySettings?.forEach(ps => {
+        searchableMap.set(ps.user_id, ps.searchable ?? true);
+      });
+
+      // Filter to only searchable users (default to true if no privacy settings exist)
+      const searchableUsers = allUsers.filter(u => {
+        const searchable = searchableMap.get(u.id) ?? true; // Default to searchable if no settings
+        return searchable === true;
+      });
+
       // Get existing friendships
       const { data: existingFriends } = await supabase
         .from('friendships')
         .select('user_id, friend_id, status')
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
-      const users = allUsers.map(u => {
+      const users = searchableUsers.map(u => {
         const friendship = existingFriends?.find(f =>
           (f.user_id === user.id && f.friend_id === u.id) ||
           (f.user_id === u.id && f.friend_id === user.id)
@@ -51,7 +71,7 @@ export async function GET(request) {
 
         return {
           id: u.id,
-          email: u.email || '',
+          email: '', // Email not included in query for privacy
           name: u.display_name || u.username || 'User',
           username: u.username || '',
           friendship_status: friendship?.status || null
@@ -90,14 +110,32 @@ export async function GET(request) {
       });
     }
 
-    // Get existing friendships for these users to show status
+    // Get privacy settings for these users to filter by searchable
     const userIds = matchingUsers.map(u => u.id);
+    const { data: privacySettings } = await supabase
+      .from('user_privacy_settings')
+      .select('user_id, searchable')
+      .in('user_id', userIds);
+
+    // Create a map of user_id -> searchable (default to true if no settings exist)
+    const searchableMap = new Map();
+    privacySettings?.forEach(ps => {
+      searchableMap.set(ps.user_id, ps.searchable ?? true);
+    });
+
+    // Filter to only searchable users (default to searchable if no privacy settings exist)
+    const searchableUsers = matchingUsers.filter(u => {
+      const searchable = searchableMap.get(u.id) ?? true; // Default to searchable if no settings
+      return searchable === true;
+    });
+
+    // Get existing friendships for these users to show status
     const { data: existingFriends } = await supabase
       .from('friendships')
       .select('user_id, friend_id, status')
       .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
-    const users = matchingUsers.map(u => {
+    const users = searchableUsers.map(u => {
       const friendship = existingFriends?.find(f =>
         (f.user_id === user.id && f.friend_id === u.id) ||
         (f.user_id === u.id && f.friend_id === user.id)
@@ -105,7 +143,7 @@ export async function GET(request) {
 
       return {
         id: u.id,
-        email: u.email || '',
+        email: '', // Email not included in query for privacy
         name: u.display_name || u.username || 'User',
         username: u.username || '',
         friendship_status: friendship?.status || null

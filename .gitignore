@@ -47,8 +47,6 @@ __pycache__/
 .coverage
 htmlcov/
 .mypy_cache/
-.pytest_cache/
-.coverage
 backend/htmlcov/
 backend/coverage.xml
 
@@ -85,14 +83,11 @@ sprint-*-assignee-breakdown.txt
 .settings/
 
 # OS
-.DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db
-
 # Testing
 coverage/
 *.lcov
@@ -100,6 +95,14 @@ coverage/
 
 # Build outputs
 dist/
-*.tsbuildinfo
 
+# Private planning and documentation folders
+issues/
+old-pbi/
+pbi-77/
+pbi-72/
+memory-bank/
+.cursorrules
+
+# Issues folder
 issues/

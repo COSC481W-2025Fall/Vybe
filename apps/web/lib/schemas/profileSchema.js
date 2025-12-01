@@ -12,7 +12,7 @@ import { z } from 'zod';
  * @property {string} display_name - User's display name (2-50 chars, alphanumeric + spaces)
  * @property {string} [bio] - User's bio/description (optional, max 200 chars)
  * @property {string} [profile_picture_url] - URL to profile picture (optional, must be valid URL)
- */
+ */ 
 
 /**
  * Display name validation:
@@ -127,14 +127,17 @@ const profilePictureUrlSchema = z
  * });
  * ```
  */
-const baseProfileSchema = z.object({
-  display_name: displayNameSchema.optional(),
-  bio: bioSchema,
-  profile_picture_url: profilePictureUrlSchema,
-}, {
+const baseProfileSchema = z.object(
+  {
+    display_name: displayNameSchema.optional(),
+    bio: bioSchema,
+    profile_picture_url: profilePictureUrlSchema,
+  },
+  {
   required_error: 'Profile data is required',
   invalid_type_error: 'Profile data must be an object',
 });
+
 
 export const profileSchema = baseProfileSchema.superRefine((data, ctx) => {
   // Override error messages for missing or invalid fields

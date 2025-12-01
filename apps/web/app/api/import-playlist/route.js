@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { getValidAccessToken } from '@/lib/youtube';
+
+export const dynamic = 'force-dynamic';
+
+async function makeSupabase() {
+  const cookieStore = await cookies();
+  return createRouteHandlerClient({ cookies: () => cookieStore });
+}
 
 export async function POST(request) {
   try {
-    const supabase = supabaseServer();
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const supabase = await makeSupabase();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    if (sessionError || !session) {
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -29,37 +37,36 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
 
-    const isMember = group.owner_id === session.user.id || await checkGroupMembership(supabase, groupId, session.user.id);
+    const isMember = group.owner_id === user.id || await checkGroupMembership(supabase, groupId, user.id);
 
     if (!isMember) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
     }
 
-    // Check if user already has a playlist in this group
-    const { data: existingPlaylists } = await supabase
+    // Check if user already has a playlist in this group (users can only have one)
+    const { data: existingPlaylist } = await supabase
       .from('group_playlists')
       .select('id')
       .eq('group_id', groupId)
-      .eq('added_by', session.user.id);
+      .eq('added_by', user.id)
+      .maybeSingle();
 
     // If user already has a playlist, delete it (cascade will delete songs)
-    if (existingPlaylists && existingPlaylists.length > 0) {
-      console.log(`[import-playlist] User already has ${existingPlaylists.length} playlist(s), removing old ones...`);
-
-      for (const oldPlaylist of existingPlaylists) {
-        await supabase
-          .from('group_playlists')
-          .delete()
-          .eq('id', oldPlaylist.id);
-      }
+    // Since users can only have one playlist, we can use a single delete query
+    if (existingPlaylist) {
+      console.log(`[import-playlist] Replacing existing playlist...`);
+      await supabase
+        .from('group_playlists')
+        .delete()
+        .eq('id', existingPlaylist.id);
     }
 
     // Import playlist based on platform
     let playlistData;
     if (platform === 'youtube') {
-      playlistData = await importYouTubePlaylist(supabase, playlistUrl, session.user.id);
+      playlistData = await importYouTubePlaylist(supabase, playlistUrl, user.id);
     } else if (platform === 'spotify') {
-      playlistData = await importSpotifyPlaylist(supabase, playlistUrl, session.user.id);
+      playlistData = await importSpotifyPlaylist(supabase, playlistUrl, user.id);
     } else {
       return NextResponse.json({ error: 'Invalid platform' }, { status: 400 });
     }
@@ -74,7 +81,7 @@ export async function POST(request) {
         playlist_url: playlistUrl,
         playlist_id: playlistData.id,
         track_count: playlistData.tracks.length,
-        added_by: session.user.id,
+        added_by: user.id,
       })
       .select()
       .single();
@@ -104,6 +111,99 @@ export async function POST(request) {
       // Clean up the playlist if songs failed to insert
       await supabase.from('group_playlists').delete().eq('id', groupPlaylist.id);
       return NextResponse.json({ error: 'Failed to import songs' }, { status: 500 });
+    }
+
+    // Run smart sorting synchronously BEFORE returning response
+    // This ensures the user sees the sorted order immediately
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        console.log('[import-playlist] Starting smart sort...');
+        const { analyzeAndSortPlaylists } = await import('@/lib/services/openaiSorting');
+        const { getTrackMetadata } = await import('@/lib/services/musicMetadata');
+        const { updatePlaylistOrder, updateSongOrder } = await import('@/lib/db/smartSorting');
+        
+        // Fetch all playlists and songs
+        const { data: allPlaylists } = await supabase
+          .from('group_playlists')
+          .select('*')
+          .eq('group_id', groupId);
+
+        if (allPlaylists && allPlaylists.length > 0) {
+          const playlistIds = allPlaylists.map(p => p.id);
+          const { data: allSongs } = await supabase
+            .from('playlist_songs')
+            .select('*')
+            .in('playlist_id', playlistIds);
+
+          if (allSongs && allSongs.length > 0) {
+            // Get Spotify tokens
+            const userIds = [...new Set(allPlaylists.map(p => p.added_by))];
+            const { data: spotifyTokens } = await supabase
+              .from('spotify_tokens')
+              .select('user_id, access_token')
+              .in('user_id', userIds);
+
+            const tokenMap = {};
+            spotifyTokens?.forEach(token => {
+              tokenMap[token.user_id] = token.access_token;
+            });
+
+            // Fetch metadata from all sources (Spotify, Last.fm, MusicBrainz)
+            console.log(`[import-playlist] Fetching metadata for ${allSongs.length} songs from Spotify, Last.fm, and MusicBrainz...`);
+            const allSongsMetadata = [];
+            for (const playlist of allPlaylists) {
+              const songs = allSongs.filter(s => s.playlist_id === playlist.id);
+              const spotifyToken = tokenMap[playlist.added_by] || null;
+
+              for (const song of songs) {
+                try {
+                  const metadata = await getTrackMetadata(song, playlist.platform, spotifyToken);
+                  if (metadata) {
+                    allSongsMetadata.push({ 
+                      ...metadata, 
+                      songId: song.id, 
+                      playlistId: playlist.id 
+                    });
+                  }
+                  // Small delay between songs to avoid overwhelming APIs
+                  await new Promise(resolve => setTimeout(resolve, 50));
+                } catch (err) {
+                  console.error(`[import-playlist] Error fetching metadata for song ${song.id}:`, err);
+                  // Continue with basic song info
+                  allSongsMetadata.push({
+                    songId: song.id,
+                    playlistId: playlist.id,
+                    title: song.title,
+                    artist: song.artist || 'Unknown Artist',
+                    genres: [],
+                    popularity: 0,
+                    audioFeatures: {},
+                    sources: [],
+                  });
+                }
+              }
+            }
+
+            console.log(`[import-playlist] Fetched metadata for ${allSongsMetadata.length} songs. Analyzing with OpenAI...`);
+            
+            // Analyze and sort using OpenAI with all metadata
+            const { playlistOrder, songOrders } = await analyzeAndSortPlaylists(
+              groupId,
+              allPlaylists,
+              allSongsMetadata
+            );
+
+            // Update database with sorted order
+            await updatePlaylistOrder(supabase, groupId, playlistOrder);
+            await updateSongOrder(supabase, songOrders);
+            
+            console.log('[import-playlist] Smart sort completed successfully');
+          }
+        }
+      } catch (error) {
+        console.error('[import-playlist] Error in smart sort (non-fatal):', error);
+        // Don't fail the import if sorting fails - user can still use the playlist
+      }
     }
 
     return NextResponse.json({
@@ -195,11 +295,11 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
       item.snippet?.title !== 'Deleted video'
     );
 
-    // Get video durations (requires separate API call)
+    // Get video durations and categories (requires separate API call)
     if (validItems.length > 0) {
       const videoIds = validItems.map(item => item.contentDetails.videoId).join(',');
       const videosResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${videoIds}`,
+        `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${videoIds}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -208,19 +308,36 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
       );
 
       const videosData = await videosResponse.json();
-      const durationMap = {};
+      const videoDetailsMap = {};
       videosData.items?.forEach(video => {
-        durationMap[video.id] = parseYouTubeDuration(video.contentDetails.duration);
+        videoDetailsMap[video.id] = {
+          duration: parseYouTubeDuration(video.contentDetails.duration),
+          categoryId: video.snippet.categoryId,
+        };
       });
 
+      // Filter to only include music videos (categoryId = 10)
+      const musicVideosCount = validItems.filter(item => {
+        const details = videoDetailsMap[item.contentDetails.videoId];
+        return details && details.categoryId === '10';
+      }).length;
+
+      console.log(`[YouTube Import] Filtering: ${validItems.length} total videos, ${musicVideosCount} music videos (categoryId=10)`);
+
       validItems.forEach(item => {
-        tracks.push({
-          id: item.contentDetails.videoId,
-          title: item.snippet.title,
-          artist: item.snippet.videoOwnerChannelTitle || 'Unknown',
-          thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
-          duration: durationMap[item.contentDetails.videoId] || 0,
-        });
+        const videoId = item.contentDetails.videoId;
+        const details = videoDetailsMap[videoId];
+
+        // Only add videos with categoryId = 10 (Music)
+        if (details && details.categoryId === '10') {
+          tracks.push({
+            id: videoId,
+            title: item.snippet.title,
+            artist: item.snippet.videoOwnerChannelTitle || 'Unknown',
+            thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
+            duration: details.duration || 0,
+          });
+        }
       });
     }
 
@@ -229,6 +346,11 @@ async function importYouTubePlaylist(supabase, playlistUrl, userId) {
 
     console.log(`[YouTube Import] Total tracks so far: ${tracks.length}, Next page token: ${nextPageToken ? 'exists' : 'none'}`);
   } while (nextPageToken);
+
+  // Check if any music videos were found
+  if (tracks.length === 0) {
+    throw new Error('No music videos were found in this playlist.');
+  }
 
   return {
     id: playlistId,

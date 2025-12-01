@@ -25,7 +25,17 @@ async function handler(req, context) {
     accessToken = await getValidAccessToken(sb, user.id);
   } catch (e) {
     console.error('[yt-proxy] token error:', e);
-    return new NextResponse(JSON.stringify({ error: 'token_error', message: 'An unexpected error occurred.' }), { status: 401 });
+    // Check if this is a token refresh/auth issue
+    const isAuthError = e.message?.includes('No YouTube tokens') || 
+                        e.message?.includes('refresh') || 
+                        e.message?.includes('No valid session');
+    return new NextResponse(JSON.stringify({ 
+      error: 'token_error', 
+      message: isAuthError 
+        ? 'Your YouTube session has expired. Please sign out and sign back in with Google to reconnect.'
+        : 'An unexpected error occurred.',
+      requiresReauth: isAuthError
+    }), { status: 401 });
   }
 
   const params = await context.params;
@@ -46,6 +56,21 @@ async function handler(req, context) {
 
   const upstream = await fetch(target, init);
   const text = await upstream.text();
+  
+  // If YouTube returns 401, the token might have been revoked or expired
+  if (upstream.status === 401) {
+    console.error('[yt-proxy] YouTube returned 401:', text);
+    return new NextResponse(JSON.stringify({ 
+      error: 'youtube_auth_error', 
+      message: 'Your YouTube authorization has expired. Please sign out and sign back in with Google to reconnect.',
+      requiresReauth: true,
+      upstream: text
+    }), { 
+      status: 401,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+  
   return new NextResponse(text, {
     status: upstream.status,
     headers: { 'content-type': upstream.headers.get('content-type') || 'application/json' },

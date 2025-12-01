@@ -25,7 +25,7 @@ export default function SignInPage() {
       provider: 'spotify',
       options: {
         redirectTo: `${location.origin}/auth/callback?next=/library&provider=spotify`,
-        scopes: 'user-read-email user-read-private playlist-read-private user-read-recently-played',
+        scopes: 'user-read-email user-read-private playlist-read-private playlist-modify-private playlist-modify-public user-read-recently-played',
       },
       queryParams: { show_dialog: 'true' },
     });
@@ -42,7 +42,12 @@ export default function SignInPage() {
           'email',
           'profile',
           'https://www.googleapis.com/auth/youtube.readonly',
+          'https://www.googleapis.com/auth/youtube.force-ssl', // Allow playlist creation
         ].join(' '),
+        queryParams: {
+          access_type: 'offline',  // Required to get a refresh token
+          prompt: 'consent',       // Force consent screen to ensure refresh token is returned
+        },
       },
     });
     if (error) console.error('Google/YouTube login error:', error.message);
@@ -55,8 +60,8 @@ export default function SignInPage() {
           <div className="flex justify-center mb-4 sm:mb-6">
             <div className="relative">
               <div className="absolute inset-0 rounded-full blur-md icon-glow-pulse"></div>
-              <div className="glass-card rounded-full p-3 sm:p-4 relative backdrop-blur-xl bg-white/10 border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.2)]">
-                <Music className="h-6 w-6 sm:h-8 sm:w-8 text-white relative z-10" />
+              <div className="glass-card rounded-full p-3 sm:p-4 relative backdrop-blur-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                <Music className="h-6 w-6 sm:h-8 sm:w-8 text-[var(--foreground)] relative z-10" />
               </div>
             </div>
           </div>

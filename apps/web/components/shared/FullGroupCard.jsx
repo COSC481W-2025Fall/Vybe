@@ -46,28 +46,28 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 hover:bg-gray-800/50 active:bg-gray-800/50 transition-colors cursor-pointer backdrop-blur-sm"
+      className="glass-card rounded-xl p-4 hover:bg-white/5 [data-theme='light']:hover:bg-black/5 active:bg-white/5 [data-theme='light']:active:bg-black/5 transition-colors cursor-pointer"
     >
       <div className="flex items-start justify-between mb-3">
-        <h3 className="text-lg font-semibold text-white truncate">{group.name}</h3>
+        <h3 className="text-lg font-semibold text-[var(--foreground)] truncate">{group.name}</h3>
         {isOwner ? (
           <span className="px-3 py-1 bg-purple-600/20 text-purple-400 rounded-full text-xs font-medium border border-purple-500/30">
             Owner
           </span>
         ) : (
-          <span className="px-3 py-1 bg-gray-700/50 text-gray-300 rounded-full text-xs font-medium">
+          <span className="px-3 py-1 surface-elevated rounded-full text-xs font-medium text-[var(--muted-foreground)]">
             Public
           </span>
         )}
       </div>
 
-      <p className="text-sm text-gray-400 mb-4 line-clamp-2">
+      <p className="text-sm text-[var(--muted-foreground)] mb-4 line-clamp-2">
         {group.description || 'No description'}
       </p>
 
-      <div className="flex items-center gap-6 mb-4 text-sm text-gray-400">
+      <div className="flex items-center gap-6 mb-4 text-sm text-[var(--muted-foreground)]">
         <span>{group.memberCount || 1} members</span>
-        <span>{group.playlist_songs?.length || 0} songs</span>
+        <span>{group.songCount || 0} songs</span>
         <span className="flex items-center gap-1">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -87,20 +87,20 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
               {member?.profile_picture_url ? (
                 <img src={member.profile_picture_url} alt={member.username || 'Member'} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-white text-xs font-semibold">
+                <div className="w-full h-full flex items-center justify-center text-[var(--foreground)] text-xs font-semibold">
                   {member?.username?.[0]?.toUpperCase() || 'M'}
                 </div>
               )}
             </div>
           ))}
           {remainingCount > 0 && (
-            <div className="w-8 h-8 rounded-full bg-gray-700 border-2 border-gray-900 flex items-center justify-center text-white text-xs">
+            <div className="w-8 h-8 rounded-full surface-elevated border-2 border-[var(--background)] flex items-center justify-center text-[var(--foreground)] text-xs">
               +{remainingCount}
             </div>
           )}
         </div>
 
-        <div className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-md text-gray-300 text-sm font-mono font-semibold">
+        <div className="px-3 py-1.5 surface-elevated rounded-md text-[var(--muted-foreground)] text-sm font-mono font-semibold">
           {group.join_code || 'GENERATING...'}
         </div>
       </div>

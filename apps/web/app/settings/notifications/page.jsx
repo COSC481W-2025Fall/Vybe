@@ -129,12 +129,12 @@ function NotificationSettingsContent() {
   if (loading) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <Bell className="h-6 w-6 text-purple-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">Notifications</h2>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Notifications</h2>
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
                 Configure your notification preferences
               </p>
             </div>
@@ -153,12 +153,12 @@ function NotificationSettingsContent() {
   if (notificationError) {
     return (
       <>
-        <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
             <Bell className="h-6 w-6 text-purple-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">Notifications</h2>
-              <p className="text-sm text-gray-400 mt-0.5">
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Notifications</h2>
+              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
                 Configure your notification preferences
               </p>
             </div>
@@ -176,12 +176,12 @@ function NotificationSettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-purple-400" />
           <div>
-            <h2 className="text-xl font-semibold text-white">Notifications</h2>
-            <p className="text-sm text-gray-400 mt-0.5">
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">Notifications</h2>
+            <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
               Configure your notification preferences
             </p>
           </div>
@@ -195,8 +195,8 @@ function NotificationSettingsContent() {
           <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-white mb-1">Enable All Notifications</h3>
-                <p className="text-xs text-gray-400">
+                <h3 className="text-sm font-medium text-[var(--foreground)] mb-1">Enable All Notifications</h3>
+                <p className="text-xs text-[var(--muted-foreground)]">
                   Master toggle to enable or disable all non-essential notifications at once
                 </p>
               </div>
@@ -221,32 +221,32 @@ function NotificationSettingsContent() {
 
           {/* Email Frequency */}
           <div>
-            <label htmlFor="email_frequency" className="block text-sm font-medium text-white mb-2">
+            <label htmlFor="email_frequency" className="block text-sm font-medium text-[var(--foreground)] mb-2">
               Email Frequency
             </label>
             <select
               id="email_frequency"
               {...register('email_frequency')}
               onChange={(e) => setValue('email_frequency', e.target.value, { shouldDirty: true })}
-              className="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-white/10 [data-theme='light']:bg-black/10 border border-white/20 [data-theme='light']:border-black/30 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
             >
               <option value="instant">Instant - Receive emails immediately</option>
               <option value="daily">Daily Digest - One email per day</option>
               <option value="weekly">Weekly Summary - One email per week</option>
             </select>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-[var(--muted-foreground)] mt-1">
               Choose how often you receive email notifications
             </p>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Social Notifications */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Users className="h-5 w-5 text-purple-400" />
-              <h3 className="text-lg font-medium text-white">Social Notifications</h3>
+              <h3 className="text-lg font-medium text-[var(--foreground)]">Social Notifications</h3>
             </div>
 
             <NotificationToggle
@@ -287,13 +287,13 @@ function NotificationSettingsContent() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* Playlist Notifications */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Music className="h-5 w-5 text-purple-400" />
-              <h3 className="text-lg font-medium text-white">Playlist Notifications</h3>
+              <h3 className="text-lg font-medium text-[var(--foreground)]">Playlist Notifications</h3>
             </div>
 
             <NotificationToggle
@@ -322,13 +322,13 @@ function NotificationSettingsContent() {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-white/10"></div>
+          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
 
           {/* System Notifications */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <Megaphone className="h-5 w-5 text-purple-400" />
-              <h3 className="text-lg font-medium text-white">System Notifications</h3>
+              <h3 className="text-lg font-medium text-[var(--foreground)]">System Notifications</h3>
             </div>
 
             <NotificationToggle

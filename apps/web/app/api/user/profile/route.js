@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { profileSchema } from '@/lib/schemas/profileSchema';
-import {
-  validateRequest,
-  formatValidationErrors,
-  createErrorResponse,
-  logValidationFailure,
-  checkRateLimit,
-} from '@/lib/validation/serverValidation';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,66 +11,195 @@ async function makeSupabase() {
 
 /**
  * GET /api/user/profile
- * Fetch current user's profile information
+ * Return merged auth user + profile row
  */
 export async function GET() {
   try {
     const supabase = await makeSupabase();
-    
-    // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    // 1) Auth user (from auth.users)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch user profile from users table
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
+    // 2) Profile from your public "users" table
+    let { data: profile, error: profileError } = await supabase
+      .from('users')          // 👈 make sure your table is called "users"
       .select('*')
       .eq('id', user.id)
       .single();
 
-    if (profileError && profileError.code !== 'PGRST116') {
-      console.error('[profile API] Error fetching profile:', profileError);
+    // If profile doesn't exist, create it (trigger might have failed)
+    // IMPORTANT: Only create if profile truly doesn't exist - never overwrite existing profiles
+    if (profileError && profileError.code === 'PGRST116') {
+      console.log('[Profile GET] Profile not found (PGRST116), double-checking...');
+      
+      // Triple-check profile doesn't exist (RLS might be blocking queries)
+      // Try multiple approaches to ensure we don't accidentally overwrite an existing profile
+      let profileExists = false;
+      
+      // Check 1: Try maybeSingle() with minimal fields
+      const { data: check1, error: check1Error } = await supabase
+        .from('users')
+        .select('id, display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (check1 && !check1Error) {
+        profileExists = true;
+        console.log('[Profile GET] Profile found on check 1, fetching full profile...');
+        const { data: existingProfile, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (!fetchError && existingProfile) {
+          profile = existingProfile;
+          console.log('[Profile GET] Successfully fetched existing profile');
+        }
+      }
+      
+      // Only create if profile definitely doesn't exist after all checks
+      if (!profileExists && !profile) {
+        // Extract username from email or metadata
+        const username = user.user_metadata?.username || 
+                         user.user_metadata?.preferred_username ||
+                         user.email?.split('@')[0] || 
+                         `user_${user.id.slice(0, 8)}`;
+        
+        // Extract display name from metadata or email
+        // Filter out Spotify user IDs (they're 22+ character alphanumeric strings)
+        let displayName = user.user_metadata?.display_name ||
+                          user.user_metadata?.full_name ||
+                          user.user_metadata?.name ||
+                          null;
+        
+        // Check if displayName looks like a Spotify ID (22+ alphanumeric chars, no spaces)
+        if (displayName && /^[a-zA-Z0-9]{22,}$/.test(displayName) && !/\s/.test(displayName)) {
+          displayName = null; // Don't use Spotify IDs as display names
+        }
+        
+        // Fallback to email username or generated username
+        if (!displayName) {
+          displayName = user.email?.split('@')[0] || username;
+        }
+
+        // Try direct insert first (uses RLS, simpler)
+        const { data: newProfile, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            username: username,
+            display_name: displayName,
+            profile_picture_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('[Profile GET] Direct insert failed:', createError);
+          
+          // Last resort: return a minimal profile object so the UI doesn't break
+          profile = {
+            id: user.id,
+            username: username,
+            display_name: displayName,
+            profile_picture_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+            bio: null,
+            created_at: user.created_at,
+            updated_at: new Date().toISOString(),
+          };
+          
+          console.log('[Profile GET] Using fallback profile object (profile may not be saved to DB)');
+        } else {
+          // Direct insert succeeded
+          profile = newProfile;
+          console.log('[Profile GET] Successfully created profile via direct insert');
+        }
+        
+        // If we still don't have a profile after all attempts, try fetching one more time
+        if (!profile) {
+          const { data: fetchedProfile, error: fetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (!fetchError && fetchedProfile) {
+            profile = fetchedProfile;
+            console.log('[Profile GET] Successfully fetched profile after creation');
+          } else {
+            // Last resort fallback
+            profile = {
+              id: user.id,
+              username: username,
+              display_name: displayName,
+              profile_picture_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+              bio: null,
+              created_at: user.created_at,
+              updated_at: new Date().toISOString(),
+            };
+            console.log('[Profile GET] Using fallback profile object');
+          }
+        }
+      }
+    } else if (profileError && profileError.code !== 'PGRST116') {
+      console.error('[Profile GET] Supabase error:', profileError);
       return NextResponse.json(
-        { error: 'Failed to fetch profile' },
+        { error: 'Failed to load profile', details: profileError.message },
         { status: 500 }
       );
     }
 
-    // Get authentication provider
-    const authProvider = user.app_metadata?.provider || 'email';
-    
-    // Get provider account info from user metadata
-    const providerAccountName = user.user_metadata?.full_name || user.user_metadata?.name || null;
-    const providerAccountEmail = user.user_metadata?.email || user.email;
-    const providerUserId = user.user_metadata?.preferred_username || user.user_metadata?.user_name || null;
+    // 3) Derive provider display (Email / Google / Spotify, etc.)
+    const provider = (user.app_metadata && user.app_metadata.provider) || 'email';
 
-    // Check Spotify connection and get account info if available
-    const { data: spotifyToken } = await supabase
-      .from('spotify_tokens')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .single();
+    let auth_provider_display = 'Email';
+    if (provider === 'google') auth_provider_display = 'Google';
+    if (provider === 'spotify') auth_provider_display = 'Spotify';
 
-    let spotifyAccountInfo = null;
-    if (spotifyToken) {
-      // Try to fetch Spotify account info if token is valid
+    // 4) Try to get a nice display name for the connected account
+    let provider_account_name = null;
+
+    // First try user_metadata overrides (works for most providers)
+    const meta = user.user_metadata || {};
+    provider_account_name =
+      meta.full_name ||
+      meta.name ||
+      meta.user_name ||
+      null;
+
+    // If provider is Spotify, try to get a better display name via Spotify API
+    if (provider === 'spotify') {
       try {
-        const { getValidAccessToken } = await import('../../../../lib/spotify.js');
+        const { getValidAccessToken } = await import('@/lib/spotify');
         const accessToken = await getValidAccessToken(supabase, user.id);
         const spotifyRes = await fetch('https://api.spotify.com/v1/me', {
           headers: { 'Authorization': `Bearer ${accessToken}` },
         });
         if (spotifyRes.ok) {
           const spotifyData = await spotifyRes.json();
-          spotifyAccountInfo = {
-            display_name: spotifyData.display_name || null,
-            id: spotifyData.id || null,
-          };
+
+          // Spotify can return display_name as null or the user ID if no display name is set
+          // Check if display_name looks like an ID (all alphanumeric, no spaces)
+          const isLikelyId =
+            spotifyData.display_name &&
+            /^[a-zA-Z0-9]{22,}$/.test(spotifyData.display_name) &&
+            !/\s/.test(spotifyData.display_name);
+
+          // Use null if display_name is missing or looks like an ID (show a fallback in UI)
+          const displayName =
+            spotifyData.display_name && !isLikelyId
+              ? spotifyData.display_name
+              : null;
+
+          provider_account_name = displayName || provider_account_name;
         }
       } catch (e) {
         // Token may be invalid or expired - that's okay, we'll just show connected
@@ -86,245 +207,250 @@ export async function GET() {
       }
     }
 
-    // Check YouTube connection  
-    const { data: youtubeToken } = await supabase
-      .from('youtube_tokens')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .single();
+    // 5) Build the object returned to the frontend
+    const responseBody = {
+      // all columns from your "users" table (display_name, bio, etc.)
+      ...profile,
 
-    let youtubeAccountInfo = null;
-    if (youtubeToken) {
-      // Try to fetch YouTube account info if token is available
-      // Note: YouTube API access would require similar token handling
-      // For now, we'll show connection status without account details
-      youtubeAccountInfo = {
-        connected: true,
-      };
-    }
-
-    // Format provider name for display
-    const formatProviderName = (provider) => {
-      const names = {
-        'spotify': 'Spotify',
-        'google': 'Google (YouTube)',
-        'email': 'Email',
-      };
-      return names[provider] || provider;
+      // auth / account info for Account Information section
+      email: user.email,
+      email_verified: !!user.email_confirmed_at,
+      created_at: user.created_at,
+      auth_provider_display,
+      provider_account_name,
     };
 
-    // Return profile data with connection status
-    return NextResponse.json({
-      id: user.id,
-      email: user.email,
-      email_verified: user.email_confirmed_at ? true : false,
-      display_name: profile?.display_name || null,
-      bio: profile?.bio || null,
-      profile_picture_url: profile?.profile_picture_url || user.user_metadata?.avatar_url || null,
-      username: profile?.username || null,
-      created_at: user.created_at,
-      // Authentication provider info
-      auth_provider: authProvider,
-      auth_provider_display: formatProviderName(authProvider),
-      provider_account_name: providerAccountName,
-      provider_account_email: providerAccountEmail,
-      provider_user_id: providerUserId,
-      // Connection status
-      spotify_connected: !!spotifyToken,
-      spotify_account: spotifyAccountInfo,
-      youtube_connected: !!youtubeToken,
-      youtube_account: youtubeAccountInfo,
-    });
-  } catch (error) {
-    console.error('[profile API] Unexpected error:', error);
+    return NextResponse.json(responseBody);
+  } catch (err) {
+    console.error('[Profile GET] Unexpected error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Unexpected server error' },
       { status: 500 }
     );
   }
 }
 
 /**
- * PUT /api/user/profile
- * Update user profile
- * 
- * Request body:
- * {
- *   display_name: string (required, 2-50 chars, alphanumeric + spaces)
- *   bio?: string (optional, max 200 chars)
- *   profile_picture_url?: string (optional, valid URL)
- * }
- * 
- * Returns:
- * - 200: Updated profile data
- * - 400: Validation error
- * - 401: Unauthorized
- * - 500: Server error
+ * PATCH /api/user/profile
+ * Update current user's profile
  */
-export async function PUT(request) {
+export async function PATCH(req) {
   try {
     const supabase = await makeSupabase();
-    
-    // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    // 1) Check auth
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      console.error('[Profile PATCH] Unauthorized:', userError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Rate limiting
-    const rateLimitKey = user.id || 'anonymous';
-    const rateLimit = checkRateLimit(rateLimitKey, {
-      limit: 10, // 10 updates per minute
-      windowMs: 60 * 1000,
-    });
-
-    if (!rateLimit.allowed) {
-      const resetSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
-      return NextResponse.json(
-        createErrorResponse(
-          'Rate limit exceeded',
-          429,
-          {
-            message: `Too many requests. Please try again in ${resetSeconds} seconds.`,
-            retryAfter: resetSeconds,
-          }
-        ),
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(resetSeconds),
-            'X-RateLimit-Limit': '10',
-            'X-RateLimit-Remaining': String(rateLimit.remaining),
-            'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
-          },
-        }
-      );
-    }
-
-    // Parse and validate request body
+    // 2) Get new values from body
     let body;
     try {
-      body = await request.json();
-    } catch {
+      body = await req.json();
+    } catch (err) {
+      console.error('[Profile PATCH] Error parsing request body:', err);
       return NextResponse.json(
-        createErrorResponse('Invalid JSON in request body', 400),
+        { error: 'Invalid request body', details: err.message },
+        { status: 400 }
+      );
+    }
+    let {
+      display_name,
+      bio,
+      profile_picture_url,
+    } = body;
+
+    // 3) Validate and sanitize input
+    // Trim display_name and ensure it's not empty
+    if (display_name !== undefined && display_name !== null) {
+      display_name = String(display_name).trim();
+      if (display_name.length < 2) {
+        return NextResponse.json(
+          { error: 'Display name must be at least 2 characters' },
+          { status: 400 }
+        );
+      }
+      if (display_name.length > 50) {
+        return NextResponse.json(
+          { error: 'Display name must not exceed 50 characters' },
+          { status: 400 }
+        );
+      }
+      // Validate display_name format (letters, numbers, spaces only)
+      if (!/^[a-zA-Z0-9\s]+$/.test(display_name)) {
+        return NextResponse.json(
+          { error: 'Display name can only contain letters, numbers, and spaces' },
+          { status: 400 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'Display name is required' },
         { status: 400 }
       );
     }
 
-    // Validate and sanitize input
-    const validationResult = validateRequest(body, profileSchema, {
-      endpoint: '/api/user/profile',
-      userId: user.id,
-      sanitize: true,
-      logErrors: true,
+    // Validate bio (optional, max 200 chars)
+    if (bio !== undefined && bio !== null && bio !== '') {
+      bio = String(bio).trim();
+      if (bio.length > 200) {
+        return NextResponse.json(
+          { error: 'Bio must not exceed 200 characters' },
+          { status: 400 }
+        );
+      }
+      // Convert empty string to null
+      if (bio === '') {
+        bio = null;
+      }
+    } else {
+      bio = null;
+    }
+
+    // Validate profile_picture_url (optional)
+    if (profile_picture_url !== undefined && profile_picture_url !== null && profile_picture_url !== '') {
+      profile_picture_url = String(profile_picture_url).trim();
+      // Basic URL validation
+      try {
+        new URL(profile_picture_url);
+      } catch (e) {
+        return NextResponse.json(
+          { error: 'Invalid profile picture URL format' },
+          { status: 400 }
+        );
+      }
+      // Convert empty string to null
+      if (profile_picture_url === '') {
+        profile_picture_url = null;
+      }
+    } else {
+      profile_picture_url = null;
+    }
+
+    // 4) Simple direct UPDATE - RLS is disabled, so this will work
+    console.log('[Profile PATCH] Attempting to update profile for user:', user.id);
+    console.log('[Profile PATCH] Update payload:', {
+      display_name,
+      bio,
+      profile_picture_url,
     });
-
-    if (!validationResult.success) {
-      return NextResponse.json(
-        validationResult.errors,
-        { status: 400 }
-      );
-    }
-
-    const validatedData = validationResult.data;
-
-    // Prepare update data (only include fields that are provided)
-    const updateData = {};
     
-    if (validatedData.display_name !== undefined) {
-      updateData.display_name = validatedData.display_name;
-    }
-    
-    if (validatedData.bio !== undefined) {
-      // Convert undefined to null for database (or empty string if preferred)
-      updateData.bio = validatedData.bio || null;
-    }
-    
-    if (validatedData.profile_picture_url !== undefined) {
-      // Convert null to null (or empty string if preferred)
-      updateData.profile_picture_url = validatedData.profile_picture_url || null;
-    }
-
-    // Update user profile in database
-    const { data: updatedProfile, error: updateError } = await supabase
+    // Try direct update first
+    const { data: updated, error: updateErr } = await supabase
       .from('users')
-      .update(updateData)
+      .update({
+        display_name: display_name,
+        bio,
+        profile_picture_url,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', user.id)
       .select()
       .single();
 
-    if (updateError) {
-      console.error('[profile API] Error updating profile:', updateError);
+    let updatedProfile = null;
+
+    if (updateErr) {
+      console.error('[Profile PATCH] Update error details:', {
+        code: updateErr.code,
+        message: updateErr.message,
+        details: updateErr.details,
+        hint: updateErr.hint
+      });
       
-      // Handle specific database errors
-      if (updateError.code === '23505') { // Unique constraint violation
+      // If update fails with "not found", create the profile
+      if (updateErr.code === 'PGRST116') {
+        console.log('[Profile PATCH] Profile not found (PGRST116), creating one...');
+        
+        const username = user.user_metadata?.username || 
+                         user.user_metadata?.preferred_username ||
+                         user.email?.split('@')[0] || 
+                         `user_${user.id.slice(0, 8)}`;
+
+        console.log('[Profile PATCH] Creating profile with username:', username);
+
+        const { data: newProfile, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            username: username,
+            display_name: display_name,
+            bio: bio,
+            profile_picture_url: profile_picture_url,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('[Profile PATCH] Failed to create profile:', {
+            code: createError.code,
+            message: createError.message,
+            details: createError.details,
+            hint: createError.hint
+          });
+          return NextResponse.json(
+            { error: 'Failed to create profile', details: createError.message, code: createError.code },
+            { status: 500 }
+          );
+        }
+        
+        updatedProfile = newProfile;
+        console.log('[Profile PATCH] Successfully created profile:', updatedProfile);
+      } else {
+        // For any other error, return it
+        console.error('[Profile PATCH] Update failed with non-PGRST116 error');
         return NextResponse.json(
-          { error: 'A profile with this information already exists' },
-          { status: 400 }
+          { 
+            error: 'Failed to update profile', 
+            details: updateErr.message, 
+            code: updateErr.code,
+            hint: updateErr.hint || 'Check if RLS is disabled and migration has been run'
+          },
+          { status: 500 }
         );
       }
-      
+    } else {
+      updatedProfile = updated;
+      console.log('[Profile PATCH] Successfully updated profile:', {
+        id: updatedProfile?.id,
+        display_name: updatedProfile?.display_name,
+        bio: updatedProfile?.bio,
+      });
+    }
+
+    if (!updatedProfile) {
+      console.error('[Profile PATCH] No profile returned after create/update');
       return NextResponse.json(
-        { error: 'Failed to update profile' },
+        { error: 'Profile operation succeeded but no profile data returned', code: 'NO_PROFILE_DATA' },
         { status: 500 }
       );
     }
 
-    // Fetch updated profile with all fields (including those not updated)
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError) {
-      console.error('[profile API] Error fetching updated profile:', profileError);
-      // Even if fetch fails, return what we updated
-      return NextResponse.json({
-        id: user.id,
-        email: user.email,
-        display_name: updatedProfile?.display_name || null,
-        bio: updatedProfile?.bio || null,
-        profile_picture_url: updatedProfile?.profile_picture_url || null,
-        message: 'Profile updated successfully',
-      });
-    }
-
-    // Get authentication provider info for response
-    const authProvider = user.app_metadata?.provider || 'email';
-    const formatProviderName = (provider) => {
-      const names = {
-        'spotify': 'Spotify',
-        'google': 'Google (YouTube)',
-        'email': 'Email',
-      };
-      return names[provider] || provider;
-    };
-
-    // Return updated profile data (matching GET endpoint format)
-    return NextResponse.json({
-      id: user.id,
-      email: user.email,
-      email_verified: user.email_confirmed_at ? true : false,
-      display_name: profile?.display_name || null,
-      bio: profile?.bio || null,
-      profile_picture_url: profile?.profile_picture_url || user.user_metadata?.avatar_url || null,
-      username: profile?.username || null,
-      created_at: user.created_at,
-      auth_provider: authProvider,
-      auth_provider_display: formatProviderName(authProvider),
-      message: 'Profile updated successfully',
+    console.log('[Profile PATCH] Successfully updated profile:', {
+      display_name: updatedProfile?.display_name,
+      bio: updatedProfile?.bio,
     });
-  } catch (error) {
-    console.error('[profile API] Unexpected error:', error);
+
+    // Return the updated profile so the frontend can use it immediately
+    return NextResponse.json({ 
+      ok: true,
+      profile: updatedProfile 
+    }, { status: 200 });
+  } catch (err) {
+    console.error('[Profile PATCH] Unexpected error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Unexpected server error', 
+        details: err.message || String(err),
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      },
       { status: 500 }
     );
   }
 }
-

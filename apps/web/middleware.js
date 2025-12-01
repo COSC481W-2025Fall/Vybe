@@ -28,16 +28,19 @@ export async function middleware(req) {
 
   // If not authenticated:
   // - allow access to '/sign-in'
+  // - allow API routes to handle their own auth (return JSON errors)
   // - otherwise redirect to '/sign-in?next=...'
   if (!session) {
     if (pathname === '/sign-in') return res
+    // Let API routes handle their own authentication
+    if (pathname.startsWith('/api/')) return res
     const url = req.nextUrl.clone()
     url.pathname = CONFIG.AUTH_REDIRECT_PATH
     url.searchParams.set('next', pathname + req.nextUrl.search)
     return NextResponse.redirect(url)
   }
 
-  // If authenticated and visiting '/sign-in' → bounce to next or dashboard
+  // If authenticated and visiting '/sign-in' → bounce to next or home page
   if (pathname === '/sign-in') {
     const url = req.nextUrl.clone()
     const nextParam = req.nextUrl.searchParams.get('next')
@@ -47,7 +50,7 @@ export async function middleware(req) {
       url.pathname = dest.pathname
       url.search = dest.search
     } else {
-      url.pathname = '/dashboard' // Redirect to dashboard
+      url.pathname = '/' // Redirect to home instead of library
       url.search = ''
     }
     return NextResponse.redirect(url)

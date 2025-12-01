@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, Music2, Library, User as UserIcon, LogOut, Settings, Menu, X } from 'lucide-react';
+import { Home, Users, Library, User as UserIcon, LogOut, Settings, Menu, X } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import VybeLogo from './common/VybeLogo';
+import ThemeToggle from './ThemeToggle';
 import { useState, useEffect, useRef } from 'react';
 
 const links = CONFIG.NAV_LINKS.map(link => {
   const iconMap = {
     'Home': Home,
     'Groups': Users,
-    'Playlist': Music2,
     'Library': Library,
     'Profile': UserIcon,
     'Settings': Settings
@@ -22,20 +22,19 @@ const links = CONFIG.NAV_LINKS.map(link => {
   };
 });
 
-// eslint-disable-next-line react/prop-types
 function NavPill({ href, label, Icon, active }) {
   return (
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
       className={[
-        'group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition nav-item backdrop-blur-sm border',
+        'group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium transition-all nav-item backdrop-blur-sm border',
         active
-          ? 'bg-white text-black shadow-md border-white/20'
-          : 'text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border-white/15',
+          ? 'bg-[var(--foreground)] text-[var(--background)] shadow-md border-transparent'
+          : 'text-[var(--foreground)] bg-white/10 hover:bg-white/15 border-white/15 hover:border-white/25 [data-theme="light"]:bg-black/5 [data-theme="light"]:hover:bg-black/10 [data-theme="light"]:border-black/10 [data-theme="light"]:hover:border-black/20',
       ].join(' ')}
     >
-      <Icon className={`h-4 w-4 ${active ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
+      <Icon className={`h-4 w-4 ${active ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`} />
       <span className="hidden sm:inline">{label}</span>
     </Link>
   );
@@ -49,11 +48,14 @@ export default function Navbar() {
   const mobileMenuRef = useRef(null);
   const hamburgerButtonRef = useRef(null);
 
+  // Hide Navbar on sign-in and landing pages
+  const shouldHideNavbar = pathname === '/sign-in' || pathname === '/';
+
   // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        mobileMenuRef.current && 
+        mobileMenuRef.current &&
         !mobileMenuRef.current.contains(event.target) &&
         hamburgerButtonRef.current &&
         !hamburgerButtonRef.current.contains(event.target)
@@ -92,7 +94,7 @@ export default function Navbar() {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (response.ok) {
         // The server will handle the redirect, but we can also do it client-side as backup
         router.push('/sign-in');
@@ -109,8 +111,12 @@ export default function Navbar() {
     }
   };
 
+  if (shouldHideNavbar) {
+    return null;
+  }
+
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-transparent bg-black/40 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b border-[var(--glass-border)] [data-theme='light']:border-black/15 bg-[var(--glass-bg)] backdrop-blur-md transition-colors duration-300">
       <div className="mx-auto flex h-12 max-w-6xl items-center px-4">
         {/* left: brand (separate, no glass) */}
         <div className="shrink-0">
@@ -142,45 +148,57 @@ export default function Navbar() {
         {/* spacer right of center */}
         <div className="flex-1 hidden md:block" />
         
-        {/* Sign out button - desktop only */}
-        <button
-          onClick={handleSignOut}
-          disabled={isSigningOut}
-          className="hidden md:flex group items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition nav-item backdrop-blur-sm border border-white/10 text-white/70 hover:text-red-400 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="Sign out"
-          title="Sign out"
-        >
-          <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-70 group-hover:opacity-100'}`} />
-          <span suppressHydrationWarning>
-            {isSigningOut ? 'Logging out...' : 'Log out'}
-          </span>
-        </button>
+        {/* Theme Toggle and Sign out button - desktop only */}
+        <div className="hidden md:flex items-center gap-3">
+          <ThemeToggle />
+          <button
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="group items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium transition-all nav-item backdrop-blur-sm border text-[var(--foreground)] bg-white/10 hover:bg-white/15 border-white/15 hover:border-white/25 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:border-black/10 [data-theme='light']:hover:border-black/20 disabled:opacity-50 disabled:cursor-not-allowed flex"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut className={`h-4 w-4 ${isSigningOut ? 'opacity-50' : 'opacity-80'}`} />
+            <span suppressHydrationWarning>
+              {isSigningOut ? 'Logging out...' : 'Log out'}
+            </span>
+          </button>
+        </div>
 
-        {/* Mobile hamburger menu button */}
-        <button
-          ref={hamburgerButtonRef}
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden ml-auto flex items-center justify-center w-10 h-10 rounded-lg text-white/80 hover:text-white hover:bg-white/10 active:bg-white/10 active:text-white transition-colors"
-          aria-label="Toggle menu"
-          aria-expanded={isMobileMenuOpen}
-        >
-          {isMobileMenuOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
-        </button>
+        {/* Mobile: Theme Toggle and hamburger menu button - right aligned */}
+        <div className="md:hidden ml-auto flex items-center gap-3">
+          {/* Theme control */}
+          <div className="flex items-center">
+            <ThemeToggle />
+          </div>
+          {/* Divider */}
+          <div className="w-px h-6 bg-[var(--glass-border)]" />
+          {/* Hamburger menu */}
+          <button
+            ref={hamburgerButtonRef}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="flex items-center justify-center w-10 h-10 rounded-lg text-[var(--foreground)] bg-white/10 hover:bg-white/15 border border-white/15 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:border-black/10 transition-colors"
+            aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Mobile dropdown menu */}
       {isMobileMenuOpen && (
         <div
           ref={mobileMenuRef}
-          className="md:hidden absolute top-full left-0 right-0 bg-gray-900/95 backdrop-blur-md border-b border-gray-700 shadow-lg transition-all duration-200 ease-in-out"
+          className="md:hidden absolute top-full left-0 right-0 bg-[var(--dropdown-bg)] backdrop-blur-xl border-b border-[var(--glass-border)] shadow-lg transition-all duration-200 ease-in-out"
           data-testid="mobile-nav"
         >
           <div className="max-w-6xl mx-auto px-4 py-4 max-h-[calc(100vh-3rem)] overflow-y-auto modal-scroll">
-            <div className="bg-gray-800 border border-gray-700 rounded-md overflow-hidden">
+            <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl overflow-hidden">
               {links.map(({ href, label, Icon }) => {
                 const active =
                   pathname === href || (href !== '/dashboard' && pathname?.startsWith(href)) || (href === '/dashboard' && pathname === '/');
@@ -190,26 +208,26 @@ export default function Navbar() {
                     href={href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={[
-                      'flex items-center gap-3 px-4 py-3 text-base transition-colors border-b border-gray-700 last:border-b-0',
+                      'flex items-center gap-3 px-4 py-3.5 text-base font-medium transition-colors border-b border-[var(--glass-border)] last:border-b-0',
                       active
-                        ? 'bg-gray-700 text-white'
-                        : 'text-white hover:bg-gray-700/50',
+                        ? 'bg-[var(--foreground)] text-[var(--background)]'
+                        : 'text-[var(--foreground)] hover:bg-white/10 [data-theme="light"]:hover:bg-black/5',
                     ].join(' ')}
                     aria-current={active ? 'page' : undefined}
                   >
-                    <Icon className={`h-5 w-5 ${active ? 'opacity-100' : 'opacity-70'}`} />
-                    <span className="font-medium">{label}</span>
+                    <Icon className={`h-5 w-5 ${active ? 'opacity-100' : 'opacity-80'}`} />
+                    <span>{label}</span>
                   </Link>
                 );
               })}
               <button
                 onClick={handleSignOut}
                 disabled={isSigningOut}
-                className="w-full flex items-center gap-3 px-4 py-3 text-base transition-colors text-white hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed border-t border-gray-700"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-base font-medium transition-colors text-[var(--foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/5 disabled:opacity-50 disabled:cursor-not-allowed border-t border-[var(--glass-border)]"
                 aria-label="Sign out"
               >
-                <LogOut className={`h-5 w-5 opacity-70`} />
-                <span className="font-medium" suppressHydrationWarning>
+                <LogOut className={`h-5 w-5 opacity-80`} />
+                <span suppressHydrationWarning>
                   {isSigningOut ? 'Logging out...' : 'Log out'}
                 </span>
               </button>

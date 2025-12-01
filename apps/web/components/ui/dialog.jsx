@@ -30,7 +30,8 @@ export function DialogOverlay({ className, ...props }) {
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60 backdrop-blur-md",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/70 backdrop-blur-md",
+        "[data-theme='light']:bg-black/50",
         className,
       )}
       {...props}
@@ -45,19 +46,19 @@ export function DialogContent({ className, children, ...props }) {
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "glass-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border border-white/12 p-4 sm:p-6 shadow-2xl duration-200 sm:max-w-lg text-white",
+          // Base positioning and animation
+          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl p-4 sm:p-6 duration-200 sm:max-w-lg",
+          "text-[var(--foreground)]",
+          
+          // Use CSS variables for all themes - background, border, and shadow
+          "bg-[var(--dropdown-bg)] border-2 border-[var(--glass-border)] shadow-2xl",
           className,
         )}
-        style={{
-          borderTopColor: 'rgba(255, 255, 255, 0.2)',
-          borderLeftColor: 'rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-          background: 'rgba(17, 24, 39, 0.95)',
-        }}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="ring-offset-background focus:ring-ring absolute top-3 sm:top-4 right-3 sm:right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:pointer-events-none text-white hover:bg-white/10 p-1 rounded">
+        <DialogPrimitive.Close className="absolute top-3 sm:top-4 right-3 sm:right-4 rounded-md opacity-70 transition-all hover:opacity-100 focus:ring-2 focus:ring-[var(--accent)]/30 focus:outline-none disabled:pointer-events-none text-[var(--foreground)] hover:bg-[var(--secondary-hover)] p-1.5">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
@@ -93,7 +94,7 @@ export function DialogTitle({ className, ...props }) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-lg leading-none font-semibold text-white", className)}
+      className={cn("text-lg leading-none font-semibold text-[var(--foreground)]", className)}
       {...props}
     />
   );
@@ -103,7 +104,7 @@ export function DialogDescription({ className, ...props }) {
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-gray-400 text-sm", className)}
+      className={cn("text-[var(--muted-foreground)] text-sm", className)}
       {...props}
     />
   );

@@ -1,102 +1,273 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  
-  /* Dark mode scrollbar colors - track is transparent, only thumb visible */
+  /* High contrast dark mode - Pure black with white text and neon blue accents */
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted-foreground: #b0b0b0;
+  --accent: #00d4ff; /* Neon blue */
+
+  /* Input background - slightly elevated from page background */
+  --input-bg: #0a0a0f;
+
+  /* Glass tokens - Dark with neon blue borders */
+  --glass-bg: rgba(10, 10, 15, 0.95);
+  --glass-border: rgba(0, 212, 255, 0.3); /* Neon blue border */
+  --glass-border-hover: rgba(0, 212, 255, 0.5);
+  --glass-shadow: rgba(0, 0, 0, 0.6);
+
+  /* Dropdown/popover specific - SOLID for visibility */
+  --dropdown-bg: #050508;
+
+  /* Secondary element styling with neon blue */
+  --secondary-bg: rgba(0, 212, 255, 0.08);
+  --secondary-border: rgba(0, 212, 255, 0.25);
+  --secondary-hover: rgba(0, 212, 255, 0.15);
+
+  /* Dark mode scrollbar colors */
   --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
-  --scrollbar-thumb-active: rgba(255, 255, 255, 0.45);
+  --scrollbar-thumb: rgba(0, 212, 255, 0.3);
+  --scrollbar-thumb-hover: rgba(0, 212, 255, 0.5);
+  --scrollbar-thumb-active: rgba(0, 212, 255, 0.6);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: #ffffff;
-    --foreground: #171717;
-    
-    /* Light mode scrollbar colors */
-    --scrollbar-track: transparent;
-    --scrollbar-thumb: rgba(0, 0, 0, 0.2);
-    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.35);
-    --scrollbar-thumb-active: rgba(0, 0, 0, 0.45);
-  }
+[data-theme="light"] {
+  /* High contrast light mode - Pure white with black text and BLACK borders */
+  --background: #ffffff;
+  --foreground: #000000;
+  --muted-foreground: #404040;
+  --accent: #000000; /* Black accent for light mode */
+
+  /* Input background - pure white */
+  --input-bg: #ffffff;
+
+  /* Glass tokens - Light Mode with solid BLACK borders */
+  --glass-bg: rgba(255, 255, 255, 0.98);
+  --glass-border: rgba(0, 0, 0, 0.25);
+  --glass-border-hover: rgba(0, 0, 0, 0.5);
+  --glass-shadow: rgba(0, 0, 0, 0.2);
+
+  /* Dropdown/popover specific - pure white with black border */
+  --dropdown-bg: #ffffff;
+
+  /* Secondary element styling with BLACK borders */
+  --secondary-bg: rgba(0, 0, 0, 0.02);
+  --secondary-border: rgba(0, 0, 0, 0.2);
+  --secondary-hover: rgba(0, 0, 0, 0.06);
+
+  /* Light mode scrollbar colors - black */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.3);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.5);
+  --scrollbar-thumb-active: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="custom"] {
+  /* Custom theme variables will be set via inline styles on the root element */
+  /* These are fallback defaults - actual values come from ThemeProvider */
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted-foreground: #b0b0b0;
+  --accent: #00d4ff;
+
+  /* Input background - slightly elevated */
+  --input-bg: #0a0a0f;
+
+  /* Glass tokens - Custom (defaults match dark mode) */
+  --glass-bg: #0a0a0f;
+  --glass-border: rgba(0, 212, 255, 0.3);
+  --glass-border-hover: rgba(0, 212, 255, 0.5);
+  --glass-shadow: rgba(0, 0, 0, 0.6);
+
+  /* Dropdown/popover specific - SOLID */
+  --dropdown-bg: #050508;
+
+  /* Secondary element styling */
+  --secondary-bg: rgba(0, 212, 255, 0.08);
+  --secondary-border: rgba(0, 212, 255, 0.25);
+  --secondary-hover: rgba(0, 212, 255, 0.15);
+
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(0, 212, 255, 0.3);
+  --scrollbar-thumb-hover: rgba(0, 212, 255, 0.5);
+  --scrollbar-thumb-active: rgba(0, 212, 255, 0.6);
 }
 
 @keyframes gradient-move {
-  0% { background-position: 0% 50% }
-  50% { background-position: 100% 50% }
-  100% { background-position: 0% 50% }
+  0% {
+    background-position: 0% 50%
+  }
+
+  50% {
+    background-position: 100% 50%
+  }
+
+  100% {
+    background-position: 0% 50%
+  }
 }
 
-/* Animated gradient text (from wireframes chroma-text-gradient) */
+/* Animated gradient text */
 @keyframes chromaTextShift {
-  0%, 100% { background-position: 0% 50% }
-  25%      { background-position: 100% 20% }
-  50%      { background-position: 80% 100% }
-  75%      { background-position: 20% 80% }
+
+  0%,
+  100% {
+    background-position: 0% 50%
+  }
+
+  25% {
+    background-position: 100% 20%
+  }
+
+  50% {
+    background-position: 80% 100%
+  }
+
+  75% {
+    background-position: 20% 80%
+  }
 }
 
-/* Chroma background utilities and animations (from wireframes) */
+/* Splash screen animations */
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Chroma background utilities and animations */
 @keyframes chromaShift {
-  0%, 100% { background-position: 0% 50% }
-  20%      { background-position: 80% 20% }
-  40%      { background-position: 20% 80% }
-  60%      { background-position: 100% 40% }
-  80%      { background-position: 40% 100% }
+
+  0%,
+  100% {
+    background-position: 0% 50%
+  }
+
+  20% {
+    background-position: 80% 20%
+  }
+
+  40% {
+    background-position: 20% 80%
+  }
+
+  60% {
+    background-position: 100% 40%
+  }
+
+  80% {
+    background-position: 40% 100%
+  }
 }
 
 @keyframes chromaFlow {
-  0%, 100% { background-position: 0% 0% }
-  16%      { background-position: 70% 30% }
-  33%      { background-position: 30% 70% }
-  50%      { background-position: 100% 50% }
-  66%      { background-position: 50% 100% }
-  83%      { background-position: 20% 20% }
+
+  0%,
+  100% {
+    background-position: 0% 0%
+  }
+
+  16% {
+    background-position: 70% 30%
+  }
+
+  33% {
+    background-position: 30% 70%
+  }
+
+  50% {
+    background-position: 100% 50%
+  }
+
+  66% {
+    background-position: 50% 100%
+  }
+
+  83% {
+    background-position: 20% 20%
+  }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { opacity: .4; transform: translate(-50%, -50%) scale(1) }
-  50%      { opacity: .7; transform: translate(-50%, -50%) scale(1.3) }
+
+  0%,
+  100% {
+    opacity: .4;
+    transform: translate(-50%, -50%) scale(1)
+  }
+
+  50% {
+    opacity: .7;
+    transform: translate(-50%, -50%) scale(1.3)
+  }
 }
 
 @keyframes iconGlowPulse {
-  0% { 
-    opacity: 0.15; 
-    background-color: rgba(139, 92, 246, 0.4); /* purple */
+  0% {
+    opacity: 0.15;
+    background-color: rgba(139, 92, 246, 0.4);
   }
-  50% { 
-    opacity: 0.2; 
-    background-color: rgba(139, 92, 246, 0.35); /* purple fading */
+
+  50% {
+    opacity: 0.2;
+    background-color: rgba(139, 92, 246, 0.35);
   }
-  100% { 
-    opacity: 0.15; 
-    background-color: rgba(45, 212, 191, 0.4); /* teal */
+
+  100% {
+    opacity: 0.15;
+    background-color: rgba(45, 212, 191, 0.4);
   }
 }
 
 @layer utilities {
-  /* Typography scale utilities for consistency */
-  .page-title { @apply text-2xl font-semibold text-white; }
-  .section-title { @apply text-xl font-semibold text-white; }
-  .section-subtitle { @apply text-sm text-gray-400; }
+  .page-title {
+    @apply text-2xl font-semibold text-[var(--foreground)];
+  }
+
+  .section-title {
+    @apply text-xl font-semibold text-[var(--foreground)];
+  }
+
+  .section-subtitle {
+    @apply text-sm text-[var(--muted-foreground)];
+  }
+
   .chroma-bg {
     position: relative;
     overflow: hidden;
     background: transparent !important;
   }
+
   .chroma-bg::before {
     content: '';
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: -3;
     background-size: 350% 350%;
     animation: chromaShift 12s ease-in-out infinite;
@@ -113,10 +284,14 @@
       radial-gradient(circle at 30% 40%, #fbbf24 0%, transparent 20%),
       radial-gradient(circle at 70% 20%, #22d3ee 0%, transparent 28%);
   }
+
   .chroma-bg::after {
     content: '';
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: -2;
     background-size: 400% 400%;
     animation: chromaFlow 14s ease-in-out infinite;
@@ -130,41 +305,303 @@
     opacity: 0.08;
   }
 
-  /* Accent glow utility */
-  .chroma-accent-glow { position: relative; }
+  .chroma-accent-glow {
+    position: relative;
+  }
+
   .chroma-accent-glow::after {
     content: '';
     position: absolute;
-    top: 50%; left: 50%;
-    width: 120px; height: 120px;
+    top: 50%;
+    left: 50%;
+    width: 120px;
+    height: 120px;
     background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
     transform: translate(-50%, -50%);
-    z-index: -1; opacity: .2;
+    z-index: -1;
+    opacity: .2;
     animation: pulseGlow 3s ease-in-out infinite;
   }
 
-  /* Glass card variants (aligned with wireframes) */
+  /* Glass card variants - SOLID backgrounds for visibility */
   .glass-card {
-    background: rgba(17, 24, 39, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-  .glass-card:hover,
-  .glass-card:active {
-    background: rgba(31, 41, 55, 0.7);
-    border-color: rgba(255, 255, 255, 0.15);
+      0 8px 32px var(--glass-shadow),
+      inset 0 1px 0 var(--glass-border);
   }
 
-  /* Nav hover polish */
+  .glass-card:hover,
+  .glass-card:active {
+    background: var(--dropdown-bg);
+    border-color: var(--glass-border-hover);
+  }
+
+  /* Light mode glass-card - uses CSS variables for custom theme support */
+  [data-theme="light"] .glass-card {
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
+    box-shadow: 0 8px 32px var(--glass-shadow);
+  }
+
+  [data-theme="light"] .glass-card:hover,
+  [data-theme="light"] .glass-card:active {
+    background: var(--dropdown-bg);
+    border-color: var(--glass-border-hover);
+  }
+  
+  /* Custom theme glass-card - fully uses CSS variables */
+  [data-theme="custom"] .glass-card {
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
+    box-shadow: 0 8px 32px var(--glass-shadow);
+  }
+
+  [data-theme="custom"] .glass-card:hover,
+  [data-theme="custom"] .glass-card:active {
+    background: var(--dropdown-bg);
+    border-color: var(--glass-border-hover);
+  }
+
+  /* Modal specific - fully opaque backgrounds using CSS variables */
+  .modal-content,
+  [role="dialog"] {
+    background: var(--dropdown-bg) !important;
+    border: 2px solid var(--glass-border) !important;
+  }
+
+  [data-theme="light"] .modal-content,
+  [data-theme="light"] [role="dialog"] {
+    background: var(--dropdown-bg) !important;
+    border: 2px solid var(--glass-border) !important;
+    box-shadow: 0 25px 50px -12px var(--glass-shadow) !important;
+  }
+  
+  [data-theme="custom"] .modal-content,
+  [data-theme="custom"] [role="dialog"] {
+    background: var(--dropdown-bg) !important;
+    border: 2px solid var(--glass-border) !important;
+    box-shadow: 0 25px 50px -12px var(--glass-shadow) !important;
+  }
+
+  /* ========================================
+     BUTTON SYSTEM - Consistent across themes
+     ======================================== */
+
+  /* Primary Button - High contrast CTA */
+  .btn-primary {
+    background: var(--foreground);
+    color: var(--background);
+    border: 1px solid transparent;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    opacity: 0.95;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Secondary Button - Ghost/outline style using CSS variables */
+  .btn-secondary {
+    background: var(--secondary-bg);
+    color: var(--foreground);
+    border: 1px solid var(--secondary-border);
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+  }
+
+  .btn-secondary:active {
+    background: var(--secondary-hover);
+  }
+
+  [data-theme="light"] .btn-secondary {
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
+    box-shadow: 0 1px 3px var(--glass-shadow);
+    color: var(--foreground);
+  }
+
+  [data-theme="light"] .btn-secondary:hover {
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+    box-shadow: 0 2px 6px var(--glass-shadow);
+  }
+
+  [data-theme="light"] .btn-secondary:active {
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+  }
+  
+  [data-theme="custom"] .btn-secondary {
+    background: var(--secondary-bg);
+    border: 2px solid var(--secondary-border);
+    color: var(--foreground);
+  }
+
+  [data-theme="custom"] .btn-secondary:hover {
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+  }
+
+  [data-theme="custom"] .btn-secondary:active {
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+  }
+
+  /* Secondary button with accent border - for special CTAs */
+  .btn-secondary-accent {
+    background: var(--secondary-bg);
+    color: var(--foreground);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary-accent:hover {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  .btn-secondary-accent:active {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  /* Accent Button - Uses the accent color variable */
+  .btn-accent {
+    background: var(--accent);
+    color: white;
+    border: 1px solid color-mix(in srgb, var(--accent) 80%, transparent);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  .btn-accent:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 50%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .btn-accent:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+
+  /* Ghost Button - Minimal, text-like */
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted-foreground);
+    border: 1px solid transparent;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--foreground);
+  }
+
+  [data-theme="light"] .btn-ghost:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  /* Danger Button - For destructive actions */
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .btn-danger:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+  }
+
+  /* Form Input Global Styles for visibility - uses --input-bg for consistency */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  textarea {
+    color: var(--foreground);
+    background: var(--input-bg);
+    border: 2px solid var(--glass-border);
+  }
+
+  input:focus,
+  textarea:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+
+  /* Surface utilities for consistent backgrounds */
+  .surface-elevated {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="light"] .surface-elevated {
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
+  }
+  
+  [data-theme="custom"] .surface-elevated {
+    background: var(--secondary-bg);
+    border: 1px solid var(--glass-border);
+  }
+
+  .surface-sunken {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  [data-theme="light"] .surface-sunken {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(100, 100, 140, 0.08);
+  }
+
   .nav-item:hover {
     box-shadow:
       0 0 20px rgba(255, 255, 255, 0.10),
       0 0 40px rgba(255, 255, 255, 0.06),
       0 6px 24px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  [data-theme="light"] .nav-item:hover {
+    box-shadow:
+      0 0 20px rgba(139, 92, 246, 0.12),
+      0 0 40px rgba(139, 92, 246, 0.06),
+      0 6px 24px rgba(100, 100, 140, 0.10) !important;
   }
 }
 
@@ -175,6 +612,14 @@
       0 0 60px rgba(255, 255, 255, 0.06),
       0 10px 32px rgba(0, 0, 0, 0.25);
     border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+
+  [data-theme="light"] .hover-glow:hover {
+    box-shadow:
+      0 0 30px rgba(139, 92, 246, 0.15),
+      0 0 60px rgba(139, 92, 246, 0.08),
+      0 10px 32px rgba(100, 100, 140, 0.12);
+    border-color: rgba(139, 92, 246, 0.25) !important;
   }
 }
 
@@ -188,7 +633,6 @@
     animation: chromaTextShift 6s ease-in-out infinite;
   }
 
-  /* Vybe brand text gradient tuned for the chroma background */
   .vybe-logo-text {
     background: linear-gradient(135deg, #a78bfa, #818cf8, #22d3ee, #34d399, #fbbf24);
     background-size: 400% 400%;
@@ -196,34 +640,67 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: chromaTextShift 8s ease-in-out infinite;
-    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
   }
 
-  /* Purple gradient background for auth pages (from wireframes) */
+  [data-theme="light"] .vybe-logo-text {
+    text-shadow: 0 1px 3px rgba(100, 100, 140, .25);
+  }
+
   .purple-gradient-bg {
     background: linear-gradient(#000 0% 50%, #1a0a2e 85%, #2d1b4e 100%);
     min-height: 100vh;
   }
 
-  /* Pulsing glow for icon */
+  [data-theme="light"] .purple-gradient-bg {
+    background: linear-gradient(180deg, #f0f0f5 0%, #e8e0f5 50%, #ddd5ef 85%, #d5cce8 100%);
+  }
+
   .icon-glow-pulse {
     animation: iconGlowPulse 4s ease-in-out infinite;
   }
 }
 
-
 body {
-  background: #0f0f0f;
+  background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   height: 100vh;
   overflow-y: auto;
 }
 
+/* Theme overrides for background elements */
+[data-theme="light"] .vybe-aurora-fixed {
+  background:
+    radial-gradient(1200px 600px at 15% 10%, rgba(99, 102, 241, .22), transparent 70%),
+    radial-gradient(900px 450px at 85% 15%, rgba(139, 92, 246, .18), transparent 65%),
+    radial-gradient(800px 400px at 25% 80%, rgba(168, 85, 247, .15), transparent 60%),
+    radial-gradient(900px 450px at 70% 85%, rgba(34, 211, 238, .16), transparent 65%),
+    radial-gradient(700px 350px at 50% 50%, rgba(236, 72, 153, .10), transparent 55%),
+    linear-gradient(180deg, #f0f0f5 0%, #e8e8f0 50%, #e0e0ec 100%);
+  background-size: 120% 120%;
+  animation: vybeShift 18s ease-in-out infinite;
+}
+
+[data-theme="custom"] .vybe-aurora-fixed {
+  background: var(--background);
+  animation: none;
+}
+
+[data-theme="light"] .chroma-bg::before,
+[data-theme="light"] .chroma-bg::after {
+  opacity: 0.12;
+  mix-blend-mode: multiply;
+}
+
+[data-theme="custom"] .chroma-bg::before,
+[data-theme="custom"] .chroma-bg::after {
+  display: none;
+}
+
 main {
   height: 100vh;
   display: flex;
-  /* align-items: center; */
 }
 
 #login-box {
@@ -231,170 +708,223 @@ main {
 }
 
 @layer utilities {
-  /* Softer, subtler outer glow */
   .glow-shadow--soft {
-    background: #000;             /* keep inside opaque */
-    border-radius: 12px;          /* match your card */
+    background: var(--background);
+    border-radius: 12px;
     will-change: box-shadow;
     animation: glowShadowPulseSoft 4.6s ease-in-out infinite;
-
-    /* base (static) glow — lighter + tighter */
     box-shadow:
-      0 0 0 1px rgba(255,255,255,.30),
-      0 0 10px 6px rgba(255,255,255,.12),
-      0 0 28px 16px rgba(168,85,247,.18),
-      0 0 48px 28px rgba(168,85,247,.10);
+      0 0 0 1px rgba(255, 255, 255, .30),
+      0 0 10px 6px rgba(255, 255, 255, .12),
+      0 0 28px 16px rgba(168, 85, 247, .18),
+      0 0 48px 28px rgba(168, 85, 247, .10);
+  }
+
+  [data-theme="light"] .glow-shadow--soft {
+    box-shadow:
+      0 0 0 1px rgba(100, 100, 140, .20),
+      0 0 10px 6px rgba(100, 100, 140, .08),
+      0 0 28px 16px rgba(139, 92, 246, .20),
+      0 0 48px 28px rgba(139, 92, 246, .12);
+    animation: glowShadowPulseSoftLight 4.6s ease-in-out infinite;
+  }
+
+  @keyframes glowShadowPulseSoftLight {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 1px rgba(100, 100, 140, .18),
+        0 0 8px 5px rgba(100, 100, 140, .06),
+        0 0 24px 14px rgba(139, 92, 246, .18),
+        0 0 40px 24px rgba(139, 92, 246, .10);
+    }
+
+    50% {
+      box-shadow:
+        0 0 0 1px rgba(100, 100, 140, .24),
+        0 0 12px 7px rgba(100, 100, 140, .10),
+        0 0 34px 20px rgba(139, 92, 246, .24),
+        0 0 56px 30px rgba(139, 92, 246, .14);
+    }
   }
 
   @keyframes glowShadowPulseSoft {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow:
-        0 0 0 1px rgba(255,255,255,.28),
-        0 0 8px 5px  rgba(255,255,255,.10),
-        0 0 24px 14px rgba(168,85,247,.16),
-        0 0 40px 24px rgba(168,85,247,.08);
+        0 0 0 1px rgba(255, 255, 255, .28),
+        0 0 8px 5px rgba(255, 255, 255, .10),
+        0 0 24px 14px rgba(168, 85, 247, .16),
+        0 0 40px 24px rgba(168, 85, 247, .08);
     }
+
     50% {
       box-shadow:
-        0 0 0 1px rgba(255,255,255,.36),
-        0 0 12px 7px rgba(255,255,255,.14),
-        0 0 34px 20px rgba(168,85,247,.20),
-        0 0 56px 30px rgba(168,85,247,.10);
+        0 0 0 1px rgba(255, 255, 255, .36),
+        0 0 12px 7px rgba(255, 255, 255, .14),
+        0 0 34px 20px rgba(168, 85, 247, .20),
+        0 0 56px 30px rgba(168, 85, 247, .10);
     }
   }
 }
 
-/* ---- Vybe pulsing gradient (subtle) ------------------------------ */
 @keyframes vybePulse {
-  0%, 100% { opacity: .12; transform: scale(1); }
-  50%      { opacity: .20; transform: scale(1.03); }
+
+  0%,
+  100% {
+    opacity: .12;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: .20;
+    transform: scale(1.03);
+  }
 }
 
 @layer utilities {
   .vybe-aurora {
     position: relative;
-    isolation: isolate;           /* keep the glow behind content */
-    overflow: hidden;             /* clip glow to rounded corners if any */
+    isolation: isolate;
+    overflow: hidden;
   }
 
   .vybe-aurora::before {
     content: "";
     position: absolute;
-    inset: -12%;                  /* slight bleed so edges don’t show */
+    inset: -12%;
     z-index: -1;
     border-radius: inherit;
-
-    /* Colors based on your palette (top→bottom):
-       near-black → rich indigo → periwinkle → soft lavender → cyan */
-    --ink:    #0b0b11;
+    --ink: #0b0b11;
     --indigo: #5b53ff;
-    --peri:   #8fa0ff;
-    --lav:    #d9b8ff;
-    --cyan:   #49d1ff;
-
-    /* Layered gradients: soft radials + a linear spine */
+    --peri: #8fa0ff;
+    --lav: #d9b8ff;
+    --cyan: #49d1ff;
     background:
-      radial-gradient(120% 90% at 20% 0%,   color-mix(in oklab, var(--indigo) 65%, transparent) 0%, transparent 60%),
-      radial-gradient(120% 95% at 80% 10%,  color-mix(in oklab, var(--lav)    55%, transparent) 0%, transparent 62%),
-      radial-gradient(110% 95% at 50% 100%, color-mix(in oklab, var(--cyan)   55%, transparent) 0%, transparent 65%),
+      radial-gradient(120% 90% at 20% 0%, color-mix(in oklab, var(--indigo) 65%, transparent) 0%, transparent 60%),
+      radial-gradient(120% 95% at 80% 10%, color-mix(in oklab, var(--lav) 55%, transparent) 0%, transparent 62%),
+      radial-gradient(110% 95% at 50% 100%, color-mix(in oklab, var(--cyan) 55%, transparent) 0%, transparent 65%),
       linear-gradient(180deg, var(--ink) 0%, var(--indigo) 30%, var(--peri) 55%, var(--lav) 75%, var(--cyan) 100%);
-
     background-blend-mode: screen, screen, screen, normal;
     filter: blur(14px) saturate(115%);
-    opacity: .14;                 /* base strength (subtle) */
+    opacity: .14;
     animation: vybePulse 9s ease-in-out infinite;
     will-change: transform, opacity;
   }
 
-  /* Optional: extra gentle variant */
-  .vybe-aurora--faint::before { opacity: .10; animation-duration: 11s; }
+  .vybe-aurora--faint::before {
+    opacity: .10;
+    animation-duration: 11s;
+  }
 
-  /* Optional: a touch stronger */
-  .vybe-aurora--pop::before   { opacity: .18; animation-duration: 8s; }
+  .vybe-aurora--pop::before {
+    opacity: .18;
+    animation-duration: 8s;
+  }
 }
 
-/* Respect reduced motion */
+/* Light mode aurora effect */
+[data-theme="light"] .vybe-aurora::before {
+  --ink: #f0f0f5;
+  --indigo: #818cf8;
+  --peri: #a5b4fc;
+  --lav: #c4b5fd;
+  --cyan: #67e8f9;
+  background:
+    radial-gradient(120% 90% at 20% 0%, color-mix(in oklab, var(--indigo) 50%, transparent) 0%, transparent 60%),
+    radial-gradient(120% 95% at 80% 10%, color-mix(in oklab, var(--lav) 45%, transparent) 0%, transparent 62%),
+    radial-gradient(110% 95% at 50% 100%, color-mix(in oklab, var(--cyan) 45%, transparent) 0%, transparent 65%),
+    linear-gradient(180deg, var(--ink) 0%, var(--indigo) 30%, var(--peri) 55%, var(--lav) 75%, var(--cyan) 100%);
+  background-blend-mode: multiply, multiply, multiply, normal;
+  filter: blur(18px) saturate(130%);
+  opacity: .22;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .vybe-aurora::before { animation: none; }
+  .vybe-aurora::before {
+    animation: none;
+  }
 }
 
 @layer utilities {
   .vybe-aurora-fixed {
     position: fixed;
-    inset: 0;                 /* cover viewport */
-    z-index: -1;              /* sit behind all content */
-    pointer-events: none;     /* never block clicks/scroll */
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background:
-      radial-gradient(1200px 600px at 15% 10%, rgba(99,102,241,.18), transparent 70%),
-      radial-gradient(900px 450px at 85% 15%,  rgba(139,92,246,.16), transparent 65%),
-      radial-gradient(800px 400px at 25% 80%,  rgba(168,85,247,.12), transparent 60%),
-      radial-gradient(900px 450px at 70% 85%,  rgba(34,211,238,.14),  transparent 65%),
-      linear-gradient(#0b0b0f, #0b0b10); /* base dark */
+      radial-gradient(1200px 600px at 15% 10%, rgba(99, 102, 241, .18), transparent 70%),
+      radial-gradient(900px 450px at 85% 15%, rgba(139, 92, 246, .16), transparent 65%),
+      radial-gradient(800px 400px at 25% 80%, rgba(168, 85, 247, .12), transparent 60%),
+      radial-gradient(900px 450px at 70% 85%, rgba(34, 211, 238, .14), transparent 65%),
+      linear-gradient(#0b0b0f, #0b0b10);
     background-size: 120% 120%;
     animation: vybeShift 18s ease-in-out infinite;
-    /* If you prefer parallax feel, also add: */
-    /* background-attachment: fixed; (kept fixed anyway by position:fixed) */
   }
 
   @keyframes vybeShift {
-    0%, 100% { background-position: 0% 50%, 0% 50%, 0% 50%, 0% 50%, 0% 0%; }
-    50%     { background-position: 100% 40%, 20% 80%, 80% 20%, 0% 60%, 0% 100%; }
+
+    0%,
+    100% {
+      background-position: 0% 50%, 0% 50%, 0% 50%, 0% 50%, 0% 0%;
+    }
+
+    50% {
+      background-position: 100% 40%, 20% 80%, 80% 20%, 0% 60%, 0% 100%;
+    }
   }
 
-  /* Glassmorphism card effect */
-  .glass-card {
-    background: rgba(17, 24, 39, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  .glass-card:hover,
-  .glass-card:active {
-    background: rgba(31, 41, 55, 0.7);
-    border-color: rgba(255, 255, 255, 0.15);
-  }
-
-  /* Glass select (rounded, matching dark glass background) */
   .glass-select {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.10);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-radius: 0.75rem; /* rounded-xl */
+    border-radius: 0.75rem;
     transition: background-color .2s ease, border-color .2s ease;
     appearance: none;
-    color: #fff;
-    caret-color: #fff;
+    color: var(--foreground);
+    caret-color: var(--foreground);
     outline: none;
     box-shadow: none;
   }
+
+  [data-theme="light"] .glass-select {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(100, 100, 140, 0.15);
+  }
+
   .glass-select:focus {
     border-color: rgba(255, 255, 255, 0.15);
     background: rgba(255, 255, 255, 0.08);
   }
+
+  [data-theme="light"] .glass-select:focus {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(255, 255, 255, 0.85);
+  }
+
   .glass-select:hover {
     background: rgba(255, 255, 255, 0.10);
     border-color: rgba(255, 255, 255, 0.15);
   }
 
-  /* Best-effort dark dropdown items (browser support varies) */
+  [data-theme="light"] .glass-select:hover {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(100, 100, 140, 0.25);
+  }
+
   .glass-select option {
-    background-color: #0f172a; /* slate-900 */
-    color: #fff;
+    background-color: var(--background);
+    color: var(--foreground);
   }
 }
 
-select { color-scheme: dark; }
+select {
+  color-scheme: light dark;
+}
 
-/* ==================== MODERN AUTO-HIDING SCROLLBARS ==================== */
-
-/* Scrollbar styling for specific containers only - NOT for body/html */
-
-/* Webkit scrollbar styling for containers */
+/* Scrollbar styling */
 .overflow-y-auto::-webkit-scrollbar,
 .overflow-x-auto::-webkit-scrollbar,
 .overflow-auto::-webkit-scrollbar,
@@ -428,7 +958,6 @@ select { color-scheme: dark; }
   transition: background-color 0.3s ease 0.5s;
 }
 
-/* Show scrollbar on hover */
 .overflow-y-auto:hover::-webkit-scrollbar-thumb,
 .overflow-x-auto:hover::-webkit-scrollbar-thumb,
 .overflow-auto:hover::-webkit-scrollbar-thumb,
@@ -439,7 +968,6 @@ select { color-scheme: dark; }
   transition: background-color 0.2s ease 0s;
 }
 
-/* Show scrollbar when thumb itself is hovered */
 .overflow-y-auto::-webkit-scrollbar-thumb:hover,
 .overflow-x-auto::-webkit-scrollbar-thumb:hover,
 .overflow-auto::-webkit-scrollbar-thumb:hover,
@@ -450,7 +978,6 @@ select { color-scheme: dark; }
   transition: background-color 0s ease;
 }
 
-/* Show scrollbar when actively scrolling */
 .overflow-y-auto::-webkit-scrollbar-thumb:active,
 .overflow-x-auto::-webkit-scrollbar-thumb:active,
 .overflow-auto::-webkit-scrollbar-thumb:active,
@@ -461,13 +988,11 @@ select { color-scheme: dark; }
   transition: background-color 0s ease;
 }
 
-/* Horizontal scrollbars for containers */
 .overflow-x-auto::-webkit-scrollbar:horizontal,
 .overflow-auto::-webkit-scrollbar:horizontal {
   height: 10px;
 }
 
-/* Scrollbar corner for containers */
 .overflow-y-auto::-webkit-scrollbar-corner,
 .overflow-x-auto::-webkit-scrollbar-corner,
 .overflow-auto::-webkit-scrollbar-corner {
@@ -478,7 +1003,6 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Custom scrollbar for overflow containers */
 .overflow-y-auto,
 .overflow-x-auto,
 .overflow-auto {
@@ -486,9 +1010,8 @@ html {
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-
-/* Mobile-friendly: thinner scrollbars on touch devices */
 @media (max-width: 768px) {
+
   .overflow-y-auto::-webkit-scrollbar,
   .overflow-x-auto::-webkit-scrollbar,
   .overflow-auto::-webkit-scrollbar,
@@ -499,8 +1022,8 @@ html {
   }
 }
 
-/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
   .overflow-y-auto::-webkit-scrollbar-thumb,
   .overflow-x-auto::-webkit-scrollbar-thumb,
   .overflow-auto::-webkit-scrollbar-thumb,
@@ -508,10 +1031,8 @@ html {
   .glass-card::-webkit-scrollbar-thumb {
     transition: none;
   }
-  
+
   html {
     scroll-behavior: auto;
   }
 }
-
-

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
-import { Search, Users, TrendingUp, Music } from "lucide-react";
+import { Search, Users, TrendingUp, Music, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
@@ -49,10 +49,10 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
                         <h3 className="font-medium text-white">{community.name}</h3>
-                        {community.member_count > 2000 && (
+                        {community.playlist_links?.length > 0 && (
                           <Badge variant="secondary" className="text-xs">
-                            <TrendingUp className="h-3 w-3 mr-1" />
-                            Trending
+                            <Music className="h-3 w-3 mr-1" />
+                            Active
                           </Badge>
                         )}
                       </div>
@@ -64,16 +64,42 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 text-sm text-gray-400">
-                      <Users className="h-4 w-4" />
-                      <span>{community.member_count?.toLocaleString() || 0}</span>
+                      <Music className="h-4 w-4" />
+                      <span>
+                        {community.playlist_links?.length > 0 
+                          ? `${community.playlist_links.length} playlist${community.playlist_links.length !== 1 ? 's' : ''}`
+                          : 'No playlists'
+                        }
+                      </span>
                     </div>
                     <button
                       onClick={() => handleJoin(community.name)}
-                      className="px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm"
+                      className="px-4 py-2 btn-primary rounded-lg text-sm"
                     >
-                      Join
+                      View
                     </button>
                   </div>
+
+                  {community.playlist_links && community.playlist_links.length > 0 && (
+                    <div className="pt-2 border-t border-gray-800 space-y-1">
+                      <p className="text-xs font-medium text-gray-500 mb-2">Playlist Links:</p>
+                      {community.playlist_links.map((link, idx) => (
+                        <a
+                          key={idx}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          <span className="truncate">
+                            {link.label || `${link.platform} playlist`}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
