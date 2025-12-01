@@ -14,57 +14,44 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all accepted friends for the current user
-    // Use two separate queries to avoid RLS issues with .or()
-    const { data: friendshipsAsUser, error: error1 } = await supabase
-      .from('friendships')
-      .select('id, user_id, friend_id, status, created_at')
-      .eq('user_id', user.id)
-      .eq('status', 'accepted');
+    console.log('[GET /api/friends] Fetching friends for user:', user.id);
 
-    const { data: friendshipsAsFriend, error: error2 } = await supabase
-      .from('friendships')
-      .select('id, user_id, friend_id, status, created_at')
-      .eq('friend_id', user.id)
-      .eq('status', 'accepted');
-
-    if (error1 || error2) {
-      console.error('Error fetching friends:', { error1, error2 });
-      return NextResponse.json({ error: 'Failed to fetch friends' }, { status: 500 });
-    }
-
-    const friendships = [...(friendshipsAsUser || []), ...(friendshipsAsFriend || [])];
-
-    console.log('Friendships found:', {
-      total: friendships.length,
-      asUser: friendshipsAsUser?.length || 0,
-      asFriend: friendshipsAsFriend?.length || 0
+    // Use RPC function to fetch accepted friends (bypasses RLS reliably)
+    const { data: friendsData, error: rpcError } = await supabase.rpc('get_accepted_friends', {
+      p_user_id: user.id
     });
 
-    // Get unique friend IDs
-    const friendIds = [...new Set(friendships.map(f => f.user_id === user.id ? f.friend_id : f.user_id))];
-
-    // Fetch user details from the public users table
-    const friends = [];
-    for (const friendId of friendIds) {
-      const { data: friendUser } = await supabase
-        .from('users')
-        .select('id, username, display_name')
-        .eq('id', friendId)
-        .single();
-
-      if (friendUser) {
-        const friendship = friendships.find(f => f.user_id === friendId || f.friend_id === friendId);
-        friends.push({
-          id: friendUser.id,
-          email: '',
-          name: friendUser.display_name || friendUser.username,
-          username: friendUser.username,
-          friendship_id: friendship?.id,
-          created_at: friendship?.created_at
-        });
+    if (rpcError) {
+      console.error('[GET /api/friends] RPC error:', {
+        code: rpcError.code,
+        message: rpcError.message,
+        details: rpcError.details,
+        hint: rpcError.hint
+      });
+      
+      // Fallback to direct query if RPC doesn't exist yet
+      if (rpcError.code === '42883' || rpcError.message?.includes('does not exist')) {
+        console.log('[GET /api/friends] RPC not found, falling back to direct query');
+        return await getFriendsFallback(supabase, user.id);
       }
+      
+      return NextResponse.json({ 
+        error: 'Failed to fetch friends',
+        details: rpcError.message 
+      }, { status: 500 });
     }
+
+    console.log('[GET /api/friends] RPC returned:', friendsData?.length || 0, 'friends');
+
+    // Map the RPC response to the expected format
+    const friends = (friendsData || []).map(f => ({
+      id: f.friend_user_id,
+      email: '',
+      name: f.friend_display_name || f.friend_username,
+      username: f.friend_username,
+      friendship_id: f.friendship_id,
+      created_at: f.friendship_created_at
+    }));
 
     return NextResponse.json({
       success: true,
@@ -72,9 +59,71 @@ export async function GET(request) {
     });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('[GET /api/friends] Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+// Fallback function if RPC doesn't exist
+async function getFriendsFallback(supabase, userId) {
+  console.log('[GET /api/friends] Using fallback direct query');
+  
+  // Get all accepted friends for the current user
+  // Use two separate queries to avoid RLS issues with .or()
+  const { data: friendshipsAsUser, error: error1 } = await supabase
+    .from('friendships')
+    .select('id, user_id, friend_id, status, created_at')
+    .eq('user_id', userId)
+    .eq('status', 'accepted');
+
+  const { data: friendshipsAsFriend, error: error2 } = await supabase
+    .from('friendships')
+    .select('id, user_id, friend_id, status, created_at')
+    .eq('friend_id', userId)
+    .eq('status', 'accepted');
+
+  if (error1 || error2) {
+    console.error('[GET /api/friends] Fallback query errors:', { error1, error2 });
+    return NextResponse.json({ error: 'Failed to fetch friends' }, { status: 500 });
+  }
+
+  const friendships = [...(friendshipsAsUser || []), ...(friendshipsAsFriend || [])];
+
+  console.log('[GET /api/friends] Fallback found:', {
+    total: friendships.length,
+    asUser: friendshipsAsUser?.length || 0,
+    asFriend: friendshipsAsFriend?.length || 0
+  });
+
+  // Get unique friend IDs
+  const friendIds = [...new Set(friendships.map(f => f.user_id === userId ? f.friend_id : f.user_id))];
+
+  // Fetch user details from the public users table
+  const friends = [];
+  for (const friendId of friendIds) {
+    const { data: friendUser } = await supabase
+      .from('users')
+      .select('id, username, display_name')
+      .eq('id', friendId)
+      .single();
+
+    if (friendUser) {
+      const friendship = friendships.find(f => f.user_id === friendId || f.friend_id === friendId);
+      friends.push({
+        id: friendUser.id,
+        email: '',
+        name: friendUser.display_name || friendUser.username,
+        username: friendUser.username,
+        friendship_id: friendship?.id,
+        created_at: friendship?.created_at
+      });
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    friends
+  });
 }
 
 export async function POST(request) {
