@@ -339,7 +339,7 @@ function ProfileSettingsContent() {
                   <div className="text-sm font-medium text-[var(--foreground)]">Spotify</div>
                   <div className="text-xs text-[var(--muted-foreground)]">
                     {profileData?.spotify_connected
-                      ? profileData?.spotify_account?.display_name || profileData?.spotify_account?.id || 'Connected'
+                      ? profileData?.spotify_account?.display_name || 'Connected to Spotify'
                       : 'Not connected'}
                   </div>
                 </div>
