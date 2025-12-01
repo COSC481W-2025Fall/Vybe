@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, Users, Library, User as UserIcon, LogOut, Settings, Menu, X } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import VybeLogo from './common/VybeLogo';
-import NotificationBell from './NotificationBell';
 import ThemeToggle from './ThemeToggle';
 import { useState, useEffect, useRef } from 'react';
 
@@ -149,9 +148,8 @@ export default function Navbar() {
         {/* spacer right of center */}
         <div className="flex-1 hidden md:block" />
         
-        {/* Notification Bell, Theme Toggle, and Sign out button - desktop only */}
+        {/* Theme Toggle and Sign out button - desktop only */}
         <div className="hidden md:flex items-center gap-3">
-          <NotificationBell />
           <ThemeToggle />
           <button
             onClick={handleSignOut}
@@ -167,11 +165,10 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile: Notification Bell, Theme Toggle, and hamburger menu button - right aligned */}
+        {/* Mobile: Theme Toggle and hamburger menu button - right aligned */}
         <div className="md:hidden ml-auto flex items-center gap-3">
-          {/* Notification and Theme controls */}
-          <div className="flex items-center gap-2">
-            <NotificationBell />
+          {/* Theme control */}
+          <div className="flex items-center">
             <ThemeToggle />
           </div>
           {/* Divider */}

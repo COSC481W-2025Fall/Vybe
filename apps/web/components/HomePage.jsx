@@ -51,6 +51,15 @@ export function HomePage({ onNavigate } = {}) {
   const ADMIN_CLICKS_REQUIRED = 10;
   const ADMIN_CLICK_TIMEOUT = 3000; // 3 seconds to complete all clicks
 
+  const navigate = onNavigate ?? ((screen, params) => {
+    if (!screen) return;
+    if (screen === 'groups' && params?.groupId) {
+      router.push(`/groups/${params.groupId}`);
+      return;
+    }
+    router.push(`/${screen}`);
+  });
+
   const handleAdminClick = () => {
     // Clear existing timeout
     if (adminClickTimeoutRef.current) {
@@ -205,7 +214,7 @@ export function HomePage({ onNavigate } = {}) {
                 memberCount={group.memberCount}
                 songCount={group.songCount}
                 createdAt={group.createdAt || group.created_at}
-                onClick={() => onNavigate?.('groups', { groupId: group.id })}
+                onClick={() => navigate('groups', { groupId: group.id })}
               />
             ))
           ) : (

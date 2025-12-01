@@ -55,7 +55,6 @@ function ProfileSettingsContent() {
       display_name: '',
       bio: '',
       profile_picture_url: '',
-      is_public: false, // default private
     },
   });
 
@@ -88,7 +87,6 @@ function ProfileSettingsContent() {
       display_name: profileData.display_name || '',
       bio: profileData.bio || '',
       profile_picture_url: profileData.profile_picture_url || '',
-      is_public: profileData.is_public ?? false,
     };
 
     // Only reset if form is not dirty (to avoid overwriting user's unsaved changes)
@@ -218,7 +216,6 @@ function ProfileSettingsContent() {
       display_name: displayName,
       bio: data.bio?.trim() || null,
       profile_picture_url: data.profile_picture_url?.trim() || null,
-      is_public: Boolean(data.is_public ?? false),
     };
 
     setIsSubmitting(true);
@@ -324,7 +321,6 @@ function ProfileSettingsContent() {
           display_name: freshProfileData.display_name || '',
           bio: freshProfileData.bio || '',
           profile_picture_url: freshProfileData.profile_picture_url || '',
-          is_public: freshProfileData.is_public ?? false,
         };
         console.log('[Profile] Resetting form with fresh data:', formData);
         reset(formData);
@@ -388,13 +384,11 @@ function ProfileSettingsContent() {
             display_name: profileData.display_name || '',
             bio: profileData.bio || '',
             profile_picture_url: profileData.profile_picture_url || '',
-            is_public: profileData.is_public ?? false,
           }
         : {
             display_name: '',
             bio: '',
             profile_picture_url: '',
-            is_public: false,
           };
 
       reset(fromBackend);
