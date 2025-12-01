@@ -59,7 +59,7 @@ export async function exportPlaylistToSpotify(
     headers,
   });
   await ensureOk(meRes, 'Get current user');
-  const meJson: any = await meRes.json();
+  const meJson = await meRes.json() as { id?: string };
   const userId: string | undefined = meJson?.id;
   if (!userId) throw new Error('Failed to obtain Spotify user id from /v1/me response.');
 
@@ -78,7 +78,7 @@ export async function exportPlaylistToSpotify(
     }
   );
   await ensureOk(createRes, 'Create playlist');
-  const createJson: any = await createRes.json();
+  const createJson = await createRes.json() as { id?: string };
   const playlistId: string | undefined = createJson?.id;
   if (!playlistId) throw new Error('Playlist created but Spotify did not return an id.');
 
