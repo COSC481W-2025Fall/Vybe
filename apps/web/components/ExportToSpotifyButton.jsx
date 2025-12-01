@@ -9,13 +9,17 @@ import { toast } from 'sonner';
  * ExportToSpotifyButton - Component for exporting playlists to Spotify
  * 
  * @param {Object} props
- * @param {string} props.playlistId - Database playlist ID or 'all' for all playlists in group
- * @param {string} props.groupId - Group ID (required when playlistId is 'all')
+ * @param {string} props.sourceType - 'group' or 'community' (default: 'group')
+ * @param {string} props.sourceId - The ID of the group or community
+ * @param {string} props.playlistId - For groups: specific playlist ID or 'all' (optional for communities)
+ * @param {string} props.groupId - Group ID (required when playlistId is 'all' and sourceType is 'group')
  * @param {string} props.defaultName - Default name shown in the dialog placeholder
  * @param {boolean} props.disabled - Whether the button is disabled
  * @param {string} props.className - Additional CSS classes for the button
  */
 export default function ExportToSpotifyButton({
+  sourceType = 'group',
+  sourceId,
   playlistId,
   groupId,
   defaultName = 'Playlist',
@@ -38,8 +42,10 @@ export default function ExportToSpotifyButton({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          playlistId: playlistId === 'all' ? 'all' : playlistId,
-          groupId: playlistId === 'all' ? groupId : undefined,
+          sourceType,
+          sourceId,
+          playlistId: sourceType === 'group' ? (playlistId === 'all' ? 'all' : playlistId) : undefined,
+          groupId: sourceType === 'group' && playlistId === 'all' ? groupId : undefined,
           name: customPlaylistName.trim() || undefined,
           description: `Exported from Vybe${customPlaylistName.trim() ? ` - ${customPlaylistName.trim()}` : ''}`,
           isPublic: false,

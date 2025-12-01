@@ -156,9 +156,23 @@ export async function POST(request) {
 
     const body = await request.json();
 
+    // Support both new format (sourceType/sourceId) and legacy format (groupId/playlistId)
+    let sourceType = body.sourceType || 'group';
+    let sourceId = body.sourceId;
+    let playlistId = body.playlistId;
+    let groupId = body.groupId;
+
+    // Legacy format support: if groupId is provided but not sourceId, use groupId
+    if (!sourceId && groupId) {
+      sourceId = groupId;
+      sourceType = 'group';
+    }
+
     console.log('[export-playlist] Request body:', { 
-      playlistId: body.playlistId, 
-      groupId: body.groupId, 
+      sourceType,
+      sourceId,
+      playlistId, 
+      groupId, 
       hasName: !!body.name 
     });
 
@@ -170,30 +184,42 @@ export async function POST(request) {
 
       tracks, 
 
-      playlistId, // Database playlist ID or 'all' for all playlists in group
-
-      groupId, // Group ID (required when playlistId is 'all')
-
       isPublic = false, 
 
       isCollaborative = false 
 
     } = body;
 
-    // Validate groupId when playlistId is 'all'
-
-    if (playlistId === 'all' && !groupId) {
-
-      console.error('[export-playlist] groupId is required when playlistId is "all"');
-
+    // Validate required fields based on sourceType
+    if (sourceType === 'group') {
+      if (!playlistId) {
+        return NextResponse.json(
+          { error: 'Missing required field: playlistId' },
+          { status: 400 }
+        );
+      }
+      if (!sourceId) {
+        return NextResponse.json(
+          { error: 'Missing required field: sourceId (or groupId)' },
+          { status: 400 }
+        );
+      }
+      // Validate groupId when playlistId is 'all'
+      if (playlistId === 'all' && !groupId) {
+        groupId = sourceId; // Use sourceId as groupId for 'all' playlists
+      }
+    } else if (sourceType === 'community') {
+      if (!sourceId) {
+        return NextResponse.json(
+          { error: 'Missing required field: sourceId (community ID)' },
+          { status: 400 }
+        );
+      }
+    } else {
       return NextResponse.json(
-
-        { error: 'groupId is required when exporting all playlists' },
-
+        { error: `Invalid sourceType: ${sourceType}. Must be 'group' or 'community'` },
         { status: 400 }
-
       );
-
     }
 
 
@@ -204,11 +230,110 @@ export async function POST(request) {
 
     let stats = null;
 
+    // Handle community export
+    if (sourceType === 'community') {
+      // Fetch approved songs from the community's curated_songs table
+      const { data: community, error: communityError } = await supabase
+        .from('communities')
+        .select('id, name')
+        .eq('id', sourceId)
+        .single();
 
+      if (communityError || !community) {
+        console.error('[export-playlist] Community not found:', communityError);
+        return NextResponse.json(
+          { error: 'Community not found' },
+          { status: 404 }
+        );
+      }
 
-    // Mode 2: Export from database playlist
+      playlistName = (name?.trim()) || community.name;
 
-    if (playlistId) {
+      // Fetch approved curated songs for this community
+      const { data: curatedSongs, error: songsError } = await supabase
+        .from('curated_songs')
+        .select('id, song_id, song_title, song_artist, song_thumbnail, song_duration, platform, created_at')
+        .eq('community_id', sourceId)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: true });
+
+      if (songsError) {
+        console.error('[export-playlist] Error fetching curated songs:', songsError);
+        return NextResponse.json(
+          { 
+            error: 'Failed to fetch community songs',
+            details: songsError.message,
+            code: songsError.code
+          },
+          { status: 500 }
+        );
+      }
+
+      if (!curatedSongs || curatedSongs.length === 0) {
+        return NextResponse.json(
+          { error: 'No approved songs found in this community' },
+          { status: 400 }
+        );
+      }
+
+      // Map curated_songs fields to the format expected by convertTracksToSpotifyUris
+      const songs = curatedSongs.map(song => ({
+        id: song.id,
+        title: song.song_title,
+        artist: song.song_artist,
+        duration: song.song_duration,
+        thumbnail_url: song.song_thumbnail,
+        external_id: song.song_id,
+        platform: song.platform,
+        created_at: song.created_at
+      }));
+
+      // Convert tracks to Spotify URIs
+      const totalTracks = songs.length;
+      
+      // For communities, we need to handle mixed platforms
+      const { trackIdToUri, searchSpotifyTrack } = await import('@/lib/services/spotifyExport');
+      
+      const uriPromises = songs.map(async (song) => {
+        try {
+          const platform = song.platform || 'youtube';
+          
+          if (platform === 'spotify' && song.external_id) {
+            return trackIdToUri(song.external_id);
+          } else {
+            if (!song.title) {
+              console.warn(`[export-playlist] Song has no title, skipping`);
+              return null;
+            }
+            return await searchSpotifyTrack(song.title, song.artist, accessToken);
+          }
+        } catch (error) {
+          console.error(`[export-playlist] Error converting song "${song.title}":`, error);
+          return null;
+        }
+      });
+
+      const uris = await Promise.all(uriPromises);
+      trackUris = uris.filter(uri => uri !== null && uri !== undefined);
+
+      const exportedTracks = trackUris.length;
+      const missingTracks = totalTracks - exportedTracks;
+
+      stats = {
+        totalTracks,
+        exportedTracks,
+        missingTracks,
+      };
+
+      if (trackUris.length === 0) {
+        return NextResponse.json(
+          { error: 'No tracks could be found on Spotify. Make sure the community contains Spotify tracks or that you have Spotify connected.' },
+          { status: 400 }
+        );
+      }
+
+    } else if (playlistId) {
+      // Mode 2: Export from database playlist (group)
 
       let playlist;
 

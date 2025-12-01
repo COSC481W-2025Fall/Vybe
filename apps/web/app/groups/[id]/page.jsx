@@ -525,8 +525,10 @@ export default function GroupDetailPage({ params }) {
                         {/* Export to Spotify Button - Only shown for Spotify-connected users */}
                         {hasSpotify && (
                           <ExportToSpotifyButton
+                            sourceType="group"
+                            sourceId={groupId}
                             playlistId={selectedPlaylist}
-                            groupId={groupId}
+                            groupId={selectedPlaylist === 'all' ? groupId : undefined}
                             defaultName={
                               selectedPlaylist === 'all'
                                 ? group?.name || 'Group Playlist'
