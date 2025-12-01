@@ -342,8 +342,16 @@ export default function ProfilePage() {
                   key={friend.id}
                   className="flex items-center space-x-3 p-3 bg-white/5 [data-theme='light']:bg-black/5 rounded-lg border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                    {friend.name?.charAt(0).toUpperCase() || 'F'}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden">
+                    {friend.profile_picture_url ? (
+                      <img
+                        src={friend.profile_picture_url}
+                        alt={friend.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span>{friend.name?.charAt(0).toUpperCase() || 'F'}</span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-[var(--foreground)] truncate">{friend.name}</p>

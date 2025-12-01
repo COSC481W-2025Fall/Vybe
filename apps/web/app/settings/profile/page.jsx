@@ -712,8 +712,16 @@ function ProfileSettingsContent() {
                     className="flex items-center justify-between p-3 rounded-lg border border-white/10 [data-theme='light']:border-black/20 bg-white/5 [data-theme='light']:bg-black/5"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
-                        {friend.name?.charAt(0)?.toUpperCase() || friend.username?.charAt(0)?.toUpperCase() || '?'}
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold overflow-hidden">
+                        {friend.profile_picture_url ? (
+                          <img
+                            src={friend.profile_picture_url}
+                            alt={friend.name || friend.username}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span>{friend.name?.charAt(0)?.toUpperCase() || friend.username?.charAt(0)?.toUpperCase() || '?'}</span>
+                        )}
                       </div>
                       <div>
                         <p className="text-[var(--foreground)] font-medium">{friend.name || friend.username}</p>
