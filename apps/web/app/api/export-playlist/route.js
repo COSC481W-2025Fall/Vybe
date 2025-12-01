@@ -365,6 +365,8 @@ export async function POST(request) {
 
               external_id,
 
+              platform,
+
               position,
 
               smart_sorted_order
@@ -509,6 +511,8 @@ export async function POST(request) {
 
               external_id,
 
+              platform,
+
               position,
 
               smart_sorted_order
@@ -601,75 +605,62 @@ export async function POST(request) {
 
       const totalTracks = songs.length;
 
-      console.log(`[export-playlist] Converting ${totalTracks} tracks to Spotify URIs (platform: ${playlist.platform})`);
+      console.log(`[export-playlist] Converting ${totalTracks} tracks to Spotify URIs (playlist platform: ${playlist.platform})`);
 
-      // For mixed playlists, convert each song based on its original platform
+      // Always convert each song based on its individual platform
+      // This handles mixed playlists and single-platform playlists with songs from different sources
 
-      if (playlist.platform === 'mixed') {
+      try {
 
-        try {
+        const { trackIdToUri, searchSpotifyTrack } = await import('@/lib/services/spotifyExport');
 
-          const { trackIdToUri, searchSpotifyTrack } = await import('@/lib/services/spotifyExport');
+        const uriPromises = songs.map(async (song, index) => {
 
-          const uriPromises = songs.map(async (song, index) => {
+          try {
 
-            try {
+            // Use song's own platform, fall back to playlist_platform (for 'all' export), then playlist.platform
+            const songPlatform = song.platform || song.playlist_platform || playlist.platform || 'youtube';
 
-              const platform = song.playlist_platform || 'youtube';
+            if (songPlatform === 'spotify' && song.external_id) {
 
-              if (platform === 'spotify' && song.external_id) {
+              return trackIdToUri(song.external_id);
 
-                return trackIdToUri(song.external_id);
+            } else {
 
-              } else {
+              // For YouTube songs or songs without external_id, search on Spotify
+              if (!song.title) {
 
-                if (!song.title) {
+                console.warn(`[export-playlist] Song at index ${index} has no title, skipping`);
 
-                  console.warn(`[export-playlist] Song at index ${index} has no title, skipping`);
-
-                  return null;
-
-                }
-
-                return await searchSpotifyTrack(song.title, song.artist, accessToken);
+                return null;
 
               }
 
-            } catch (error) {
+              console.log(`[export-playlist] Searching Spotify for: "${song.title}" by "${song.artist}" (platform: ${songPlatform})`);
 
-              console.error(`[export-playlist] Error converting song "${song.title}":`, error);
-
-              return null;
+              return await searchSpotifyTrack(song.title, song.artist, accessToken);
 
             }
 
-          });
+          } catch (error) {
 
-          const uris = await Promise.all(uriPromises);
+            console.error(`[export-playlist] Error converting song "${song.title}":`, error);
 
-          trackUris = uris.filter(uri => uri !== null && uri !== undefined);
+            return null;
 
-        } catch (error) {
+          }
 
-          console.error('[export-playlist] Error in mixed platform conversion:', error);
+        });
 
-          throw new Error(`Failed to convert tracks: ${error.message}`);
+        const uris = await Promise.all(uriPromises);
 
-        }
+        trackUris = uris.filter(uri => uri !== null && uri !== undefined);
 
-      } else {
+      } catch (error) {
 
-        try {
+        console.error('[export-playlist] Error in track conversion:', error);
 
-          trackUris = await convertTracksToSpotifyUris(songs, playlist.platform, accessToken);
-
-        } catch (error) {
-
-          console.error('[export-playlist] Error converting tracks:', error);
-
-          throw new Error(`Failed to convert tracks: ${error.message}`);
-
-        }
+        throw new Error(`Failed to convert tracks: ${error.message}`);
 
       }
 
