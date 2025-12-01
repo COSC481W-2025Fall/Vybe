@@ -817,7 +817,11 @@ function ProfileSettingsContent() {
             loadFriends(); // Refresh friends list
             loadPendingRequestsCount(); // Refresh request count
           }}
-          onRefresh={loadPendingRequestsCount}
+          onRefresh={() => {
+            // Refresh both pending count and friends when an action occurs in the modal
+            loadPendingRequestsCount();
+            loadFriends();
+          }}
         />
       )}
     </div>
