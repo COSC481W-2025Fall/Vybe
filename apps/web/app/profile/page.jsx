@@ -198,6 +198,24 @@ export default function ProfilePage() {
                   <span className="hidden sm:inline">Edit Profile</span>
                 </a>
               </div>
+
+              {/* Stats - Left Aligned */}
+              <div className="flex gap-6 mt-4">
+                <div>
+                  <div className="flex items-center space-x-1">
+                    <Users className="h-4 w-4 text-blue-400" />
+                    <span className="font-medium">{groupsLoading ? '...' : groups.length}</span>
+                  </div>
+                  <p className="text-sm text-[var(--muted-foreground)]">Groups</p>
+                </div>
+                <div>
+                  <div className="flex items-center space-x-1">
+                    <Heart className="h-4 w-4 text-pink-400" />
+                    <span className="font-medium">{friends.length}</span>
+                  </div>
+                  <p className="text-sm text-[var(--muted-foreground)]">Friends</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
