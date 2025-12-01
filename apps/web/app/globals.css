@@ -7,6 +7,9 @@
   --muted-foreground: #b0b0b0;
   --accent: #00d4ff; /* Neon blue */
 
+  /* Input background - slightly elevated from page background */
+  --input-bg: #0a0a0f;
+
   /* Glass tokens - Dark with neon blue borders */
   --glass-bg: rgba(10, 10, 15, 0.95);
   --glass-border: rgba(0, 212, 255, 0.3); /* Neon blue border */
@@ -44,6 +47,9 @@
   --muted-foreground: #404040;
   --accent: #000000; /* Black accent for light mode */
 
+  /* Input background - pure white */
+  --input-bg: #ffffff;
+
   /* Glass tokens - Light Mode with solid BLACK borders */
   --glass-bg: rgba(255, 255, 255, 0.98);
   --glass-border: rgba(0, 0, 0, 0.25);
@@ -72,6 +78,9 @@
   --foreground: #ffffff;
   --muted-foreground: #b0b0b0;
   --accent: #00d4ff;
+
+  /* Input background - slightly elevated */
+  --input-bg: #0a0a0f;
 
   /* Glass tokens - Custom (defaults match dark mode) */
   --glass-bg: #0a0a0f;
@@ -475,7 +484,7 @@
     border-color: #ef4444;
   }
 
-  /* Form Input Global Styles for visibility */
+  /* Form Input Global Styles for visibility - uses --input-bg for consistency */
   input[type="text"],
   input[type="email"],
   input[type="password"],
@@ -485,25 +494,14 @@
   input[type="number"],
   textarea {
     color: var(--foreground);
-    background: var(--background);
+    background: var(--input-bg);
     border: 2px solid var(--glass-border);
   }
 
-  [data-theme="light"] input[type="text"],
-  [data-theme="light"] input[type="email"],
-  [data-theme="light"] input[type="password"],
-  [data-theme="light"] input[type="search"],
-  [data-theme="light"] input[type="url"],
-  [data-theme="light"] input[type="tel"],
-  [data-theme="light"] input[type="number"],
-  [data-theme="light"] textarea {
-    background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.2);
-  }
-
-  [data-theme="light"] input:focus,
-  [data-theme="light"] textarea:focus {
-    border-color: rgba(0, 0, 0, 0.4);
+  input:focus,
+  textarea:focus {
+    border-color: var(--accent);
+    outline: none;
   }
 
   /* Surface utilities for consistent backgrounds */

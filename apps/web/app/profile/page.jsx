@@ -5,8 +5,7 @@ import AddFriendsModal from '@/components/AddFriendsModal';
 import FriendRequestsModal from '@/components/FriendRequestsModal';
 import SongSearchModal from '@/components/SongSearchModal';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { Calendar, Heart, Mail, Music, Settings, UserPlus, Users, X, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
+import { Heart, Music, Users, X, ExternalLink, UserPlus, Mail, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -43,11 +42,9 @@ export default function ProfilePage() {
 
     setUser(session.user);
 
-    // Load profile data
-    await fetchProfile();
-
     // Load all data in parallel
     await Promise.all([
+      fetchProfile(),
       fetchFriends(),
       fetchSongOfDay()
     ]);
@@ -59,8 +56,8 @@ export default function ProfilePage() {
     try {
       const response = await fetch('/api/user/profile');
       const data = await response.json();
-      if (data.profile) {
-        setProfile(data.profile);
+      if (data && !data.error) {
+        setProfile(data);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -153,14 +150,7 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  // Get user joined date
-  const joinedDate = new Date(user.created_at).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  // Get display name and avatar
+  // Get display name, avatar, and bio from profile
   const displayName = profile?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
   const avatarUrl = profile?.profile_picture_url || null;
   const bio = profile?.bio || null;
@@ -168,11 +158,12 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen text-[var(--foreground)]">
       <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-6 sm:space-y-8">
-        {/* Profile Header Card */}
+
+        {/* Profile Info Section */}
         <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
-          <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
-            {/* Avatar */}
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl sm:text-3xl font-bold flex-shrink-0 overflow-hidden">
+          <div className="flex items-start gap-4 sm:gap-6">
+            {/* Profile Picture */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl sm:text-2xl font-bold flex-shrink-0 overflow-hidden">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
@@ -184,79 +175,48 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* User Info */}
-            <div className="flex-1 text-center md:text-left space-y-4">
-              <div>
-                <h2 className="page-title text-xl sm:text-2xl">
-                  {displayName}
-                </h2>
-                <p className="section-subtitle text-xs sm:text-sm">{user.email}</p>
-
-                {/* Bio */}
-                {bio && (
-                  <p className="text-sm text-[var(--muted-foreground)] mt-2 max-w-xl">
-                    {bio}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-center md:justify-start space-x-2 mt-2">
-                  <Calendar className="h-4 w-4 text-[var(--muted-foreground)]" />
-                  <span className="text-sm text-[var(--muted-foreground)]">
-                    Joined {joinedDate}
-                  </span>
+            {/* Profile Details */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl font-semibold text-[var(--foreground)] truncate">
+                    {displayName}
+                  </h2>
+                  <p className="text-sm text-[var(--muted-foreground)] truncate">{user.email}</p>
+                  {bio && (
+                    <p className="text-sm text-[var(--muted-foreground)] mt-2 line-clamp-2">
+                      {bio}
+                    </p>
+                  )}
                 </div>
+                {/* Edit Profile Button */}
+                <a
+                  href="/settings/profile"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 text-[var(--foreground)] rounded-lg text-sm font-medium transition-colors border border-white/20 [data-theme='light']:border-black/20 flex-shrink-0"
+                >
+                  <UserIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">Edit Profile</span>
+                </a>
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="flex items-center justify-center space-x-1">
-                    <Music className="h-4 w-4 text-purple-400" />
-                    <span className="font-medium">{songOfDay ? '1' : '0'}</span>
-                  </div>
-                  <p className="text-sm text-[var(--muted-foreground)]">Song Today</p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center space-x-1">
+              {/* Stats - Left Aligned */}
+              <div className="flex gap-6 mt-4">
+                <div>
+                  <div className="flex items-center space-x-1">
                     <Users className="h-4 w-4 text-blue-400" />
                     <span className="font-medium">{groupsLoading ? '...' : groups.length}</span>
                   </div>
                   <p className="text-sm text-[var(--muted-foreground)]">Groups</p>
                 </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center space-x-1">
+                <div>
+                  <div className="flex items-center space-x-1">
                     <Heart className="h-4 w-4 text-pink-400" />
                     <span className="font-medium">{friends.length}</span>
                   </div>
                   <p className="text-sm text-[var(--muted-foreground)]">Friends</p>
                 </div>
-              </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
-              <button
-                onClick={() => setShowFriendRequestsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
-              >
-                <Mail className="h-4 w-4" />
-                Requests
-              </button>
-              <button
-                onClick={() => setShowAddFriendsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg text-sm sm:text-base"
-              >
-                <UserPlus className="h-4 w-4" />
-                Add Friend
-              </button>
-              <Link
-                href="/settings"
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
-              >
-                <Settings className="h-4 w-4" />
-                Settings
-              </Link>
-            </div>
+          </div>
           </div>
         </div>
 
@@ -338,85 +298,81 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {/* Recent Activity */}
-          <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
-            <h3 className="section-subtitle flex items-center space-x-2 mb-4">
-              <Users className="h-5 w-5" />
-              <span>Recent Activity</span>
+        {/* Friends Section */}
+        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="section-subtitle flex items-center space-x-2">
+              <Heart className="h-5 w-5" />
+              <span>Friends ({friends.length})</span>
             </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--muted-foreground)]">Groups joined this week</span>
-                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-full text-xs sm:text-sm text-[var(--foreground)] backdrop-blur-sm">0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--muted-foreground)]">Songs shared this month</span>
-                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-full text-xs sm:text-sm text-[var(--foreground)] backdrop-blur-sm">0</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--muted-foreground)]">Playlists collaborated on</span>
-                <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-full text-xs sm:text-sm text-[var(--foreground)] backdrop-blur-sm">0</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFriendRequestsModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 text-[var(--foreground)] rounded-lg text-sm font-medium transition-colors border border-white/20 [data-theme='light']:border-black/20"
+              >
+                <Mail className="h-4 w-4" />
+                <span className="hidden sm:inline">Requests</span>
+              </button>
+              <button
+                onClick={() => setShowAddFriendsModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg text-sm font-medium transition-colors"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add Friend</span>
+              </button>
             </div>
           </div>
 
-          {/* Friends Section */}
-          <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="section-subtitle flex items-center space-x-2">
-                <Heart className="h-5 w-5" />
-                <span>Friends ({friends.length})</span>
-              </h3>
+          {friends.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" />
+              <h3 className="section-title mb-2 text-lg sm:text-xl">No friends yet</h3>
+              <p className="section-subtitle text-xs sm:text-sm mb-4">Start connecting with friends to share music</p>
+              <button
+                onClick={() => setShowAddFriendsModal(true)}
+                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg font-medium transition-colors text-sm sm:text-base"
+              >
+                Add Friends
+              </button>
             </div>
-
-            {friends.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" />
-                <h3 className="section-title mb-2 text-lg sm:text-xl">No friends yet</h3>
-                <p className="section-subtitle text-xs sm:text-sm mb-4">Start connecting with friends to share music</p>
-                <button
-                  onClick={() => setShowAddFriendsModal(true)}
-                  className="px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg text-sm sm:text-base"
+          ) : (
+            <div className="space-y-2">
+              {friends.slice(0, 5).map((friend) => (
+                <div
+                  key={friend.id}
+                  className="flex items-center space-x-3 p-3 bg-white/5 [data-theme='light']:bg-black/5 rounded-lg border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors"
                 >
-                  Add Friends
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {friends.slice(0, 5).map((friend) => (
-                  <div
-                    key={friend.id}
-                    className="flex items-center space-x-3 p-3 bg-white/5 [data-theme='light']:bg-black/5 rounded-lg border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                      {friend.name?.charAt(0).toUpperCase() || 'F'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-[var(--foreground)] truncate">{friend.name}</p>
-                      <p className="text-sm text-[var(--muted-foreground)] truncate">@{friend.username}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setFriendToRemove(friend);
-                        setShowRemoveFriendModal(true);
-                      }}
-                      className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
-                      title="Remove friend"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                    {friend.name?.charAt(0).toUpperCase() || 'F'}
                   </div>
-                ))}
-                {friends.length > 5 && (
-                  <p className="text-sm text-[var(--muted-foreground)] text-center pt-2">
-                    +{friends.length - 5} more friends
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-[var(--foreground)] truncate">{friend.name}</p>
+                    <p className="text-sm text-[var(--muted-foreground)] truncate">@{friend.username}</p>
+                    {friend.bio && (
+                      <p className="text-xs text-[var(--muted-foreground)] mt-1 line-clamp-2 opacity-80">
+                        {friend.bio}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setFriendToRemove(friend);
+                      setShowRemoveFriendModal(true);
+                    }}
+                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
+                    title="Remove friend"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              {friends.length > 5 && (
+                <p className="text-sm text-[var(--muted-foreground)] text-center pt-2">
+                  +{friends.length - 5} more friends
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bottom spacing */}

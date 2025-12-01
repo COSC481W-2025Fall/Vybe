@@ -15,15 +15,11 @@ export function Input({ className, type, ...props }) {
         "file:text-[var(--foreground)] file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
         
-        // Dark mode - visible borders and background
-        "bg-[var(--background)] border-[var(--glass-border)]",
-        
-        // Light mode - black borders for high contrast
-        "[data-theme='light']:bg-white [data-theme='light']:border-black/20",
+        // Consistent background across all themes using --input-bg
+        "bg-[var(--input-bg)] border-[var(--glass-border)]",
         
         // Focus states
         "focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30 focus-visible:border-[var(--accent)]",
-        "[data-theme='light']:focus-visible:border-black [data-theme='light']:focus-visible:ring-black/20",
         
         // Invalid states
         "aria-invalid:ring-red-500/20 aria-invalid:border-red-500",

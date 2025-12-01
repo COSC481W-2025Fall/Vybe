@@ -17,11 +17,9 @@ function SelectTrigger({ className = '', children, ...props }) {
     <SelectPrimitive.Trigger
       className={[
         'w-full px-4 py-3 rounded-lg text-[var(--foreground)] cursor-pointer flex items-center justify-between',
-        'bg-[var(--background)] border-2 border-[var(--glass-border)] transition-all',
-        '[data-theme="light"]:bg-white [data-theme="light"]:border-black/20',
-        'hover:border-[var(--glass-border-hover)] [data-theme="light"]:hover:border-black/40',
+        'bg-[var(--input-bg)] border-2 border-[var(--glass-border)] transition-all',
+        'hover:border-[var(--glass-border-hover)]',
         'focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)]',
-        '[data-theme="light"]:focus:border-black [data-theme="light"]:focus:ring-black/20',
         className,
       ].join(' ')}
       {...props}
@@ -46,7 +44,6 @@ function SelectContent({ className = '', children, ...props }) {
           'z-50 rounded-lg text-[var(--foreground)] overflow-hidden shadow-2xl',
           'backdrop-blur-xl border-2 border-[var(--glass-border)]',
           'bg-[var(--dropdown-bg)]',
-          '[data-theme="light"]:bg-white [data-theme="light"]:border-black/20',
           className,
         ].join(' ')}
         position="popper"
@@ -68,10 +65,8 @@ function SelectItem({ className = '', children, ...props }) {
       className={[
         'relative flex items-center rounded-md py-2.5 px-3 text-sm outline-none select-none',
         'text-[var(--foreground)] cursor-pointer transition-colors',
-        'hover:bg-[var(--accent)]/15 focus:bg-[var(--accent)]/15',
-        'data-[highlighted]:bg-[var(--accent)]/15',
-        '[data-theme="light"]:hover:bg-black/5 [data-theme="light"]:focus:bg-black/5',
-        '[data-theme="light"]:data-[highlighted]:bg-black/5',
+        'hover:bg-[var(--secondary-hover)] focus:bg-[var(--secondary-hover)]',
+        'data-[highlighted]:bg-[var(--secondary-hover)]',
         className,
       ].join(' ')}
       {...props}

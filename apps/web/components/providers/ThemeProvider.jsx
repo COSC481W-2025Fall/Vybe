@@ -106,12 +106,18 @@ function generateGlassColors(background, foreground, accent) {
     const dropdownG = Math.min(bg.g + 5, 15);
     const dropdownB = Math.min(bg.b + 8, 20);
     
+    // Input background - slightly lighter than page background
+    const inputR = Math.min(bg.r + 10, 25);
+    const inputG = Math.min(bg.g + 10, 25);
+    const inputB = Math.min(bg.b + 15, 35);
+    
     return {
       glassBg: rgbToHex(glassR, glassG, glassB), // SOLID
       glassBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.3)`,
       glassBorderHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.5)`,
       glassShadow: 'rgba(0, 0, 0, 0.6)',
       dropdownBg: rgbToHex(dropdownR, dropdownG, dropdownB), // SOLID
+      inputBg: rgbToHex(inputR, inputG, inputB), // Input background
       // Accent-based secondary styling
       secondaryBg: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.08)`,
       secondaryBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.25)`,
@@ -127,6 +133,7 @@ function generateGlassColors(background, foreground, accent) {
       glassBorderHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.4)`,
       glassShadow: 'rgba(0, 0, 0, 0.15)',
       dropdownBg: '#ffffff', // SOLID white
+      inputBg: '#ffffff', // Pure white input background
       // Secondary styling
       secondaryBg: 'rgba(0, 0, 0, 0.03)',
       secondaryBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.15)`,
@@ -215,6 +222,7 @@ export function ThemeProvider({ children }) {
       root.style.setProperty('--glass-border-hover', glassColors.glassBorderHover);
       root.style.setProperty('--glass-shadow', glassColors.glassShadow);
       root.style.setProperty('--dropdown-bg', glassColors.dropdownBg);
+      root.style.setProperty('--input-bg', glassColors.inputBg);
       
       // Secondary element styling (accent-influenced)
       root.style.setProperty('--secondary-bg', glassColors.secondaryBg);
@@ -236,6 +244,7 @@ export function ThemeProvider({ children }) {
       root.style.removeProperty('--glass-border-hover');
       root.style.removeProperty('--glass-shadow');
       root.style.removeProperty('--dropdown-bg');
+      root.style.removeProperty('--input-bg');
       root.style.removeProperty('--secondary-bg');
       root.style.removeProperty('--secondary-border');
       root.style.removeProperty('--secondary-hover');
