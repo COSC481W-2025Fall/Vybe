@@ -18,7 +18,7 @@ const SETTINGS_SECTIONS = [
     id: 'profile',
     label: 'Profile',
     icon: User,
-    description: 'Manage your display name, bio, and profile picture',
+    description: 'Manage your display name, bio, profile picture, and friends',
     path: '/settings/profile',
   },
   {

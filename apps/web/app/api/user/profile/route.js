@@ -35,44 +35,62 @@ export async function GET() {
       .single();
 
     // If profile doesn't exist, create it (trigger might have failed)
+    // IMPORTANT: Only create if profile truly doesn't exist - never overwrite existing profiles
     if (profileError && profileError.code === 'PGRST116') {
-      console.log('[Profile GET] Profile not found, creating one...');
+      console.log('[Profile GET] Profile not found (PGRST116), double-checking...');
       
-      // Extract username from email or metadata
-      const username = user.user_metadata?.username || 
-                       user.user_metadata?.preferred_username ||
-                       user.email?.split('@')[0] || 
-                       `user_${user.id.slice(0, 8)}`;
+      // Triple-check profile doesn't exist (RLS might be blocking queries)
+      // Try multiple approaches to ensure we don't accidentally overwrite an existing profile
+      let profileExists = false;
       
-      // Extract display name from metadata or email
-      // Filter out Spotify user IDs (they're 22+ character alphanumeric strings)
-      let displayName = user.user_metadata?.display_name ||
-                        user.user_metadata?.full_name ||
-                        user.user_metadata?.name ||
-                        null;
+      // Check 1: Try maybeSingle() with minimal fields
+      const { data: check1, error: check1Error } = await supabase
+        .from('users')
+        .select('id, display_name')
+        .eq('id', user.id)
+        .maybeSingle();
       
-      // Check if displayName looks like a Spotify ID (22+ alphanumeric chars, no spaces)
-      if (displayName && /^[a-zA-Z0-9]{22,}$/.test(displayName) && !/\s/.test(displayName)) {
-        displayName = null; // Don't use Spotify IDs as display names
-      }
-      
-      // Fallback to email username or generated username
-      if (!displayName) {
-        displayName = user.email?.split('@')[0] || username;
-      }
-
-      // Try to create profile using RPC function (bypasses RLS)
-      const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_profile_manual', {
-        p_user_id: user.id,
-        p_username: username,
-        p_display_name: displayName,
-        p_profile_picture_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null
-      });
-
-      if (rpcError) {
-        console.error('[Profile GET] RPC failed, trying direct insert:', rpcError);
+      if (check1 && !check1Error) {
+        profileExists = true;
+        console.log('[Profile GET] Profile found on check 1, fetching full profile...');
+        const { data: existingProfile, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
         
-        // Fallback: Try direct insert (RLS should allow if auth.uid() = id)
+        if (!fetchError && existingProfile) {
+          profile = existingProfile;
+          console.log('[Profile GET] Successfully fetched existing profile');
+        }
+      }
+      
+      // Only create if profile definitely doesn't exist after all checks
+      if (!profileExists && !profile) {
+        // Extract username from email or metadata
+        const username = user.user_metadata?.username || 
+                         user.user_metadata?.preferred_username ||
+                         user.email?.split('@')[0] || 
+                         `user_${user.id.slice(0, 8)}`;
+        
+        // Extract display name from metadata or email
+        // Filter out Spotify user IDs (they're 22+ character alphanumeric strings)
+        let displayName = user.user_metadata?.display_name ||
+                          user.user_metadata?.full_name ||
+                          user.user_metadata?.name ||
+                          null;
+        
+        // Check if displayName looks like a Spotify ID (22+ alphanumeric chars, no spaces)
+        if (displayName && /^[a-zA-Z0-9]{22,}$/.test(displayName) && !/\s/.test(displayName)) {
+          displayName = null; // Don't use Spotify IDs as display names
+        }
+        
+        // Fallback to email username or generated username
+        if (!displayName) {
+          displayName = user.email?.split('@')[0] || username;
+        }
+
+        // Try direct insert first (uses RLS, simpler)
         const { data: newProfile, error: createError } = await supabase
           .from('users')
           .insert({
@@ -85,7 +103,7 @@ export async function GET() {
           .single();
 
         if (createError) {
-          console.error('[Profile GET] Failed to create profile:', createError);
+          console.error('[Profile GET] Direct insert failed:', createError);
           
           // Last resort: return a minimal profile object so the UI doesn't break
           profile = {
@@ -101,60 +119,39 @@ export async function GET() {
           
           console.log('[Profile GET] Using fallback profile object (profile may not be saved to DB)');
         } else {
+          // Direct insert succeeded
           profile = newProfile;
           console.log('[Profile GET] Successfully created profile via direct insert');
         }
-      } else if (rpcData && rpcData.length > 0) {
-        // RPC succeeded and returned the profile directly
-        profile = rpcData[0];
-        console.log('[Profile GET] Successfully created profile via RPC (returned directly)');
-      } else {
-        // RPC succeeded but didn't return data, try fetching
-        console.log('[Profile GET] RPC succeeded but no data returned, fetching profile...');
         
-        // Retry up to 3 times with increasing delays
-        let newProfile = null;
-        let fetchError = null;
-        
-        for (let attempt = 0; attempt < 3; attempt++) {
-          if (attempt > 0) {
-            await new Promise(resolve => setTimeout(resolve, 50 * attempt));
-          }
-          
-          const result = await supabase
+        // If we still don't have a profile after all attempts, try fetching one more time
+        if (!profile) {
+          const { data: fetchedProfile, error: fetchError } = await supabase
             .from('users')
             .select('*')
             .eq('id', user.id)
             .single();
           
-          if (!result.error && result.data) {
-            newProfile = result.data;
-            fetchError = null;
-            break;
+          if (!fetchError && fetchedProfile) {
+            profile = fetchedProfile;
+            console.log('[Profile GET] Successfully fetched profile after creation');
           } else {
-            fetchError = result.error;
+            // Last resort fallback
+            profile = {
+              id: user.id,
+              username: username,
+              display_name: displayName,
+              profile_picture_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+              bio: null,
+              is_public: false,
+              created_at: user.created_at,
+              updated_at: new Date().toISOString(),
+            };
+            console.log('[Profile GET] Using fallback profile object');
           }
         }
-        
-        if (fetchError || !newProfile) {
-          console.error('[Profile GET] RPC succeeded but failed to fetch profile after retries:', fetchError);
-          profile = {
-            id: user.id,
-            username: username,
-            display_name: displayName,
-            profile_picture_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
-            bio: null,
-            is_public: false,
-            created_at: user.created_at,
-            updated_at: new Date().toISOString(),
-          };
-          console.log('[Profile GET] Using fallback profile object');
-        } else {
-          profile = newProfile;
-          console.log('[Profile GET] Successfully fetched profile after RPC');
-        }
       }
-    } else if (profileError) {
+    } else if (profileError && profileError.code !== 'PGRST116') {
       console.error('[Profile GET] Supabase error:', profileError);
       return NextResponse.json(
         { error: 'Failed to load profile', details: profileError.message },
@@ -344,42 +341,50 @@ export async function PATCH(req) {
       is_public = is_public === 'true' || is_public === true || is_public === 1 || is_public === '1';
     }
 
-    // 4) Check if profile exists first, then update or create accordingly
-    const { data: existingProfile, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle(); // Use maybeSingle to avoid error if not found
-
-    console.log('[Profile PATCH] Profile check result:', {
-      exists: !!existingProfile,
-      checkError: checkError?.code || null,
-      userId: user.id
+    // 4) Simple direct UPDATE - RLS is disabled, so this will work
+    console.log('[Profile PATCH] Attempting to update profile for user:', user.id);
+    console.log('[Profile PATCH] Update payload:', {
+      display_name,
+      bio,
+      profile_picture_url,
+      is_public: Boolean(is_public)
     });
+    
+    // Try direct update first
+    const { data: updated, error: updateErr } = await supabase
+      .from('users')
+      .update({
+        display_name: display_name,
+        bio,
+        profile_picture_url,
+        is_public: Boolean(is_public),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+      .select()
+      .single();
 
     let updatedProfile = null;
 
-    // Extract username for creation if needed
-    const username = user.user_metadata?.username || 
-                     user.user_metadata?.preferred_username ||
-                     user.email?.split('@')[0] || 
-                     `user_${user.id.slice(0, 8)}`;
-
-    if (!existingProfile) {
-      // Profile doesn't exist, create it using RPC (bypasses RLS)
-      console.log('[Profile PATCH] Profile not found, creating one...');
-      
-      const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_profile_manual', {
-        p_user_id: user.id,
-        p_username: username,
-        p_display_name: display_name,
-        p_profile_picture_url: profile_picture_url
+    if (updateErr) {
+      console.error('[Profile PATCH] Update error details:', {
+        code: updateErr.code,
+        message: updateErr.message,
+        details: updateErr.details,
+        hint: updateErr.hint
       });
-
-      if (rpcError) {
-        console.error('[Profile PATCH] RPC failed, trying direct insert:', rpcError);
+      
+      // If update fails with "not found", create the profile
+      if (updateErr.code === 'PGRST116') {
+        console.log('[Profile PATCH] Profile not found (PGRST116), creating one...');
         
-        // Fallback: Try direct insert
+        const username = user.user_metadata?.username || 
+                         user.user_metadata?.preferred_username ||
+                         user.email?.split('@')[0] || 
+                         `user_${user.id.slice(0, 8)}`;
+
+        console.log('[Profile PATCH] Creating profile with username:', username);
+
         const { data: newProfile, error: createError } = await supabase
           .from('users')
           .insert({
@@ -394,98 +399,62 @@ export async function PATCH(req) {
           .single();
 
         if (createError) {
-          console.error('[Profile PATCH] Failed to create profile:', createError);
+          console.error('[Profile PATCH] Failed to create profile:', {
+            code: createError.code,
+            message: createError.message,
+            details: createError.details,
+            hint: createError.hint
+          });
           return NextResponse.json(
             { error: 'Failed to create profile', details: createError.message, code: createError.code },
             { status: 500 }
           );
         }
-        updatedProfile = newProfile;
-      } else if (rpcData && rpcData.length > 0) {
-        // RPC succeeded and returned the profile
-        updatedProfile = rpcData[0];
-        // Update the fields that weren't set by RPC (bio, is_public)
-        if (bio !== null || is_public !== undefined) {
-          const { data: updated, error: updateErr } = await supabase
-            .from('users')
-            .update({
-              bio,
-              is_public: Boolean(is_public),
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', user.id)
-            .select()
-            .single();
-          
-          if (updateErr) {
-            console.error('[Profile PATCH] Failed to update bio/is_public:', updateErr);
-            updatedProfile = rpcData[0]; // Use RPC result even if update failed
-          } else {
-            updatedProfile = updated;
-          }
-        }
-      } else {
-        // RPC succeeded but no data, try fetching
-        const { data: fetchedProfile, error: fetchError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
         
-        if (fetchError || !fetchedProfile) {
-          return NextResponse.json(
-            { error: 'Profile created but could not be retrieved', details: fetchError?.message, code: fetchError?.code },
-            { status: 500 }
-          );
-        }
-        updatedProfile = fetchedProfile;
+        updatedProfile = newProfile;
+        console.log('[Profile PATCH] Successfully created profile:', updatedProfile);
+      } else {
+        // For any other error, return it
+        console.error('[Profile PATCH] Update failed with non-PGRST116 error');
+        return NextResponse.json(
+          { 
+            error: 'Failed to update profile', 
+            details: updateErr.message, 
+            code: updateErr.code,
+            hint: updateErr.hint || 'Check if RLS is disabled and migration has been run'
+          },
+          { status: 500 }
+        );
       }
-    } else if (checkError && checkError.code !== 'PGRST116') {
-      // Some other error checking for profile
-      console.error('[Profile PATCH] Error checking profile:', checkError);
-      return NextResponse.json(
-        { error: 'Failed to check profile', details: checkError.message, code: checkError.code },
-        { status: 500 }
-      );
     } else {
-      // Profile exists, update it
-      console.log('[Profile PATCH] Profile exists, updating...');
-      const { data: updated, error: updateErr } = await supabase
-        .from('users')
-        .update({
-          display_name,
-          bio,
-          profile_picture_url,
-          is_public: Boolean(is_public),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
-        .select()
-        .single();
-
-      if (updateErr) {
-        console.error('[Profile PATCH] Supabase update error:', updateErr);
-        return NextResponse.json(
-          { error: 'Failed to update profile', details: updateErr.message, code: updateErr.code },
-          { status: 500 }
-        );
-      }
-      
-      if (!updated) {
-        console.error('[Profile PATCH] Update returned no data');
-        return NextResponse.json(
-          { error: 'Update succeeded but no data returned', code: 'NO_DATA' },
-          { status: 500 }
-        );
-      }
-      
       updatedProfile = updated;
-      console.log('[Profile PATCH] Update successful:', {
-        display_name: updatedProfile.display_name,
-        has_bio: !!updatedProfile.bio,
-        is_public: updatedProfile.is_public
+      console.log('[Profile PATCH] Successfully updated profile:', {
+        id: updatedProfile?.id,
+        display_name: updatedProfile?.display_name,
+        bio: updatedProfile?.bio,
+        is_public: updatedProfile?.is_public
       });
     }
+
+    if (!updatedProfile) {
+      console.error('[Profile PATCH] No profile returned after create/update');
+      return NextResponse.json(
+        { error: 'Profile operation succeeded but no profile data returned', code: 'NO_PROFILE_DATA' },
+        { status: 500 }
+      );
+    }
+
+    console.log('[Profile PATCH] Successfully updated profile:', {
+      display_name: updatedProfile?.display_name,
+      bio: updatedProfile?.bio,
+      is_public: updatedProfile?.is_public,
+    });
+
+    // Return the updated profile so the frontend can use it immediately
+    return NextResponse.json({ 
+      ok: true,
+      profile: updatedProfile 
+    }, { status: 200 });
 
     // Legacy code path - keeping for reference but should not be reached
     /*

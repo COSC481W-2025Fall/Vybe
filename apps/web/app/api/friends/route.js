@@ -94,15 +94,39 @@ export async function POST(request) {
       return NextResponse.json({ error: 'You cannot send a friend request to yourself' }, { status: 400 });
     }
 
-    // Check if user exists in the public users table (don't need admin for this)
+    // Check if user exists in the public users table
+    // With RLS enabled, SELECT policy allows viewing all profiles
     const { data: friendUser, error: userError } = await supabase
       .from('users')
       .select('id')
       .eq('id', friendId)
       .single();
 
-    if (userError || !friendUser) {
-      console.error('User not found in users table:', userError);
+    if (userError) {
+      console.error('Error checking if user exists:', {
+        code: userError.code,
+        message: userError.message,
+        details: userError.details,
+        hint: userError.hint
+      });
+      
+      // If it's a permission error, RLS might be blocking it
+      if (userError.code === '42501' || userError.message?.includes('permission denied')) {
+        console.error('RLS permission error when checking user existence');
+        return NextResponse.json({ 
+          error: 'Permission denied - unable to verify user exists',
+          details: 'RLS policy may be blocking user lookup'
+        }, { status: 403 });
+      }
+      
+      return NextResponse.json({ 
+        error: 'User not found', 
+        details: userError.message 
+      }, { status: 404 });
+    }
+
+    if (!friendUser) {
+      console.error('User not found in users table (no error but no data)');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
@@ -126,44 +150,66 @@ export async function POST(request) {
       }
     }
 
-    // Create friend request (user_id is sender, friend_id is receiver)
-    console.log('Creating friend request:', { user_id: user.id, friend_id: friendId });
+    // Create friend request using RPC function (bypasses RLS)
+    console.log('Creating friend request via RPC:', { user_id: user.id, friend_id: friendId });
 
-    const { data: friendship, error: friendshipError } = await supabase
-      .from('friendships')
-      .insert({
-        user_id: user.id,
-        friend_id: friendId,
-        status: 'pending'
-      })
-      .select()
-      .single();
-
-    if (friendshipError) {
-      console.error('Error creating friend request:', friendshipError);
-      return NextResponse.json({ error: 'Failed to send friend request', details: friendshipError }, { status: 500 });
-    }
-
-    console.log('Friend request created successfully in database:', {
-      id: friendship.id,
-      user_id: friendship.user_id,
-      friend_id: friendship.friend_id,
-      status: friendship.status
+    const { data: friendship, error: friendshipError } = await supabase.rpc('create_friend_request', {
+      p_user_id: user.id,
+      p_friend_id: friendId
     });
 
-    // Verify it was saved by querying it back
-    const { data: verify } = await supabase
-      .from('friendships')
-      .select('*')
-      .eq('id', friendship.id)
-      .single();
+    if (friendshipError) {
+      console.error('Error creating friend request via RPC:', {
+        code: friendshipError.code,
+        message: friendshipError.message,
+        details: friendshipError.details,
+        hint: friendshipError.hint
+      });
+      
+      // Handle specific error cases
+      if (friendshipError.message?.includes('already exists')) {
+        return NextResponse.json({ 
+          error: 'Friend request already sent or pending' 
+        }, { status: 400 });
+      }
+      
+      if (friendshipError.message?.includes('yourself')) {
+        return NextResponse.json({ 
+          error: 'You cannot send a friend request to yourself' 
+        }, { status: 400 });
+      }
+      
+      return NextResponse.json({ 
+        error: 'Failed to send friend request', 
+        details: friendshipError.message,
+        code: friendshipError.code
+      }, { status: 500 });
+    }
+    
+    // RPC returns an array, get the first element
+    const friendshipData = Array.isArray(friendship) ? friendship[0] : friendship;
 
-    console.log('Verified in database:', verify ? 'EXISTS' : 'NOT FOUND');
+    // Map the renamed columns back to expected names
+    const mappedFriendship = friendshipData ? {
+      id: friendshipData.friendship_id,
+      user_id: friendshipData.friendship_user_id,
+      friend_id: friendshipData.friendship_friend_id,
+      status: friendshipData.friendship_status,
+      created_at: friendshipData.friendship_created_at,
+      updated_at: friendshipData.friendship_updated_at
+    } : null;
+
+    console.log('Friend request created successfully via RPC:', {
+      id: mappedFriendship?.id,
+      user_id: mappedFriendship?.user_id,
+      friend_id: mappedFriendship?.friend_id,
+      status: mappedFriendship?.status
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Friend request sent',
-      friendship
+      friendship: mappedFriendship
     });
 
   } catch (error) {

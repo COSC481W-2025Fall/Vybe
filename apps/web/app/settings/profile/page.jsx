@@ -73,11 +73,13 @@ function ProfileSettingsContent() {
 
   const [initialized, setInitialized] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize from Supabase profile only
   useEffect(() => {
     if (!profileData) return; // wait until we actually have data
     if (justSaved) return; // Don't overwrite form right after saving
+    if (isSubmitting) return; // Don't overwrite form while submitting
 
     const formValues = {
       display_name: profileData.display_name || '',
@@ -92,7 +94,7 @@ function ProfileSettingsContent() {
       reset(formValues);
       setInitialized(true);
     }
-  }, [profileData, reset, initialized, isDirty, justSaved]);
+  }, [profileData, reset, initialized, isDirty, justSaved, isSubmitting]);
 
   // Load friends list
   useEffect(() => {
@@ -187,6 +189,12 @@ function ProfileSettingsContent() {
 
   // Submit handler: update Supabase users table directly
   const onSubmit = async (data) => {
+    // Prevent duplicate submissions
+    if (isSubmitting) {
+      console.log('[Profile] Already submitting, ignoring duplicate request');
+      return;
+    }
+
     // Trim and validate display_name
     const displayName = data.display_name?.trim() || '';
     if (displayName.length < 2) {
@@ -209,6 +217,9 @@ function ProfileSettingsContent() {
       profile_picture_url: data.profile_picture_url?.trim() || null,
       is_public: Boolean(data.is_public ?? false),
     };
+
+    setIsSubmitting(true);
+    console.log('[Profile] Starting profile update...', payload);
 
     try {
       const res = await fetch('/api/user/profile', {
@@ -280,18 +291,28 @@ function ProfileSettingsContent() {
       // Get the response data (may include updated profile)
       const responseData = await res.json();
       
-      // Use the profile from response if available, otherwise refetch
+      // Update the cache immediately with the response data
+      if (responseData.profile) {
+        console.log('[Profile] Updating cache directly with response data:', responseData.profile);
+        queryClient.setQueryData(['profile'], responseData.profile);
+      }
+      
+      // Also invalidate to trigger any other components using this data
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      
+      // Force a refetch to ensure we have the absolute latest from the database
+      const refetchResults = await queryClient.refetchQueries({ 
+        queryKey: ['profile'],
+        type: 'active' // Only refetch active queries
+      });
+      
+      // Use the profile from response if available, otherwise use refetched data
       let freshProfileData = responseData.profile;
       
-      if (!freshProfileData) {
-        // Fallback: Invalidate and refetch profile data
-        queryClient.invalidateQueries({ queryKey: ['profile'] });
-        const refetchResults = await queryClient.refetchQueries({ queryKey: ['profile'] });
-        
-        if (refetchResults && refetchResults.length > 0) {
-          const queryResult = refetchResults[0];
-          freshProfileData = queryResult?.data;
-        }
+      if (!freshProfileData && refetchResults && refetchResults.length > 0) {
+        const queryResult = refetchResults[0];
+        freshProfileData = queryResult?.data;
+        console.log('[Profile] Got fresh data from refetch:', freshProfileData);
       }
       
       // Update form with fresh data from database
@@ -315,7 +336,8 @@ function ProfileSettingsContent() {
       // Allow useEffect to run again after a delay (gives time for the form to update)
       setTimeout(() => {
         setJustSaved(false);
-      }, 500);
+        setIsSubmitting(false);
+      }, 1000); // Increased delay to prevent race conditions
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
@@ -329,6 +351,7 @@ function ProfileSettingsContent() {
       }
     } catch (error) {
       console.error('[Profile] Network/unknown error updating profile:', error);
+      setIsSubmitting(false);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('show-toast', {
@@ -339,6 +362,11 @@ function ProfileSettingsContent() {
           })
         );
       }
+    } finally {
+      // Ensure submitting state is cleared even if there's an early return
+      setTimeout(() => {
+        setIsSubmitting(false);
+      }, 2000);
     }
   };
 
@@ -397,7 +425,7 @@ function ProfileSettingsContent() {
             <div>
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
               <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-                Manage your display name, bio, and profile picture
+                Manage your display name, bio, profile picture, and friends here
               </p>
             </div>
           </div>
@@ -421,7 +449,7 @@ function ProfileSettingsContent() {
             <div>
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
               <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-                Manage your display name, bio, and profile picture
+              Manage your display name, bio, profile picture, and friends here
               </p>
             </div>
           </div>
@@ -446,7 +474,7 @@ function ProfileSettingsContent() {
           <div>
             <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-              Manage your display name, bio, and profile picture
+            Manage your display name, bio, profile picture, and friends here
             </p>
           </div>
         </div>
