@@ -44,8 +44,22 @@ export async function GET(request) {
   // Helper function to create redirect with cookies
   const createRedirectWithCookies = (redirectUrl) => {
     const response = NextResponse.redirect(redirectUrl);
+    const isProduction = process.env.NODE_ENV === 'production' || 
+                         request.url.startsWith('https://');
+    
+    console.log('[callback] Setting', cookiesToSet.length, 'cookies, production:', isProduction);
+    
     cookiesToSet.forEach(({ name, value, options }) => {
-      response.cookies.set(name, value, options);
+      // Merge Supabase's options with production-safe defaults
+      const cookieOptions = {
+        ...options,
+        path: options?.path || '/',
+        // In production (HTTPS), cookies must be secure
+        secure: isProduction ? true : (options?.secure ?? false),
+        // Allow cookies on same-site navigations (needed for OAuth redirects)
+        sameSite: options?.sameSite || 'lax',
+      };
+      response.cookies.set(name, value, cookieOptions);
     });
     return response;
   };
@@ -60,7 +74,9 @@ export async function GET(request) {
 
     // Now exchange the code with Supabase to create the session
     // Pass the code explicitly - required for PKCE flow in newer Supabase versions
+    console.log('[callback] Exchanging code for session...');
     const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    console.log('[callback] After exchange, cookies to set:', cookiesToSet.length);
 
     if (exchangeError) {
       console.error('[callback] Error exchanging code for session:', exchangeError);
@@ -71,9 +87,12 @@ export async function GET(request) {
       return createRedirectWithCookies(errorUrl);
     }
 
-    // Use session from exchangeCodeForSession response first, then fallback to getSession
-    // This is important because cookies might not be set immediately after exchangeCodeForSession
-    const session = sessionData?.session || (await supabase.auth.getSession()).data?.session;
+    // Force a getSession call to ensure cookies are written
+    console.log('[callback] Exchange successful, verifying session...');
+    const { data: { session: verifiedSession } } = await supabase.auth.getSession();
+    console.log('[callback] After getSession, cookies to set:', cookiesToSet.length);
+    
+    const session = sessionData?.session || verifiedSession;
     
     if (!session || !session.user) {
       console.error('[callback] No session found after exchangeCodeForSession');

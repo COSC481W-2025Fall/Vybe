@@ -36,6 +36,9 @@ export async function middleware(req) {
     request: { headers: req.headers },
   })
 
+  const isProduction = process.env.NODE_ENV === 'production' ||
+                       req.url.startsWith('https://')
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -56,7 +59,13 @@ export async function middleware(req) {
             request: { headers: req.headers },
           })
           cookiesToSet.forEach(({ name, value, options }) => {
-            res.cookies.set(name, value, options)
+            const cookieOptions = {
+              ...options,
+              path: options?.path || '/',
+              secure: isProduction ? true : (options?.secure ?? false),
+              sameSite: options?.sameSite || 'lax',
+            }
+            res.cookies.set(name, value, cookieOptions)
           })
         },
       },
@@ -71,7 +80,13 @@ export async function middleware(req) {
   const redirectWithCookies = (url) => {
     const redirectResponse = NextResponse.redirect(url)
     cookiesToSet.forEach(({ name, value, options }) => {
-      redirectResponse.cookies.set(name, value, options)
+      const cookieOptions = {
+        ...options,
+        path: options?.path || '/',
+        secure: isProduction ? true : (options?.secure ?? false),
+        sameSite: options?.sameSite || 'lax',
+      }
+      redirectResponse.cookies.set(name, value, cookieOptions)
     })
     return redirectResponse
   }
