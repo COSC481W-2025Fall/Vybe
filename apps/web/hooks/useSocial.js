@@ -77,9 +77,39 @@ export function useSocial() {
         return;
       }
 
-      // TODO: Query song_shares table for friends' songs
-      // For now, using empty array
-      setFriendsSongsOfTheDay([]);
+      const fetchJson = async (url) => {
+        const response = await fetch(url);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const message = payload?.error || payload?.message || `Request failed: ${response.status}`;
+          throw new Error(message);
+        }
+        return payload;
+      };
+
+      // Load the user's current song of the day and their friends' recent songs
+      const [mySongResult, friendsSongsResult] = await Promise.allSettled([
+        fetchJson('/api/song-of-the-day'),
+        fetchJson('/api/friends/songs')
+      ]);
+
+      if (mySongResult.status === 'fulfilled' && mySongResult.value?.success) {
+        setSongOfTheDay(mySongResult.value.songOfDay || null);
+      } else if (mySongResult.status === 'rejected') {
+        console.warn('Failed to fetch song of the day:', mySongResult.reason);
+      }
+
+      if (friendsSongsResult.status === 'fulfilled' && friendsSongsResult.value?.success) {
+        setFriendsSongsOfTheDay(friendsSongsResult.value.songs || []);
+      } else {
+        console.warn(
+          'Failed to fetch friends songs:',
+          friendsSongsResult.status === 'rejected'
+            ? friendsSongsResult.reason
+            : friendsSongsResult.value?.error
+        );
+        setFriendsSongsOfTheDay([]);
+      }
 
       // Query communities table
       const { data: communitiesData, error: communitiesError } = await supabase
