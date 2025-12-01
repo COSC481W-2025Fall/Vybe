@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { useGroups } from '@/hooks/useGroups';
 
 export default function ProfilePage() {
   const supabase = supabaseBrowser();
@@ -23,8 +24,10 @@ export default function ProfilePage() {
   const [showSongSearchModal, setShowSongSearchModal] = useState(false);
   const [showRemoveFriendModal, setShowRemoveFriendModal] = useState(false);
   const [friendToRemove, setFriendToRemove] = useState(null);
-  const [groupsCount, setGroupsCount] = useState(0);
   const [songOfDay, setSongOfDay] = useState(null);
+
+  // Use the same hook as My Groups page for consistent group count
+  const { groups, loading: groupsLoading } = useGroups();
 
   useEffect(() => {
     loadProfileData();
@@ -46,7 +49,6 @@ export default function ProfilePage() {
     // Load all data in parallel
     await Promise.all([
       fetchFriends(),
-      fetchGroupsCount(),
       fetchSongOfDay()
     ]);
 
@@ -75,18 +77,6 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Error fetching friends:', error);
-    }
-  };
-
-  const fetchGroupsCount = async () => {
-    try {
-      const response = await fetch('/api/groups');
-      const data = await response.json();
-      if (data.success) {
-        setGroupsCount(data.groups?.length || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching groups:', error);
     }
   };
 
@@ -229,7 +219,7 @@ export default function ProfilePage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center space-x-1">
                     <Users className="h-4 w-4 text-blue-400" />
-                    <span className="font-medium">{groupsCount}</span>
+                    <span className="font-medium">{groupsLoading ? '...' : groups.length}</span>
                   </div>
                   <p className="text-sm text-[var(--muted-foreground)]">Groups</p>
                 </div>

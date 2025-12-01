@@ -22,6 +22,7 @@ import { useProfile } from '@/hooks/useProfileUpdate';
 import AddFriendsModal from '@/components/AddFriendsModal';
 import FriendRequestsModal from '@/components/FriendRequestsModal';
 import { useQueryClient } from '@tanstack/react-query';
+import { useGroups } from '@/hooks/useGroups';
 
 function ProfileSettingsContent() {
   const {
@@ -37,6 +38,9 @@ function ProfileSettingsContent() {
     isLoading: loading,
     error: profileError,
   } = useProfile();
+
+  // Get groups count using the same hook as My Groups page
+  const { groups, loading: groupsLoading } = useGroups();
 
   const {
     register,
@@ -650,6 +654,16 @@ function ProfileSettingsContent() {
               <div className="flex-1">
                 <div className="text-sm text-[var(--muted-foreground)] mb-1">Member Since</div>
                 <span className="text-[var(--foreground)]">{formatDate(profileData?.created_at)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Users className="h-5 w-5 text-[var(--muted-foreground)] mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <div className="text-sm text-[var(--muted-foreground)] mb-1">Groups</div>
+                <span className="text-[var(--foreground)]">
+                  {groupsLoading ? 'Loading...' : `${groups.length} group${groups.length !== 1 ? 's' : ''}`}
+                </span>
               </div>
             </div>
           </div>
