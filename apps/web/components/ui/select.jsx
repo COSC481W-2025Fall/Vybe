@@ -18,8 +18,11 @@ function SelectTrigger({ className = '', children, ...props }) {
       className={[
         'w-full px-4 py-3 rounded-lg text-[var(--foreground)] cursor-pointer flex items-center justify-between',
         'bg-[var(--input-bg)] border-2 border-[var(--glass-border)] transition-all',
+        '[data-theme="light"]:bg-white [data-theme="light"]:border-black/15',
         'hover:border-[var(--glass-border-hover)]',
+        '[data-theme="light"]:hover:border-black/30',
         'focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)]',
+        '[data-theme="light"]:focus:border-black/40',
         className,
       ].join(' ')}
       {...props}
@@ -44,6 +47,7 @@ function SelectContent({ className = '', children, ...props }) {
           'z-50 rounded-lg text-[var(--foreground)] overflow-hidden shadow-2xl',
           'backdrop-blur-xl border-2 border-[var(--glass-border)]',
           'bg-[var(--dropdown-bg)]',
+          '[data-theme="light"]:bg-white [data-theme="light"]:border-black/15 [data-theme="light"]:shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)]',
           className,
         ].join(' ')}
         position="popper"
@@ -67,6 +71,8 @@ function SelectItem({ className = '', children, ...props }) {
         'text-[var(--foreground)] cursor-pointer transition-colors',
         'hover:bg-[var(--secondary-hover)] focus:bg-[var(--secondary-hover)]',
         'data-[highlighted]:bg-[var(--secondary-hover)]',
+        '[data-theme="light"]:hover:bg-black/5 [data-theme="light"]:focus:bg-black/5',
+        '[data-theme="light"]:data-[highlighted]:bg-black/5',
         className,
       ].join(' ')}
       {...props}

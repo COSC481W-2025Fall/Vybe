@@ -51,17 +51,17 @@ export function DialogContent({ className, children, ...props }) {
           "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl p-4 sm:p-6 duration-200 sm:max-w-lg",
           "text-[var(--foreground)]",
           
-          // Dark mode styling
-          "bg-[var(--dropdown-bg)] border-2 border-[var(--glass-border)] shadow-2xl",
+          // Dark mode styling - solid opaque background
+          "bg-[#050508] border-2 border-[var(--glass-border)] shadow-2xl",
           
-          // Light mode - white with black borders
-          "[data-theme='light']:bg-white [data-theme='light']:border-black/20 [data-theme='light']:shadow-xl",
+          // Light mode - pure white with visible black borders
+          "[data-theme='light']:bg-white [data-theme='light']:border-2 [data-theme='light']:border-black/15 [data-theme='light']:shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]",
           className,
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute top-3 sm:top-4 right-3 sm:right-4 rounded-md opacity-70 transition-all hover:opacity-100 focus:ring-2 focus:ring-[var(--accent)]/30 focus:outline-none disabled:pointer-events-none text-[var(--foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/10 p-1.5">
+        <DialogPrimitive.Close className="absolute top-3 sm:top-4 right-3 sm:right-4 rounded-md opacity-70 transition-all hover:opacity-100 focus:ring-2 focus:ring-[var(--accent)]/30 focus:outline-none disabled:pointer-events-none text-[var(--foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/5 p-1.5">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
