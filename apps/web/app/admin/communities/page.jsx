@@ -7,11 +7,18 @@ import { TextField, TextareaField } from '@/components/shared/FormField';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Plus, Edit, Trash2, ExternalLink, Music, Check, X, Filter, RefreshCw, Search, Save, Copy, Download, Upload, MoreVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, ExternalLink, Music, Check, X, Filter, RefreshCw, Search, Save, Copy, Download, Upload, MoreVertical, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Admin password - hashed would be better in production
+const ADMIN_PASSWORD = 'Te@m_Vybe-2O25!';
+const AUTH_KEY = 'vybe_admin_auth';
 
 export default function AdminCommunitiesPage() {
   const router = useRouter();
+  const [isAdminAuthed, setIsAdminAuthed] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCommunity, setEditingCommunity] = useState(null);
@@ -36,10 +43,39 @@ export default function AdminCommunitiesPage() {
   const [inlineName, setInlineName] = useState('');
   const [inlineDescription, setInlineDescription] = useState('');
 
+  // Check for existing admin auth on mount
   useEffect(() => {
-    checkAuth();
-    loadCommunities();
+    const storedAuth = sessionStorage.getItem(AUTH_KEY);
+    if (storedAuth === 'true') {
+      setIsAdminAuthed(true);
+    }
   }, []);
+
+  useEffect(() => {
+    if (isAdminAuthed) {
+      checkAuth();
+      loadCommunities();
+    }
+  }, [isAdminAuthed]);
+
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    if (passwordInput === ADMIN_PASSWORD) {
+      setIsAdminAuthed(true);
+      sessionStorage.setItem(AUTH_KEY, 'true');
+      setPasswordError('');
+      toast.success('Access granted');
+    } else {
+      setPasswordError('Incorrect password');
+      setPasswordInput('');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAdminAuthed(false);
+    sessionStorage.removeItem(AUTH_KEY);
+    toast.success('Logged out of admin');
+  };
 
   const checkAuth = async () => {
     const supabase = supabaseBrowser();
@@ -399,6 +435,45 @@ export default function AdminCommunitiesPage() {
     event.target.value = '';
   };
 
+  // Password protection screen
+  if (!isAdminAuthed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <Card className="w-full max-w-md glass-card">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
+              <Lock className="h-6 w-6 text-purple-400" />
+            </div>
+            <CardTitle className="text-xl">Admin Access Required</CardTitle>
+            <p className="text-sm text-[var(--muted-foreground)] mt-2">
+              Enter the admin password to access this page
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="w-full px-4 py-3 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  autoFocus
+                />
+                {passwordError && (
+                  <p className="text-red-400 text-sm mt-2">{passwordError}</p>
+                )}
+              </div>
+              <Button type="submit" className="w-full">
+                Access Admin
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto p-6">
@@ -413,12 +488,21 @@ export default function AdminCommunitiesPage() {
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Communities Admin</h1>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Our Favorites Admin</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-1">
-            Manage communities and their playlist links
+            Manage playlists we&apos;re currently listening to
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          >
+            <Lock className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
           <label className="cursor-pointer">
             <input
               type="file"

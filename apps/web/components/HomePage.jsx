@@ -325,10 +325,10 @@ export function HomePage({ onNavigate } = {}) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
             <h2 className="flex items-center space-x-2 text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-1">
-              <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
-              <span>Trending Communities</span>
+              <Music className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span>Our Favorites</span>
             </h2>
-            <p className="text-[var(--muted-foreground)] text-xs sm:text-sm">Discover new music communities</p>
+            <p className="text-[var(--muted-foreground)] text-xs sm:text-sm">These playlists are what we&apos;re currently listening to</p>
           </div>
           <button
             onClick={communitiesDialog.open}
