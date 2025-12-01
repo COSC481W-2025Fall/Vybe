@@ -1530,7 +1530,7 @@ function EmbeddedPlayer({ song, onClose }) {
     if (song.platform === 'youtube') {
       return `https://www.youtube.com/embed/${song.external_id}?autoplay=1`;
     } else if (song.platform === 'spotify') {
-      // Note: Spotify doesn't support autoplay in embeds due to browser policies
+      // Spotify embed with dark theme
       return `https://open.spotify.com/embed/track/${song.external_id}?utm_source=generator&theme=0`;
     }
     return null;
@@ -1540,11 +1540,12 @@ function EmbeddedPlayer({ song, onClose }) {
 
   if (!embedUrl) return null;
 
-  // Heights: YouTube 16:9 aspect ratio, Spotify compact player
-  const playerHeight = song.platform === 'youtube' ? 203 : 152;
+  const isSpotify = song.platform === 'spotify';
+  const isYouTube = song.platform === 'youtube';
 
   return (
     <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 glass-card sm:rounded-lg shadow-2xl border-t sm:border border-white/20 [data-theme='light']:border-black/20 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 w-full sm:w-[360px] md:w-[400px]">
+      {/* Header with song info */}
       <div className="flex items-center justify-between bg-white/5 [data-theme='light']:bg-black/5 px-3 sm:px-4 py-2 border-b border-white/10 [data-theme='light']:border-black/10">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <img
@@ -1556,7 +1557,7 @@ function EmbeddedPlayer({ song, onClose }) {
             <p className="text-[var(--foreground)] font-semibold text-xs sm:text-sm truncate">{song.title}</p>
             <p className="text-[var(--muted-foreground)] text-[10px] sm:text-xs truncate">{song.artist}</p>
           </div>
-          {song.platform === 'spotify' && (
+          {isSpotify && (
             <span className="hidden sm:inline-block ml-2 px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded border border-green-600/30 whitespace-nowrap flex-shrink-0">
               Click ▶
             </span>
@@ -1571,16 +1572,28 @@ function EmbeddedPlayer({ song, onClose }) {
           </svg>
         </button>
       </div>
-      <div className="relative w-full" style={{ paddingBottom: song.platform === 'youtube' ? '56.25%' : `${playerHeight}px` }}>
+      
+      {/* Player embed */}
+      {isYouTube ? (
+        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          <iframe
+            src={embedUrl}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full"
+          />
+        </div>
+      ) : (
         <iframe
           src={embedUrl}
           frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className={`${song.platform === 'youtube' ? 'absolute inset-0' : ''} block w-full h-full`}
-          style={song.platform === 'spotify' ? { height: `${playerHeight}px` } : {}}
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+          className="w-full"
+          style={{ height: '152px', borderRadius: 0 }}
         />
-      </div>
+      )}
     </div>
   );
 }

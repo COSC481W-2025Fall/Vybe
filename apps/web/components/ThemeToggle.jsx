@@ -6,11 +6,11 @@ import { useTheme as useCtxTheme } from '@/contexts/ThemeContext';
 import { useTheme as useProvTheme } from './providers/ThemeProvider';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -53,29 +53,29 @@ const DEFAULT_THEME = {
 
 function ProviderThemeToggle({ prov }) {
   const { theme, setTheme, customColors = {}, setCustomColors = () => {} } = prov;
-  const [isOpen, setIsOpen] = useState(false);
-  const [showCustomizer, setShowCustomizer] = useState(false);
-  const dropdownRef = useRef(null);
+    const [isOpen, setIsOpen] = useState(false);
+    const [showCustomizer, setShowCustomizer] = useState(false);
+    const dropdownRef = useRef(null);
 
-  useEffect(() => {
+    useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-  const handleThemeChange = (newTheme) => {
-    setTheme(newTheme);
+    const handleThemeChange = (newTheme) => {
+        setTheme(newTheme);
     if (newTheme === 'custom') setShowCustomizer(true);
-    setIsOpen(false);
-  };
+        setIsOpen(false);
+    };
 
-  const handleColorChange = (key, value) => {
-    setCustomColors({ [key]: value });
-  };
+    const handleColorChange = (key, value) => {
+        setCustomColors({ [key]: value });
+    };
 
   const toggleContrast = () => {
     const newContrast = customColors.contrast === 'high' ? 'low' : 'high';
@@ -97,78 +97,78 @@ function ProviderThemeToggle({ prov }) {
     setTheme('dark');
   };
 
-  const CurrentIcon = {
-    dark: Moon,
-    light: Sun,
-    system: Monitor,
-    custom: Palette,
-  }[theme] || Moon;
+    const CurrentIcon = {
+        dark: Moon,
+        light: Sun,
+        system: Monitor,
+        custom: Palette,
+    }[theme] || Moon;
 
   const isHighContrast = customColors.contrast !== 'low';
 
-  return (
-    <div className="relative z-50" ref={dropdownRef}>
-      <Button
-        variant="ghost"
-        size="icon"
+    return (
+        <div className="relative z-50" ref={dropdownRef}>
+            <Button
+                variant="ghost"
+                size="icon"
         onClick={() => setIsOpen((s) => !s)}
         className="h-9 w-9 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-border-hover)] text-[var(--foreground)] flex items-center justify-center cursor-pointer"
-        aria-label="Toggle theme"
-      >
-        <CurrentIcon className="h-4 w-4" />
-      </Button>
+                aria-label="Toggle theme"
+            >
+                <CurrentIcon className="h-4 w-4" />
+            </Button>
 
-      {isOpen && (
+            {isOpen && (
         <div className="absolute right-0 mt-2 w-48 rounded-xl border border-[var(--glass-border)] bg-[var(--dropdown-bg)] shadow-xl backdrop-blur-xl z-50 overflow-hidden">
-          <div className="p-1 space-y-1">
-            {[
-              { id: 'dark', label: 'Dark', Icon: Moon },
-              { id: 'light', label: 'Light', Icon: Sun },
-              { id: 'system', label: 'System', Icon: Monitor },
-              { id: 'custom', label: 'Custom', Icon: Palette },
-            ].map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                onClick={() => handleThemeChange(id)}
+                    <div className="p-1 space-y-1">
+                        {[
+                            { id: 'dark', label: 'Dark', Icon: Moon },
+                            { id: 'light', label: 'Light', Icon: Sun },
+                            { id: 'system', label: 'System', Icon: Monitor },
+                            { id: 'custom', label: 'Custom', Icon: Palette },
+                        ].map(({ id, label, Icon }) => (
+                            <button
+                                key={id}
+                                onClick={() => handleThemeChange(id)}
                 className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors ${
                   theme === id
                     ? 'bg-[var(--secondary-hover)] text-[var(--foreground)]'
                     : 'text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--secondary-bg)]'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
-                </div>
-                {theme === id && <Check className="h-3 w-3" />}
-              </button>
-            ))}
+                                    }`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Icon className="h-4 w-4" />
+                                    <span>{label}</span>
+                                </div>
+                                {theme === id && <Check className="h-3 w-3" />}
+                            </button>
+                        ))}
 
-            <div className="my-1 h-px bg-[var(--glass-border)]" />
+                        <div className="my-1 h-px bg-[var(--glass-border)]" />
 
-            <button
-              onClick={() => {
-                setTheme('custom');
-                setShowCustomizer(true);
-                setIsOpen(false);
-              }}
+                        <button
+                            onClick={() => {
+                                setTheme('custom');
+                                setShowCustomizer(true);
+                                setIsOpen(false);
+                            }}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--secondary-bg)] transition-colors cursor-pointer"
-            >
-              <Settings2 className="h-4 w-4" />
-              <span>Customize Colors</span>
-            </button>
-          </div>
-        </div>
-      )}
+                        >
+                            <Settings2 className="h-4 w-4" />
+                            <span>Customize Colors</span>
+                        </button>
+                    </div>
+                </div>
+            )}
 
-      <Dialog open={showCustomizer} onOpenChange={setShowCustomizer}>
+            <Dialog open={showCustomizer} onOpenChange={setShowCustomizer}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+                    <DialogHeader>
             <DialogTitle className="text-[var(--foreground)]">Theme Customizer</DialogTitle>
             <DialogDescription className="text-[var(--muted-foreground)]">
               Choose a preset theme or create your own custom color scheme.
-            </DialogDescription>
-          </DialogHeader>
+                        </DialogDescription>
+                    </DialogHeader>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
             {/* Column 1 - Dark & Light Presets */}
@@ -305,14 +305,14 @@ function ProviderThemeToggle({ prov }) {
                       }`}
                     />
                   </button>
-                </div>
+                                </div>
                 <p className="text-xs text-[var(--muted-foreground)]">
                   {isHighContrast 
                     ? 'High contrast: Maximum text visibility' 
                     : 'Low contrast: Softer, muted appearance'}
                 </p>
-              </div>
-            </div>
+                            </div>
+                        </div>
 
             {/* Column 3 - Custom Colors & Preview */}
             <div className="space-y-4">
@@ -328,25 +328,25 @@ function ProviderThemeToggle({ prov }) {
                 <div key={id} className="flex items-center gap-3">
                   <Label htmlFor={`${id}-color`} className="w-20 text-sm text-[var(--muted-foreground)]">
                     {label}
-                  </Label>
+                            </Label>
                   <div className="flex items-center gap-2 flex-1">
                     <div className="h-9 w-9 rounded-lg border-2 border-[var(--glass-border)] overflow-hidden flex-shrink-0 shadow-sm">
-                      <input
+                                    <input
                         id={`${id}-color`}
-                        type="color"
+                                        type="color"
                         value={customColors[id] || defaultVal}
                         onChange={(e) => handleColorChange(id, e.target.value)}
-                        className="h-full w-full p-0 border-0 cursor-pointer scale-150"
-                      />
-                    </div>
-                    <Input
+                                        className="h-full w-full p-0 border-0 cursor-pointer scale-150"
+                                    />
+                                </div>
+                                <Input
                       value={customColors[id] || ''}
                       onChange={(e) => handleColorChange(id, e.target.value)}
                       className="font-mono text-xs"
                       placeholder={defaultVal}
-                    />
-                  </div>
-                </div>
+                                />
+                            </div>
+                        </div>
               ))}
 
               {/* Live Preview */}
@@ -430,10 +430,10 @@ function ProviderThemeToggle({ prov }) {
                         className="px-2 py-1 rounded text-[10px] font-medium text-white"
                         style={{ background: customColors.accent || '#00d4ff' }}
                       >
-                        Accent
+                                Accent
                       </button>
-                    </div>
-                  </div>
+                                </div>
+                            </div>
                 </div>
               </div>
 
@@ -445,12 +445,12 @@ function ProviderThemeToggle({ prov }) {
                 <RotateCcw className="h-4 w-4" />
                 <span className="text-sm">Reset to Default</span>
               </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
 }
 
 function LegacyThemeToggle({ ctx }) {
