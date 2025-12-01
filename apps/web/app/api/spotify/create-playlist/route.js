@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { getValidAccessToken } from '@/lib/spotify';
 
+// Spotify IDs are Base62 encoded, alphanumeric only (22 characters typically)
+const SPOTIFY_ID_REGEX = /^[a-zA-Z0-9]{1,50}$/;
+
 // Create a new playlist in the user's Spotify account and copy tracks from an existing playlist
 export async function POST(request) {
   try {
@@ -12,6 +15,17 @@ export async function POST(request) {
     const body = await request.json();
     const { playlistId, newPlaylistName } = body || {};
     if (!playlistId || !newPlaylistName) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+
+    // Validate playlistId format to prevent SSRF attacks
+    if (typeof playlistId !== 'string' || !SPOTIFY_ID_REGEX.test(playlistId)) {
+      return NextResponse.json({ error: 'Invalid playlist ID format' }, { status: 400 });
+    }
+
+    // Sanitize newPlaylistName (limit length, remove control characters)
+    const sanitizedName = String(newPlaylistName).slice(0, 200).replace(/[\x00-\x1F\x7F]/g, '');
+    if (!sanitizedName.trim()) {
+      return NextResponse.json({ error: 'Invalid playlist name' }, { status: 400 });
+    }
 
     const userId = session.user.id;
 
@@ -45,7 +59,7 @@ export async function POST(request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: newPlaylistName,
+        name: sanitizedName,
         description: `Imported from Vybe • source: ${playlistJson.name || playlistId}`,
         public: false,
       }),
