@@ -207,6 +207,8 @@ export default function LibraryView() {
   // User identity and provider
   const [userInfo, setUserInfo] = useState(null);
   const [provider, setProvider] = useState(null);
+  const [hasSpotify, setHasSpotify] = useState(false);
+  const [hasYoutube, setHasYoutube] = useState(false);
   const [loadingMe, setLoadingMe] = useState(true);
   const [meError, setMeError] = useState(null);
 
@@ -250,12 +252,16 @@ export default function LibraryView() {
         // Check user's linked identities to see which providers they have
         const identities = user.identities || [];
         const hasGoogle = identities.some(id => id.provider === 'google');
-        const hasSpotify = identities.some(id => id.provider === 'spotify');
+        const hasSpotifyCheck = identities.some(id => id.provider === 'spotify');
+
+        // Set provider availability flags
+        setHasSpotify(hasSpotifyCheck);
+        setHasYoutube(hasGoogle);
 
         console.log('[LibraryView] URL from parameter:', fromParam);
         console.log('[LibraryView] Last used provider from DB:', lastUsedProvider);
         console.log('[LibraryView] User identities:', identities.map(i => i.provider));
-        console.log('[LibraryView] Has Google:', hasGoogle, 'Has Spotify:', hasSpotify);
+        console.log('[LibraryView] Has Google:', hasGoogle, 'Has Spotify:', hasSpotifyCheck);
 
         // Priority: URL parameter (just logged in) > DB saved preference
         let finalProvider = null;
@@ -268,11 +274,11 @@ export default function LibraryView() {
           // Use saved preference from database
           finalProvider = lastUsedProvider;
           console.log('[LibraryView] Using last_used_provider from DB:', finalProvider);
-        } else if (hasSpotify && !hasGoogle) {
+        } else if (hasSpotifyCheck && !hasGoogle) {
           // Only Spotify is linked
           finalProvider = 'spotify';
           console.log('[LibraryView] Only Spotify linked');
-        } else if (hasGoogle && !hasSpotify) {
+        } else if (hasGoogle && !hasSpotifyCheck) {
           // Only Google is linked
           finalProvider = 'google';
           console.log('[LibraryView] Only Google linked');
@@ -486,61 +492,76 @@ export default function LibraryView() {
 
   // --- load playlists (for both Spotify and YouTube) ---
   const loadPlaylists = useCallback(async () => {
-    if (provider !== 'spotify' && provider !== 'google') return;
+    // Load playlists from all connected platforms
+    if (!hasSpotify && !hasYoutube) return;
 
     try {
       setLoadingPlaylists(true);
+      const allPlaylists = [];
+      const errors = [];
 
-      if (provider === 'spotify') {
-        console.log('[LibraryView] Loading Spotify playlists...');
-        const res = await fetch('/api/spotify/me/playlists?limit=50', { cache: 'no-store' });
-        if (!res.ok) {
-          let errorData = {};
-          if (res && typeof res.json === 'function') {
-            errorData = await res.json().catch(() => ({}));
+      // Load Spotify playlists if connected
+      if (hasSpotify) {
+        try {
+          console.log('[LibraryView] Loading Spotify playlists...');
+          const res = await fetch('/api/spotify/me/playlists?limit=50', { cache: 'no-store' });
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            const errorMessage = errorData.message || `HTTP ${res.status}`;
+            // If it's a token error, provide a helpful message
+            if (errorData.code === 'NO_TOKENS' || res.status === 401) {
+              errors.push('Spotify: ' + errorMessage + ' Go to Settings to connect your Spotify account.');
+            } else {
+              errors.push('Spotify: ' + errorMessage);
+            }
           } else {
-            const txt = await (res && typeof res.text === 'function' ? res.text().catch(() => '') : Promise.resolve(''));
-            errorData = { message: txt };
+            const json = await res.json();
+            console.log('[LibraryView] Raw Spotify playlists response:', json);
+            const items = (json.items || []).map(mapPlaylist);
+            allPlaylists.push(...items);
           }
-          const errorMessage = errorData && errorData.message ? `HTTP ${res.status} ${errorData.message}` : `HTTP ${res.status}`;
-          // If it's a token error, provide a helpful message
-          if (errorData.code === 'NO_TOKENS' || res.status === 401) {
-            throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
-          }
-          throw new Error(errorMessage);
+        } catch (err) {
+          console.error('[LibraryView] Error loading Spotify playlists:', err);
+          errors.push('Spotify: ' + String(err?.message || err));
         }
-        const json = await parseJson(res) || {};
-        console.log('[LibraryView] Raw Spotify playlists response:', json);
-        const items = (json.items || []).map(mapPlaylist);
-        setPlaylists(items);
-      } else if (provider === 'google') {
-        console.log('[LibraryView] Loading YouTube playlists...');
-        const res = await fetch('/api/youtube/youtube/v3/playlists?part=snippet,contentDetails&mine=true&maxResults=50', { cache: 'no-store' });
-        if (!res.ok) {
-          const body = await res.text().catch(() => '');
-          throw new Error(`HTTP ${res.status} ${body}`);
-        }
-        const json = await parseJson(res) || {};
-        console.log('[LibraryView] Raw YouTube playlists response:', json);
-        const items = (json.items || []).map(mapYouTubePlaylist);
-        setPlaylists(items);
       }
 
-      setPlaylistsError(null);
+      // Load YouTube playlists if connected
+      if (hasYoutube) {
+        try {
+          console.log('[LibraryView] Loading YouTube playlists...');
+          const res = await fetch('/api/youtube/youtube/v3/playlists?part=snippet,contentDetails&mine=true&maxResults=50', { cache: 'no-store' });
+          if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            errors.push('YouTube: HTTP ' + res.status + ' ' + body);
+          } else {
+            const json = await res.json();
+            console.log('[LibraryView] Raw YouTube playlists response:', json);
+            const items = (json.items || []).map(mapYouTubePlaylist);
+            allPlaylists.push(...items);
+          }
+        } catch (err) {
+          console.error('[LibraryView] Error loading YouTube playlists:', err);
+          errors.push('YouTube: ' + String(err?.message || err));
+        }
+      }
+
+      setPlaylists(allPlaylists);
+      setPlaylistsError(errors.length > 0 ? errors.join('; ') : null);
     } catch (err) {
       console.error('Failed to load playlists', err);
       setPlaylistsError(String(err?.message || err));
     } finally {
       setLoadingPlaylists(false);
     }
-  }, [provider, mapPlaylist, mapYouTubePlaylist]);
+  }, [hasSpotify, hasYoutube, mapPlaylist, mapYouTubePlaylist]);
 
   // --- load playlists when tab changes to saved ---
   useEffect(() => {
-    if (tab === 'saved' && (provider === 'spotify' || provider === 'google') && playlists.length === 0 && !loadingPlaylists) {
+    if (tab === 'saved' && (hasSpotify || hasYoutube) && playlists.length === 0 && !loadingPlaylists) {
       loadPlaylists();
     }
-  }, [tab, provider, playlists.length, loadingPlaylists, loadPlaylists]);
+  }, [tab, hasSpotify, hasYoutube, playlists.length, loadingPlaylists, loadPlaylists]);
 
   const content = useMemo(() => {
     // Show "connect account" message if no provider
@@ -575,7 +596,11 @@ export default function LibraryView() {
             <div className="min-w-0">
               <h2 className="section-title text-lg sm:text-xl">Your Playlists</h2>
               <p className="section-subtitle text-xs sm:text-sm">
-                {provider === 'google' ? 'Your saved YouTube playlists' : 'Your saved Spotify playlists'}
+                {hasSpotify && hasYoutube 
+                  ? 'Your saved Spotify and YouTube playlists' 
+                  : hasYoutube 
+                    ? 'Your saved YouTube playlists' 
+                    : 'Your saved Spotify playlists'}
               </p>
             </div>
           </div>
@@ -596,17 +621,14 @@ export default function LibraryView() {
           {!loadingPlaylists && !playlistsError && playlists.length === 0 && (
             <div className="relative text-center py-8 sm:py-12 md:py-16">
               <ListMusic className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 text-muted-foreground mx-auto mb-4 sm:mb-6" />
-              {provider === 'google' ? (
-                <>
-                  <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No playlists found</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground">Create some playlists on YouTube to see them here</p>
-                </>
-              ) : (
-                <>
-                  <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No playlists found</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground">Create some playlists on Spotify to see them here</p>
-                </>
-              )}
+              <h3 className="section-title mb-2 sm:mb-3 text-lg sm:text-xl">No playlists found</h3>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                {hasSpotify && hasYoutube 
+                  ? 'Create some playlists on Spotify or YouTube to see them here' 
+                  : hasYoutube 
+                    ? 'Create some playlists on YouTube to see them here' 
+                    : 'Create some playlists on Spotify to see them here'}
+              </p>
             </div>
           )}
 

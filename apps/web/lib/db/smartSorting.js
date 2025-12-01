@@ -8,49 +8,116 @@
  * @param {Object} supabase - Supabase client instance
  * @param {string} groupId - Group ID
  * @param {Array} playlistOrder - Array of {playlistId, order} objects
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} Summary of updates
  */
 export async function updatePlaylistOrder(supabase, groupId, playlistOrder) {
+  const summary = {
+    total: playlistOrder.length,
+    successful: 0,
+    failed: 0
+  };
 
-  // Update each playlist's smart_sorted_order
+  console.log(`[smartSorting] 📝 Updating ${playlistOrder.length} playlist order(s)`);
+
   const updates = playlistOrder.map(({ playlistId, order }) =>
     supabase
       .from('group_playlists')
-      .update({ smart_sorted_order: order })
+      .update({ 
+        smart_sorted_order: order,
+        last_sorted_at: new Date().toISOString()
+      })
       .eq('id', playlistId)
       .eq('group_id', groupId)
+      .select('id, smart_sorted_order')
   );
 
-  await Promise.all(updates);
+  const results = await Promise.allSettled(updates);
+  
+  results.forEach((result) => {
+    if (result.status === 'fulfilled' && result.value.data && result.value.data.length > 0) {
+      summary.successful++;
+    } else {
+      summary.failed++;
+    }
+  });
 
-  // Update last_sorted_at for all playlists in the group
-  await supabase
-    .from('group_playlists')
-    .update({ last_sorted_at: new Date().toISOString() })
-    .eq('group_id', groupId);
+  console.log(`[smartSorting] ✅ Updated ${summary.successful}/${summary.total} playlists`);
+  return summary;
 }
 
 /**
  * Update song order for playlists
  * @param {Object} supabase - Supabase client instance
  * @param {Object} songOrders - Object mapping playlistId to array of {songId, order}
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} Summary with updateMap for corrections
  */
 export async function updateSongOrder(supabase, songOrders) {
+  const totalSongs = Object.values(songOrders).reduce((sum, orders) => sum + orders.length, 0);
+  const summary = {
+    totalSongs,
+    playlists: Object.keys(songOrders).length,
+    successful: 0,
+    failed: 0,
+    errors: []
+  };
+  
+  console.log(`[smartSorting] 📝 Updating ${totalSongs} song(s) across ${summary.playlists} playlist(s)`);
 
-  // Update songs for each playlist
-  const updates = Object.entries(songOrders).map(([playlistId, songOrder]) => {
-    const songUpdates = songOrder.map(({ songId, order }) =>
-      supabase
-        .from('playlist_songs')
-        .update({ smart_sorted_order: order })
-        .eq('id', songId)
-        .eq('playlist_id', playlistId)
-    );
-    return Promise.all(songUpdates);
+  // Build update promises with metadata tracking
+  const allUpdates = [];
+  const updateMap = new Map(); // songId -> { playlistId, order } for correction
+  
+  Object.entries(songOrders).forEach(([playlistId, songOrder]) => {
+    songOrder.forEach(({ songId, order }) => {
+      updateMap.set(songId, { playlistId, order });
+      allUpdates.push(
+        supabase
+          .from('playlist_songs')
+          .update({ smart_sorted_order: order })
+          .eq('id', songId)
+          .eq('playlist_id', playlistId)
+          .select('id, smart_sorted_order')
+      );
+    });
   });
 
-  await Promise.all(updates);
+  // Execute all updates in parallel
+  const BATCH_SIZE = 200;
+  const updateStartTime = Date.now();
+  
+  for (let i = 0; i < allUpdates.length; i += BATCH_SIZE) {
+    const batch = allUpdates.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(batch);
+    
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        const { data, error } = result.value;
+        if (error) {
+          summary.failed++;
+          summary.errors.push(error.message || error.code);
+        } else if (data && data.length > 0) {
+          summary.successful++;
+        } else {
+          summary.failed++;
+          summary.errors.push('No rows returned');
+        }
+      } else {
+        summary.failed++;
+        summary.errors.push(result.reason?.message || 'Promise rejected');
+      }
+    });
+  }
+  
+  const updateTime = ((Date.now() - updateStartTime) / 1000).toFixed(2);
+  console.log(`[smartSorting] ✅ Updated ${summary.successful}/${summary.totalSongs} songs in ${updateTime}s`);
+  
+  if (summary.failed > 0) {
+    console.error(`[smartSorting] ❌ ${summary.failed} failed`);
+  }
+  
+  // Store update map for correction
+  summary.updateMap = updateMap;
+  return summary;
 }
 
 /**
@@ -146,37 +213,3 @@ export async function hasSmartSorting(supabase, groupId) {
 
   return data && data.length > 0;
 }
-
-/**
- * Clear smart sorting for a group (reset to original order)
- * @param {Object} supabase - Supabase client instance
- * @param {string} groupId - Group ID
- * @returns {Promise<void>}
- */
-export async function clearSmartSorting(supabase, groupId) {
-
-  // Get all playlists in the group
-  const { data: playlists } = await supabase
-    .from('group_playlists')
-    .select('id')
-    .eq('group_id', groupId);
-
-  if (!playlists || playlists.length === 0) {
-    return;
-  }
-
-  const playlistIds = playlists.map(p => p.id);
-
-  // Clear smart_sorted_order for all playlists
-  await supabase
-    .from('group_playlists')
-    .update({ smart_sorted_order: null, last_sorted_at: null })
-    .eq('group_id', groupId);
-
-  // Clear smart_sorted_order for all songs in these playlists
-  await supabase
-    .from('playlist_songs')
-    .update({ smart_sorted_order: null })
-    .in('playlist_id', playlistIds);
-}
-

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from "react";
-import { Users, Plus, TrendingUp, ChevronRight, Music, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Users, Plus, TrendingUp, ChevronRight, Music, AlertCircle, ExternalLink, Youtube } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "./ui/dialog";
 import { useGroups } from "../hooks/useGroups";
 import { useSocial } from "../hooks/useSocial";
@@ -14,18 +15,22 @@ import { SongDetailsDialog } from "./shared/SongDetailsDialog";
 import { CommunitiesDialog } from "./shared/CommunitiesDialog";
 import { ShareSongDialog } from "./shared/ShareSongDialog";
 import { toast } from "sonner";
+import ExportPlaylistButton from "./ExportPlaylistButton";
+import { supabaseBrowser } from "@/lib/supabase/client";
 /**
  * HomePage component - Main dashboard view for authenticated users
- * Displays groups, friends' songs, and music communities
+ * Displays groups, friends' songs, and music communities (tehe)
  * @param {Object} props
  * @param {Function} props.onNavigate - Optional navigation handler for routing
  */
 export function HomePage({ onNavigate } = {}) {
+  const router = useRouter();
   const { groups, createGroup, loading: groupsLoading, error: groupsError } = useGroups();
   const { friendsSongsOfTheDay, communities, loading: socialLoading, error: socialError } = useSocial();
   const createGroupDialog = useDialog();
   const communitiesDialog = useDialog();
   const shareSongDialog = useDialog();
+  
   // Added dialogue hook and state (delete this comment later)
   const communityDetailDialog = useDialog();
   const [selectedCommunity, setSelectedCommunity] = useState(null);
@@ -36,6 +41,59 @@ export function HomePage({ onNavigate } = {}) {
   const [createError, setCreateError] = useState("");
   const [selectedSong, setSelectedSong] = useState(null);
   const [songDialogOpen, setSongDialogOpen] = useState(false);
+  const [communitySongs, setCommunitySongs] = useState([]);
+  const [loadingSongs, setLoadingSongs] = useState(false);
+  const [hasYouTube, setHasYouTube] = useState(false);
+
+  // Admin access easter egg
+  const [adminClickCount, setAdminClickCount] = useState(0);
+  const adminClickTimeoutRef = useRef(null);
+  const ADMIN_CLICKS_REQUIRED = 10;
+  const ADMIN_CLICK_TIMEOUT = 3000; // 3 seconds to complete all clicks
+
+  const handleAdminClick = () => {
+    // Clear existing timeout
+    if (adminClickTimeoutRef.current) {
+      clearTimeout(adminClickTimeoutRef.current);
+    }
+
+    const newCount = adminClickCount + 1;
+    setAdminClickCount(newCount);
+
+    if (newCount >= ADMIN_CLICKS_REQUIRED) {
+      // Success! Redirect to admin console
+      setAdminClickCount(0);
+      router.push('/admin/communities');
+      toast.success('Admin access granted');
+    } else {
+      // Set timeout to reset counter if user doesn't click fast enough
+      adminClickTimeoutRef.current = setTimeout(() => {
+        setAdminClickCount(0);
+      }, ADMIN_CLICK_TIMEOUT);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (adminClickTimeoutRef.current) {
+        clearTimeout(adminClickTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Check if user has YouTube/Google connected
+  useEffect(() => {
+    const checkYouTubeConnection = async () => {
+      const supabase = supabaseBrowser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.identities) {
+        const hasGoogle = user.identities.some(id => id.provider === 'google');
+        setHasYouTube(hasGoogle);
+      }
+    };
+    checkYouTubeConnection();
+  }, []);
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
@@ -287,9 +345,26 @@ export function HomePage({ onNavigate } = {}) {
               type="button"
               className="glass-card rounded-xl p-4 sm:p-6 hover:bg-white/5 active:bg-white/5 transition-colors cursor-pointer text-left w-full focus:outline-none focus:ring-2 focus:ring-white/20"
               //onClick={() => toast.success(`Joined ${community.name}`)}
-              onClick={() => {
+              onClick={async () => {
                 setSelectedCommunity(community);
                 communityDetailDialog.open();
+                
+                // Fetch songs for this community
+                if (community.id) {
+                  setLoadingSongs(true);
+                  setCommunitySongs([]);
+                  try {
+                    const response = await fetch(`/api/communities/${community.id}/playlist-songs`);
+                    if (response.ok) {
+                      const data = await response.json();
+                      setCommunitySongs(data.songs || []);
+                    }
+                  } catch (error) {
+                    console.error('Error fetching community songs:', error);
+                  } finally {
+                    setLoadingSongs(false);
+                  }
+                }
               }}
             >
               <div className="flex items-start justify-between mb-2 sm:mb-3">
@@ -310,9 +385,19 @@ export function HomePage({ onNavigate } = {}) {
               </div> */}
 
               <div className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--muted-foreground)]">{community.member_count.toLocaleString()} members</span>
+                <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                  <Music className="h-4 w-4" />
+                  <span>
+                    {community.playlist_links?.length > 0 
+                      ? `${community.playlist_links.length} playlist${community.playlist_links.length !== 1 ? 's' : ''}`
+                      : 'No playlists'
+                    }
+                  </span>
+                </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--muted-foreground)]">{community.group_count?.toLocaleString() || 0} groups</span>
+                  <span className="text-sm text-[var(--muted-foreground)]">
+                    {community.song_count || 0} curated song{(community.song_count || 0) !== 1 ? 's' : ''}
+                  </span>
                   <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
                 </div>
               </div>
@@ -337,17 +422,116 @@ export function HomePage({ onNavigate } = {}) {
         communities={communities}
       />
 
-      {/* For now, added 3 empty pop ups to the trending communities button */}
+      {/* Community Detail Dialog */}
       <Dialog open={communityDetailDialog.isOpen} onOpenChange={communityDetailDialog.setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedCommunity?.name || 'Community'}</DialogTitle>
-            <DialogDescription>
-              {/* Leave blank for now */}
-            </DialogDescription>
+        <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:max-w-4xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-4 sm:p-6">
+          <DialogHeader className="pb-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-xl sm:text-2xl">{selectedCommunity?.name || 'Community'}</DialogTitle>
+                <DialogDescription className="text-sm sm:text-base mt-2">
+                  {selectedCommunity?.description || 'Music community'}
+                </DialogDescription>
+              </div>
+              {hasYouTube && selectedCommunity && (
+                <ExportPlaylistButton
+                  sourceType="community"
+                  sourceId={selectedCommunity.id}
+                  defaultName={selectedCommunity.name}
+                />
+              )}
+            </div>
           </DialogHeader>
-          <div>
-            {/* Leave blank for now */}
+          
+          <div className="space-y-4 sm:space-y-6 flex-1 overflow-y-auto modal-scroll pr-2">
+            {/* Playlist Links Section */}
+            {selectedCommunity?.playlist_links && selectedCommunity.playlist_links.length > 0 && (
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-base sm:text-lg font-semibold text-[var(--foreground)] flex items-center gap-2">
+                  <Music className="h-5 w-5 sm:h-6 sm:w-6" />
+                  Playlist Links
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                  {selectedCommunity.playlist_links.map((link, idx) => (
+                    <a
+                      key={idx}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-colors"
+                    >
+                      <ExternalLink className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm sm:text-base font-medium text-[var(--foreground)] truncate">
+                          {link.label || `${link.platform} playlist`}
+                        </p>
+                        <p className="text-xs sm:text-sm text-[var(--muted-foreground)] truncate mt-1">
+                          {link.url}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--muted-foreground)] flex-shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Curated Songs Section */}
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base sm:text-lg font-semibold text-[var(--foreground)] flex items-center gap-2">
+                  <Music className="h-5 w-5 sm:h-6 sm:w-6" />
+                  Curated Songs
+                </h3>
+                {selectedCommunity?.song_count !== undefined && (
+                  <span className="text-xs sm:text-sm text-[var(--muted-foreground)] bg-white/5 px-2 sm:px-3 py-1 rounded-full">
+                    {selectedCommunity.song_count} approved
+                  </span>
+                )}
+              </div>
+              
+              {loadingSongs ? (
+                <div className="flex items-center justify-center py-12 sm:py-16">
+                  <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-purple-400"></div>
+                </div>
+              ) : communitySongs.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto pr-2">
+                  {communitySongs
+                    .filter(song => song.curation_status === 'approved')
+                    .map((song, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                      >
+                        {song.thumbnail && (
+                          <img
+                            src={song.thumbnail}
+                            alt={song.title}
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm sm:text-base font-medium text-[var(--foreground)] truncate">
+                            {song.title}
+                          </p>
+                          <p className="text-xs sm:text-sm text-[var(--muted-foreground)] truncate mt-1">
+                            {song.artist || 'Unknown Artist'}
+                          </p>
+                          <span className="inline-block mt-1 text-xs text-purple-400 capitalize">
+                            {song.platform}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 sm:py-16 text-[var(--muted-foreground)]">
+                  <Music className="h-16 w-16 sm:h-20 sm:w-20 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm sm:text-base">No curated songs yet</p>
+                  <p className="text-xs sm:text-sm mt-2">Songs will appear here once they're approved</p>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -356,6 +540,21 @@ export function HomePage({ onNavigate } = {}) {
         open={shareSongDialog.isOpen}
         onOpenChange={shareSongDialog.setIsOpen}
       />
+
+      {/* Hidden admin access button - click 10 times quickly in bottom right corner */}
+      <button
+        onClick={handleAdminClick}
+        className="fixed bottom-4 right-4 w-12 h-12 opacity-0 pointer-events-auto cursor-pointer z-50"
+        aria-label=""
+        title=""
+        style={{ 
+          backgroundColor: 'transparent',
+          border: 'none',
+          outline: 'none'
+        }}
+      >
+        {/* Invisible clickable area for admin access easter egg */}
+      </button>
     </div>
   );
 }

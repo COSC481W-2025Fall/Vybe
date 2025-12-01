@@ -3,6 +3,57 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 
+/**
+ * Helper function to populate communities with song counts from curated_songs table
+ * @param {Array} communities - Array of community objects
+ * @param {Object} supabase - Supabase client instance
+ * @returns {Promise<Array>} Communities with song counts added
+ */
+async function populateCommunitiesWithSongCounts(communities, supabase) {
+  if (!communities || communities.length === 0) {
+    return communities;
+  }
+
+  try {
+    // Get all community IDs
+    const communityIds = communities.map(c => c.id);
+
+    // Query curated_songs to count approved songs per community
+    // Only count approved songs (pending/removed are not shown to users)
+    const { data: songCounts, error: countError } = await supabase
+      .from('curated_songs')
+      .select('community_id, status')
+      .in('community_id', communityIds)
+      .eq('status', 'approved');
+
+    if (countError) {
+      // If curated_songs table doesn't exist, just return communities without counts
+      if (countError.code === '42P01' || countError.message?.includes('does not exist')) {
+        console.warn('curated_songs table does not exist. Song counts will not be available.');
+        return communities.map(c => ({ ...c, song_count: 0 }));
+      }
+      console.error('Error fetching song counts:', countError);
+      return communities.map(c => ({ ...c, song_count: 0 }));
+    }
+
+    // Count songs per community
+    const countMap = {};
+    songCounts?.forEach(song => {
+      countMap[song.community_id] = (countMap[song.community_id] || 0) + 1;
+    });
+
+    // Add song_count to each community
+    return communities.map(community => ({
+      ...community,
+      song_count: countMap[community.id] || 0
+    }));
+  } catch (error) {
+    console.error('Error populating communities with song counts:', error);
+    // Return communities with 0 counts on error
+    return communities.map(c => ({ ...c, song_count: 0 }));
+  }
+}
+
 export function useSocial() {
   const [songOfTheDay, setSongOfTheDay] = useState(null);
   const [friendsSongsOfTheDay, setFriendsSongsOfTheDay] = useState([]);
@@ -30,34 +81,29 @@ export function useSocial() {
       // For now, using empty array
       setFriendsSongsOfTheDay([]);
 
-      // TODO: Query communities table
-      // For now, using mock communities
-      setCommunities([
-        {
-          id: 'comm-1',
-          name: 'Indie Discoveries',
-          description: 'Finding hidden gems in indie music',
-          member_count: 1240,
-          //Mock group count
-          group_count: 45
-        },
-        {
-          id: 'comm-2',
-          name: 'Jazz Lounge',
-          description: 'Classic and modern jazz appreciation',
-          member_count: 892,
-          //Mock group count
-          group_count: 32
-        },
-        {
-          id: 'comm-3',
-          name: 'Electronic Pulse',
-          description: 'Latest electronic and dance tracks',
-          member_count: 2156,
-          //Mock group count
-          group_count: 78
+      // Query communities table
+      const { data: communitiesData, error: communitiesError } = await supabase
+        .from('communities')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (communitiesError) {
+        // Check if it's a "relation does not exist" error (table not created)
+        if (communitiesError.code === '42P01' || communitiesError.message?.includes('does not exist')) {
+          console.warn('Communities table does not exist. Please run the migration: apps/web/supabase/migrations/009_create_communities_table.sql');
+          setCommunities([]);
+        } else {
+          console.error('Error fetching communities:', communitiesError);
+          setCommunities([]);
         }
-      ]);
+      } else {
+        // Populate communities with song counts from curated_songs
+        const communitiesWithCounts = await populateCommunitiesWithSongCounts(
+          communitiesData || [],
+          supabase
+        );
+        setCommunities(communitiesWithCounts);
+      }
     } catch (err) {
       console.error('Error loading social data:', err);
       setError(err.message || 'Failed to load social data');

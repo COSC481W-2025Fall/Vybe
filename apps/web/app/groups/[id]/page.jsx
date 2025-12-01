@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Users, Heart, MoreVertical, Plus } from 'lucide-react';
+import { Users, Heart, MoreVertical, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+import ExportPlaylistButton from '@/components/ExportPlaylistButton';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
@@ -21,8 +23,13 @@ export default function GroupDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+<<<<<<< HEAD
   const [exporting, setExporting] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
+=======
+  const [hasYouTube, setHasYouTube] = useState(false);
+  const [isSorting, setIsSorting] = useState(false);
+>>>>>>> feature/pbi-72-playlist-export
 
   useEffect(() => {
     // Unwrap params Promise
@@ -54,6 +61,55 @@ export default function GroupDetailPage({ params }) {
     }
 
     setUser(session.user);
+
+    // Check if user has YouTube/Google connected
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.identities) {
+      const hasGoogle = user.identities.some(id => id.provider === 'google');
+      setHasYouTube(hasGoogle);
+    }
+  }
+
+  async function handleSmartSort() {
+    if (!groupId || isSorting) return;
+    
+    setIsSorting(true);
+    toast.info('Starting AI smart sort... This may take a minute.', { duration: 3000 });
+    
+    try {
+      const response = await fetch(`/api/groups/${groupId}/smart-sort`, {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Extract more detailed error message
+        const errorMessage = data.error || data.message || 'Failed to sort playlists';
+        
+        // Check for specific error types
+        if (errorMessage.includes('quota') || errorMessage.includes('billing')) {
+          throw new Error('OpenAI API quota exceeded. Please check your OpenAI account billing and plan settings to enable smart sorting.');
+        } else if (errorMessage.includes('rate limit')) {
+          throw new Error('Rate limit reached. Please wait a moment and try again.');
+        } else {
+          throw new Error(errorMessage);
+        }
+      }
+      
+      toast.success(`Successfully sorted ${data.songsProcessed || 0} songs!`, { duration: 5000 });
+      
+      // Reload data to show sorted order
+      await loadGroupData();
+      // Always reload songs after sorting - loadGroupData sets selectedPlaylist to 'all'
+      // Reload songs directly to ensure the new order is displayed
+      await loadPlaylistSongs('all');
+    } catch (error) {
+      console.error('[Groups] Error sorting:', error);
+      toast.error(error.message || 'Failed to sort playlists. Please try again.', { duration: 7000 });
+    } finally {
+      setIsSorting(false);
+    }
   }
 
   async function loadGroupData() {
@@ -62,12 +118,28 @@ export default function GroupDetailPage({ params }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !groupId) return;
 
-    // Get group details
-    const { data: groupData, error: groupError } = await supabase
-      .from('groups')
-      .select('*')
-      .eq('id', groupId)
-      .single();
+    // Fetch group, members, and playlists in parallel
+    const [groupResult, memberResult, playlistResult] = await Promise.all([
+      supabase
+        .from('groups')
+        .select('*')
+        .eq('id', groupId)
+        .single(),
+      supabase
+        .from('group_members')
+        .select('user_id, joined_at')
+        .eq('group_id', groupId),
+      supabase
+        .from('group_playlists')
+        .select('*')
+        .eq('group_id', groupId)
+        .order('smart_sorted_order', { ascending: true, nullsLast: true })
+        .order('created_at', { ascending: true })
+    ]);
+
+    const { data: groupData, error: groupError } = groupResult;
+    const { data: memberData } = memberResult;
+    const { data: playlistData } = playlistResult;
 
     if (groupError || !groupData) {
       console.error('Error loading group:', groupError);
@@ -76,21 +148,33 @@ export default function GroupDetailPage({ params }) {
     }
 
     setGroup(groupData);
+    setPlaylists(playlistData || []);
 
-    // Get group members (owner + members)
-    const { data: memberData } = await supabase
-      .from('group_members')
-      .select('user_id, joined_at')
-      .eq('group_id', groupId);
+    // Fetch owner and member users in parallel
+    const memberUserIds = (memberData || []).map(m => m.user_id);
+    const userFetchPromises = [
+      supabase
+        .from('users')
+        .select('id, username, profile_picture_url')
+        .eq('id', groupData.owner_id)
+        .maybeSingle()
+    ];
 
-    // Fetch owner user data - only select fields that exist in the users table
+    if (memberUserIds.length > 0) {
+      userFetchPromises.push(
+        supabase
+          .from('users')
+          .select('id, username, profile_picture_url')
+          .in('id', memberUserIds)
+      );
+    }
+
+    const userResults = await Promise.all(userFetchPromises);
+    const { data: ownerUserData, error: ownerError } = userResults[0];
+    const { data: memberUsersData, error: memberUsersError } = memberUserIds.length > 0 ? userResults[1] : { data: [], error: null };
+
+    // Handle owner user data
     let ownerUser = null;
-    const { data: ownerUserData, error: ownerError } = await supabase
-      .from('users')
-      .select('id, username, profile_picture_url')
-      .eq('id', groupData.owner_id)
-      .maybeSingle();
-
     if (ownerError) {
       console.error('Error fetching owner user:', ownerError);
       // Fallback: use session user data if it's the current user
@@ -105,23 +189,13 @@ export default function GroupDetailPage({ params }) {
       ownerUser = ownerUserData;
     }
 
-    // Fetch all member users data
-    const memberUserIds = (memberData || []).map(m => m.user_id);
+    // Handle member users data
     let memberUsers = [];
-
-    if (memberUserIds.length > 0) {
-      const { data: memberUsersData, error: memberUsersError } = await supabase
-        .from('users')
-        .select('id, username, profile_picture_url')
-        .in('id', memberUserIds);
-
-      if (memberUsersError) {
-        console.error('Error fetching member users:', memberUsersError);
-        // Continue without member user data rather than failing
-        memberUsers = [];
-      } else {
-        memberUsers = memberUsersData || [];
-      }
+    if (memberUsersError) {
+      console.error('Error fetching member users:', memberUsersError);
+      memberUsers = [];
+    } else {
+      memberUsers = memberUsersData || [];
     }
 
     // Combine owner and members with full user data
@@ -147,29 +221,23 @@ export default function GroupDetailPage({ params }) {
       .filter(m => m.users); // Only filter out non-owner members without user data
 
     const allMembers = [ownerMember, ...otherMembers];
-
     setMembers(allMembers);
 
-    // Get playlists associated with this group, ordered by smart_sorted_order if available
-    const { data: playlistData } = await supabase
-      .from('group_playlists')
-      .select('*')
-      .eq('group_id', groupId)
-      .order('smart_sorted_order', { ascending: true, nullsLast: true })
-      .order('created_at', { ascending: true });
-
-    setPlaylists(playlistData || []);
-
-    // Get actual song counts for each playlist
+    // Get actual song counts for all playlists in parallel
     if (playlistData && playlistData.length > 0) {
-      const counts = {};
-      for (const playlist of playlistData) {
-        const { count } = await supabase
+      const countPromises = playlistData.map(playlist =>
+        supabase
           .from('playlist_songs')
           .select('*', { count: 'exact', head: true })
-          .eq('playlist_id', playlist.id);
-        counts[playlist.id] = count || 0;
-      }
+          .eq('playlist_id', playlist.id)
+          .then(result => ({ playlistId: playlist.id, count: result.count || 0 }))
+      );
+
+      const countResults = await Promise.all(countPromises);
+      const counts = {};
+      countResults.forEach(({ playlistId, count }) => {
+        counts[playlistId] = count;
+      });
       setActualTrackCounts(counts);
     }
 
@@ -204,51 +272,53 @@ export default function GroupDetailPage({ params }) {
         return new Date(a.created_at) - new Date(b.created_at);
       });
 
-      // Fetch songs from each playlist in order, maintaining playlist order
-      const batchSize = 1000;
-      let allSongs = [];
-      for (const playlist of sortedPlaylists) {
-        let playlistSongs = [];
-        let rangeStart = 0;
-        let hasMoreSongs = true;
+      // Create a map of playlist order for sorting
+      const playlistOrderMap = new Map();
+      sortedPlaylists.forEach((playlist, idx) => {
+        playlistOrderMap.set(playlist.id, playlist.smart_sorted_order ?? idx + 1000);
+      });
 
-        while (hasMoreSongs) {
-          const { data: batch, error: songsError } = await supabase
-            .from('playlist_songs')
-            .select(`
-              *,
-              song_likes (
-                user_id
-              ),
-              group_playlists!inner (
-                id,
-                name,
-                platform
-              )
-            `)
-            .eq('playlist_id', playlist.id)
-            .order('smart_sorted_order', { ascending: true, nullsLast: true })
-            .order('position', { ascending: true })
-            .range(rangeStart, rangeStart + batchSize - 1);
+      // Fetch all songs from all playlists in parallel (much faster)
+      const { data: allSongsData, error: songsError } = await supabase
+        .from('playlist_songs')
+        .select(`
+          *,
+          song_likes (
+            user_id
+          ),
+          group_playlists!inner (
+            id,
+            name,
+            platform,
+            smart_sorted_order
+          )
+        `)
+        .in('playlist_id', playlistIds)
+        .order('smart_sorted_order', { ascending: true, nullsLast: true })
+        .order('position', { ascending: true });
 
-          if (songsError) {
-            console.error('[Groups] Error loading songs:', songsError);
-            break;
-          }
-
-          if (batch && batch.length > 0) {
-            playlistSongs = [...playlistSongs, ...batch];
-            rangeStart += batchSize;
-            hasMoreSongs = batch.length === batchSize;
-          } else {
-            hasMoreSongs = false;
-          }
-        }
-
-        allSongs = [...allSongs, ...playlistSongs];
+      if (songsError) {
+        console.error('[Groups] Error loading songs:', songsError);
+        setPlaylistSongs([]);
+        return;
       }
 
-      console.log('[Groups] Loaded songs count:', allSongs?.length);
+      // Sort songs: first by playlist order, then by song order within playlist
+      const allSongs = (allSongsData || []).sort((a, b) => {
+        const playlistA = playlistOrderMap.get(a.playlist_id) ?? 1000;
+        const playlistB = playlistOrderMap.get(b.playlist_id) ?? 1000;
+        
+        // If same playlist, sort by song order
+        if (playlistA === playlistB) {
+          const orderA = a.smart_sorted_order ?? a.position ?? 0;
+          const orderB = b.smart_sorted_order ?? b.position ?? 0;
+          return orderA - orderB;
+        }
+        
+        // Otherwise sort by playlist order
+        return playlistA - playlistB;
+      });
+
       songs = allSongs;
     } else {
       // Get songs from specific playlist - also use batching
@@ -275,6 +345,8 @@ export default function GroupDetailPage({ params }) {
           .order('smart_sorted_order', { ascending: true, nullsLast: true })
           .order('position', { ascending: true })
           .range(rangeStart, rangeStart + batchSize - 1);
+        
+        console.log(`[Groups] Loaded batch: ${batch?.length || 0} songs (smart_sorted_order used)`);
 
         if (playlistError) {
           console.error('[Groups] Error loading playlist songs:', playlistError);
@@ -371,22 +443,39 @@ export default function GroupDetailPage({ params }) {
               {/* Playlist Selector */}
               {playlists.length > 0 ? (
                 <>
-                  {/* Smart Sort Indicator */}
-                  {playlists.some(p => p.smart_sorted_order !== null) && (
-                    <div className="mb-4 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2">
-                      <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      <span className="text-sm text-[var(--foreground)]">
-                        <span className="font-medium">AI Smart Sort Active</span>
-                        {playlists[0]?.last_sorted_at && (
-                          <span className="text-[var(--muted-foreground)] ml-2">
-                            (Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
+                  {/* Smart Sort Section */}
+                  <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    {playlists.some(p => p.smart_sorted_order !== null) && (
+                      <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2 flex-1">
+                        <Sparkles className="w-5 h-5 text-purple-400" />
+                        <span className="text-sm text-[var(--foreground)]">
+                          <span className="font-medium">AI Smart Sort Active</span>
+                          {playlists[0]?.last_sorted_at && (
+                            <span className="text-[var(--muted-foreground)] ml-2">
+                              (Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleSmartSort}
+                      disabled={isSorting || playlists.length === 0}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                    >
+                      {isSorting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Sorting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          <span>AI Smart Sort</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-[var(--muted-foreground)] mb-2">
                       Select Playlist
@@ -415,7 +504,11 @@ export default function GroupDetailPage({ params }) {
 
                   {/* Playlist Header */}
                   <div className="mb-6">
+<<<<<<< HEAD
                     <div className="flex items-start justify-between">
+=======
+                    <div className="flex items-start justify-between gap-4">
+>>>>>>> feature/pbi-72-playlist-export
                       <div>
                         <h2 className="section-title mb-1">
                           {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
@@ -424,6 +517,7 @@ export default function GroupDetailPage({ params }) {
                           {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
                         </p>
                       </div>
+<<<<<<< HEAD
 
                       {/* Export buttons (only for a single Spotify playlist) */}
                       {selectedPlaylist !== 'all' && (() => {
@@ -498,6 +592,21 @@ export default function GroupDetailPage({ params }) {
                           </div>
                         );
                       })()}
+=======
+                      {/* Export to YouTube Button - Only shown for YouTube-connected users */}
+                      {hasYouTube && (
+                        <ExportPlaylistButton
+                          sourceType="group"
+                          sourceId={groupId}
+                          playlistId={selectedPlaylist}
+                          defaultName={
+                            selectedPlaylist === 'all'
+                              ? group?.name || 'Group Playlist'
+                              : playlists.find(p => p.id === selectedPlaylist)?.name || 'Playlist'
+                          }
+                        />
+                      )}
+>>>>>>> feature/pbi-72-playlist-export
                     </div>
                   </div>
 
@@ -661,9 +770,10 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
 
 function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   const supabase = supabaseBrowser();
-  const [platform, setPlatform] = useState('spotify'); // 'youtube' or 'spotify'
+  const [platform, setPlatform] = useState(null); // 'youtube', 'spotify', or null for 'all'
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
-  const [playlists, setPlaylists] = useState([]);
+  const [selectedPlaylistPlatform, setSelectedPlaylistPlatform] = useState(null);
+  const [playlists, setPlaylists] = useState([]); // Array of { playlist, platform }
   const [loading, setLoading] = useState(false);
   const [fetchingPlaylists, setFetchingPlaylists] = useState(false);
   const [error, setError] = useState('');
@@ -672,17 +782,19 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   const [userExistingPlaylist, setUserExistingPlaylist] = useState(null);
 
   useEffect(() => {
-    checkConnectedAccounts();
-    checkUserExistingPlaylist();
+    // Run these checks in parallel
+    Promise.all([
+      checkConnectedAccounts(),
+      checkUserExistingPlaylist()
+    ]);
   }, []);
 
   useEffect(() => {
-    if (platform === 'spotify' && hasSpotify) {
-      fetchSpotifyPlaylists();
-    } else if (platform === 'youtube' && hasYoutube) {
-      fetchYoutubePlaylists();
+    // Load playlists from all connected platforms
+    if (hasSpotify || hasYoutube) {
+      loadAllPlaylists();
     }
-  }, [platform]);
+  }, [hasSpotify, hasYoutube]);
 
   async function checkUserExistingPlaylist() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -751,77 +863,66 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
     console.log('[Groups] Final determined provider:', provider);
 
-    if (provider === 'google') {
-      console.log('[Groups] Setting YouTube as available');
-      setHasYoutube(true);
-      setHasSpotify(hasSpotify);
+    // Set availability flags for both platforms
+    setHasSpotify(hasSpotify);
+    setHasYoutube(hasGoogle);
+
+    // Set default platform: if both available, show all (null), otherwise show the only available one
+    if (hasGoogle && hasSpotify) {
+      // Both available, show all playlists by default
+      setPlatform(null);
+    } else if (hasGoogle && !hasSpotify) {
       setPlatform('youtube');
-      fetchYoutubePlaylists();
-    } else if (provider === 'spotify') {
-      console.log('[Groups] Setting Spotify as available');
-      setHasSpotify(true);
-      setHasYoutube(hasGoogle);
+    } else if (hasSpotify && !hasGoogle) {
       setPlatform('spotify');
-      fetchSpotifyPlaylists();
-    } else {
-      console.log('[Groups] No provider determined, using fallback');
-      // Fallback: if we have identities but no provider was determined,
-      // still set the flags so the user can access their accounts
-      if (hasGoogle) {
-        console.log('[Groups] Fallback: Setting YouTube as available');
-        setHasYoutube(true);
-        setPlatform('youtube');
-        fetchYoutubePlaylists();
-      }
-      if (hasSpotify) {
-        console.log('[Groups] Fallback: Setting Spotify as available');
-        setHasSpotify(true);
-        if (!hasGoogle) {
-          setPlatform('spotify');
-          fetchSpotifyPlaylists();
+    }
+  }
+
+  async function loadAllPlaylists() {
+    setFetchingPlaylists(true);
+    setError('');
+    const allPlaylists = [];
+    const errors = [];
+
+    // Load Spotify playlists if connected
+    if (hasSpotify) {
+      try {
+        const response = await fetch('/api/spotify/me/playlists?limit=50');
+        const data = await response.json();
+
+        if (!response.ok) {
+          errors.push('Spotify: ' + (data.error || 'Failed to fetch Spotify playlists'));
+        } else {
+          const items = (data.items || []).map(playlist => ({ playlist, platform: 'spotify' }));
+          allPlaylists.push(...items);
         }
+      } catch (err) {
+        console.error('Error fetching Spotify playlists:', err);
+        errors.push('Spotify: Failed to load playlists. Please try reconnecting your account.');
       }
     }
-  }
 
-  async function fetchSpotifyPlaylists() {
-    setFetchingPlaylists(true);
-    setError('');
-    try {
-      const response = await fetch('/api/spotify/me/playlists?limit=50');
-      const data = await response.json();
+    // Load YouTube playlists if connected
+    if (hasYoutube) {
+      try {
+        const response = await fetch('/api/youtube/youtube/v3/playlists?part=snippet&mine=true&maxResults=50');
+        const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch Spotify playlists');
+        if (!response.ok) {
+          errors.push('YouTube: ' + (data.error || 'Failed to fetch YouTube playlists'));
+        } else {
+          const items = (data.items || []).map(playlist => ({ playlist, platform: 'youtube' }));
+          allPlaylists.push(...items);
+        }
+      } catch (err) {
+        console.error('Error fetching YouTube playlists:', err);
+        errors.push('YouTube: Failed to load playlists. Please try reconnecting your account.');
       }
-
-      setPlaylists(data.items || []);
-    } catch (err) {
-      console.error('Error fetching Spotify playlists:', err);
-      setError('Failed to load Spotify playlists. Please try reconnecting your account.');
-    } finally {
-      setFetchingPlaylists(false);
     }
-  }
 
-  async function fetchYoutubePlaylists() {
-    setFetchingPlaylists(true);
-    setError('');
-    try {
-      const response = await fetch('/api/youtube/youtube/v3/playlists?part=snippet&mine=true&maxResults=50');
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch YouTube playlists');
-      }
-
-      setPlaylists(data.items || []);
-    } catch (err) {
-      console.error('Error fetching YouTube playlists:', err);
-      setError('Failed to load YouTube playlists. Please try reconnecting your account.');
-    } finally {
-      setFetchingPlaylists(false);
-    }
+    setPlaylists(allPlaylists);
+    setError(errors.length > 0 ? errors.join('; ') : '');
+    setFetchingPlaylists(false);
   }
 
   async function handleAddPlaylist(e) {
@@ -833,17 +934,24 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
     if (!session) return;
 
     try {
-      const selectedPlaylist = playlists.find(p =>
-        platform === 'spotify' ? p.id === selectedPlaylistId : p.id === selectedPlaylistId
-      );
-
-      if (!selectedPlaylist) {
+      if (!selectedPlaylistId || !selectedPlaylistPlatform) {
         throw new Error('Please select a playlist');
       }
 
+      const selectedPlaylistData = playlists.find(p => 
+        p.playlist.id === selectedPlaylistId && p.platform === selectedPlaylistPlatform
+      );
+
+      if (!selectedPlaylistData) {
+        throw new Error('Selected playlist not found');
+      }
+
+      const selectedPlaylist = selectedPlaylistData.playlist;
+      const playlistPlatform = selectedPlaylistData.platform;
+
       // Generate playlist URL based on platform
       let playlistUrl;
-      if (platform === 'spotify') {
+      if (playlistPlatform === 'spotify') {
         playlistUrl = selectedPlaylist.external_urls?.spotify || `https://open.spotify.com/playlist/${selectedPlaylist.id}`;
       } else {
         playlistUrl = `https://www.youtube.com/playlist?list=${selectedPlaylist.id}`;
@@ -855,7 +963,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           groupId,
-          platform,
+          platform: playlistPlatform,
           playlistUrl,
           userId: session.user.id,
         }),
@@ -920,41 +1028,83 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
         )}
 
         <form onSubmit={handleAddPlaylist}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-              Platform
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setPlatform('youtube')}
-                disabled={!hasYoutube}
-                className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
-                  platform === 'youtube'
-                    ? 'bg-red-600 text-white border-red-500/30'
-                    : hasYoutube
-                    ? 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
-                    : 'bg-white/5 [data-theme=\'light\']:bg-black/5 text-[var(--muted-foreground)] cursor-not-allowed border-white/10 [data-theme=\'light\']:border-black/10'
-                }`}
-              >
-                YouTube {!hasYoutube && '(Not Connected)'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlatform('spotify')}
-                disabled={!hasSpotify}
-                className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
-                  platform === 'spotify'
-                    ? 'bg-green-600 text-white border-green-500/30'
-                    : hasSpotify
-                    ? 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
-                    : 'bg-white/5 [data-theme=\'light\']:bg-black/5 text-[var(--muted-foreground)] cursor-not-allowed border-white/10 [data-theme=\'light\']:border-black/10'
-                }`}
-              >
-                Spotify {!hasSpotify && '(Not Connected)'}
-              </button>
+          {hasSpotify && hasYoutube && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Filter by Platform
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPlatform(null)}
+                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                    platform === null
+                      ? 'bg-purple-600 text-white border-purple-500/30'
+                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlatform('youtube')}
+                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                    platform === 'youtube'
+                      ? 'bg-red-600 text-white border-red-500/30'
+                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                  }`}
+                >
+                  YouTube
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlatform('spotify')}
+                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                    platform === 'spotify'
+                      ? 'bg-green-600 text-white border-green-500/30'
+                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                  }`}
+                >
+                  Spotify
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+          {((hasSpotify && !hasYoutube) || (!hasSpotify && hasYoutube)) && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Platform
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {hasYoutube && (
+                  <button
+                    type="button"
+                    onClick={() => setPlatform('youtube')}
+                    className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                      platform === 'youtube'
+                        ? 'bg-red-600 text-white border-red-500/30'
+                        : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                    }`}
+                  >
+                    YouTube
+                  </button>
+                )}
+                {hasSpotify && (
+                  <button
+                    type="button"
+                    onClick={() => setPlatform('spotify')}
+                    className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                      platform === 'spotify'
+                        ? 'bg-green-600 text-white border-green-500/30'
+                        : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                    }`}
+                  >
+                    Spotify
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
@@ -966,42 +1116,57 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
               </div>
             ) : playlists.length > 0 ? (
               <div className="max-h-64 overflow-y-auto bg-white/5 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-md modal-scroll">
-                {playlists.map((playlist) => {
-                  const playlistName = platform === 'spotify'
-                    ? playlist.name
-                    : playlist.snippet?.title;
-                  const playlistImage = platform === 'spotify'
-                    ? playlist.images?.[0]?.url
-                    : playlist.snippet?.thumbnails?.default?.url;
-                  const trackCount = platform === 'spotify'
-                    ? playlist.tracks?.total
-                    : null;
+                {playlists
+                  .filter(p => platform === null || p.platform === platform)
+                  .map(({ playlist, platform: playlistPlatform }) => {
+                    const playlistName = playlistPlatform === 'spotify'
+                      ? playlist.name
+                      : playlist.snippet?.title;
+                    const playlistImage = playlistPlatform === 'spotify'
+                      ? playlist.images?.[0]?.url
+                      : playlist.snippet?.thumbnails?.default?.url;
+                    const trackCount = playlistPlatform === 'spotify'
+                      ? playlist.tracks?.total
+                      : playlist.contentDetails?.itemCount;
+                    const isSelected = selectedPlaylistId === playlist.id && selectedPlaylistPlatform === playlistPlatform;
 
-                  return (
-                    <button
-                      key={playlist.id}
-                      type="button"
-                      onClick={() => setSelectedPlaylistId(playlist.id)}
-                      className={`w-full flex items-center gap-3 p-3 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors border border-transparent hover:border-white/10 [data-theme='light']:hover:border-black/10 ${
-                        selectedPlaylistId === playlist.id ? 'bg-white/10 [data-theme=\'light\']:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20' : ''
-                      }`}
-                    >
-                      {playlistImage && (
-                        <img
-                          src={playlistImage}
-                          alt={playlistName}
-                          className="w-12 h-12 rounded object-cover"
-                        />
-                      )}
-                      <div className="flex-1 text-left">
-                        <p className="text-[var(--foreground)] font-medium truncate">{playlistName}</p>
-                        {trackCount !== null && (
-                          <p className="text-sm text-[var(--muted-foreground)]">{trackCount} tracks</p>
+                    return (
+                      <button
+                        key={`${playlistPlatform}-${playlist.id}`}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPlaylistId(playlist.id);
+                          setSelectedPlaylistPlatform(playlistPlatform);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors border border-transparent hover:border-white/10 [data-theme='light']:hover:border-black/10 ${
+                          isSelected ? 'bg-white/10 [data-theme=\'light\']:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20' : ''
+                        }`}
+                      >
+                        {playlistImage && (
+                          <img
+                            src={playlistImage}
+                            alt={playlistName}
+                            className="w-12 h-12 rounded object-cover"
+                          />
                         )}
-                      </div>
-                      {selectedPlaylistId === playlist.id && (
-                        <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="flex-1 text-left">
+                          <div className="flex items-center gap-2">
+                            <p className="text-[var(--foreground)] font-medium truncate">{playlistName}</p>
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                              playlistPlatform === 'spotify' 
+                                ? 'bg-green-600/20 text-green-400 border border-green-500/30' 
+                                : 'bg-red-600/20 text-red-400 border border-red-500/30'
+                            }`}>
+                              {playlistPlatform === 'spotify' ? 'Spotify' : 'YouTube'}
+                            </span>
+                          </div>
+                          {trackCount !== null && trackCount !== undefined && (
+                            <p className="text-sm text-[var(--muted-foreground)]">{trackCount} tracks</p>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         </div>

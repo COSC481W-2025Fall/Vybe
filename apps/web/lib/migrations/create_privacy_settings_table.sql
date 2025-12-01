@@ -159,3 +159,7 @@ EXECUTE FUNCTION create_default_privacy_settings();
 -- 3. Verify RLS policies work correctly
 -- ============================================
 
+
+
+
+

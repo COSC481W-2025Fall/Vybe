@@ -223,7 +223,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
                   placeholder={CONFIRMATION_PHRASE}
                   className={[
                     'w-full px-4 py-3 rounded-lg bg-white/5 border text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2',
-                    '[data-theme="light"]:bg-black/5 [data-theme="light"]:border-black/20',
+                    "[data-theme='light']:bg-black/5 [data-theme='light']:border-black/20",
                     errors.confirmationPhrase
                       ? 'border-red-500/50 focus:ring-red-500/50'
                       : 'border-white/20 focus:ring-red-500/50 focus:border-red-500/50',
@@ -261,7 +261,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
                     placeholder="Enter your password"
                     className={[
                       'w-full px-4 py-3 pl-12 rounded-lg bg-white/5 border text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2',
-                      '[data-theme="light"]:bg-black/5 [data-theme="light"]:border-black/20',
+                      "[data-theme='light']:bg-black/5 [data-theme='light']:border-black/20",
                       errors.password
                         ? 'border-red-500/50 focus:ring-red-500/50'
                         : 'border-white/20 focus:ring-red-500/50 focus:border-red-500/50',
@@ -319,8 +319,8 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
             disabled={currentStep === 1 || isDeleting}
             className={[
               'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-              'border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 hover:text-[var(--foreground)]',
-              '[data-theme="light"]:border-black/20',
+              "border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)]",
+              "[data-theme='light']:border-black/20",
               (currentStep === 1 || isDeleting) && 'opacity-50 cursor-not-allowed',
             ].join(' ')}
           >
@@ -331,7 +331,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
             {!isDeleting && (
               <button
                 onClick={handleClose}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 hover:text-[var(--foreground)] [data-theme="light"]:border-black/20"
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] [data-theme='light']:border-black/20"
               >
                 Cancel
               </button>
@@ -374,4 +374,8 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
     </div>
   );
 }
+
+
+
+
 

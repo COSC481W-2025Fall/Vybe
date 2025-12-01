@@ -73,9 +73,9 @@ function AccountSettingsContent() {
           },
         }));
         
-        // Redirect to dashboard after a short delay
+        // Redirect to home after a short delay
         setTimeout(() => {
-          window.location.href = '/dashboard';
+          window.location.href = '/';
         }, 2000);
       }
     } catch (error) {
@@ -118,7 +118,7 @@ function AccountSettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <SettingsIcon className="h-6 w-6 text-purple-400" />
           <div>
@@ -131,7 +131,7 @@ function AccountSettingsContent() {
       </div>
 
       {/* Section Content */}
-      <div className="p-6 w-full space-y-8">
+      <div className="p-4 sm:p-6 w-full space-y-6 sm:space-y-8">
         {/* Account Information Section */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-[var(--foreground)]">Account Information</h3>

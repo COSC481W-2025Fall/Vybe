@@ -85,27 +85,75 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
   }, [searchQuery]);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim() || !provider) return;
+    if (!searchQuery.trim()) return;
 
     setLoading(true);
     setError('');
 
     try {
-      // Use the appropriate API based on provider
-      const apiEndpoint = provider === 'google'
-        ? `/api/youtube-search?q=${encodeURIComponent(searchQuery)}`
-        : `/api/spotify-search?q=${encodeURIComponent(searchQuery)}`;
+      // Search both platforms - users can see content from both
+      const [spotifyResponse, youtubeResponse] = await Promise.allSettled([
+        fetch(`/api/spotify-search?q=${encodeURIComponent(searchQuery)}`),
+        fetch(`/api/youtube-search?q=${encodeURIComponent(searchQuery)}`)
+      ]);
 
-      const response = await fetch(apiEndpoint);
-      const data = await response.json();
+      const allSongs = [];
 
-      if (data.error) {
-        setError(data.error);
+      // Process Spotify results
+      if (spotifyResponse.status === 'fulfilled' && spotifyResponse.value.ok) {
+        const spotifyData = await spotifyResponse.value.json();
+        if (spotifyData.tracks && spotifyData.tracks.length > 0) {
+          // Mark as Spotify and add to results
+          spotifyData.tracks.forEach(track => {
+            allSongs.push({
+              ...track,
+              _platform: 'spotify',
+              _source: 'spotify'
+            });
+          });
+        }
+      }
+
+      // Process YouTube results
+      if (youtubeResponse.status === 'fulfilled' && youtubeResponse.value.ok) {
+        const youtubeData = await youtubeResponse.value.json();
+        if (youtubeData.items && youtubeData.items.length > 0) {
+          // Convert YouTube format to match Spotify format for display
+          youtubeData.items.forEach(item => {
+            allSongs.push({
+              id: item.id?.videoId || item.id,
+              name: item.snippet?.title || 'Unknown',
+              artists: [{ name: item.snippet?.channelTitle || 'Unknown Artist' }],
+              album: {
+                name: 'YouTube',
+                images: item.snippet?.thumbnails ? [
+                  { url: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url }
+                ] : []
+              },
+              duration_ms: 0, // YouTube doesn't provide duration in search
+              external_urls: {
+                spotify: null,
+                youtube: `https://www.youtube.com/watch?v=${item.id?.videoId || item.id}`
+              },
+              _platform: 'youtube',
+              _source: 'youtube'
+            });
+          });
+        }
+      }
+
+      // Check for errors
+      if (spotifyResponse.status === 'rejected' && youtubeResponse.status === 'rejected') {
+        setError('Failed to search songs. Please try again.');
+        setSongs([]);
+      } else if (allSongs.length === 0) {
+        setError('No songs found. Try a different search term.');
         setSongs([]);
       } else {
-        setSongs(data.tracks || data.items || []);
+        setSongs(allSongs);
       }
     } catch (error) {
+      console.error('[SongSearchModal] Search error:', error);
       setError('Failed to search songs. Please try again.');
       setSongs([]);
     } finally {
@@ -114,13 +162,17 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
   };
 
   const handleSelectSong = async (song) => {
-    if (provider === 'google') {
-      // YouTube/Google result
+    // Determine platform from song data
+    const isYouTube = song._platform === 'youtube' || song._source === 'youtube' || song.id?.videoId;
+    const isSpotify = song._platform === 'spotify' || song._source === 'spotify' || song.external_urls?.spotify;
+
+    if (isYouTube) {
+      // YouTube result
       const videoId = song.id?.videoId || song.id;
-      const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const youtubeUrl = song.external_urls?.youtube || `https://www.youtube.com/watch?v=${videoId}`;
 
       // Try to find Spotify equivalent
-      const searchQuery = `${song.snippet?.title || song.title}`;
+      const searchQuery = `${song.snippet?.title || song.name || song.title}`;
       let spotifyUrl = null;
 
       try {
@@ -137,39 +189,42 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
 
       onSelectSong({
         id: videoId,
-        name: song.snippet?.title || song.title || 'Unknown',
-        artist: song.snippet?.channelTitle || 'Unknown Artist',
+        name: song.snippet?.title || song.name || song.title || 'Unknown',
+        artist: song.snippet?.channelTitle || song.artists?.[0]?.name || 'Unknown Artist',
         album: '',
-        imageUrl: song.snippet?.thumbnails?.high?.url || song.snippet?.thumbnails?.default?.url,
+        imageUrl: song.snippet?.thumbnails?.high?.url || song.snippet?.thumbnails?.default?.url || song.album?.images?.[0]?.url,
         previewUrl: null,
         spotifyUrl: spotifyUrl,
         youtubeUrl: youtubeUrl,
       });
     } else {
-      // Spotify result
-      const searchQuery = `${song.name} ${song.artists.map(a => a.name).join(' ')}`;
-      let youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
+      // Spotify result (or default)
+      const searchQuery = `${song.name} ${song.artists?.map(a => a.name).join(' ') || ''}`;
+      let youtubeUrl = song.external_urls?.youtube || `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`;
 
-      try {
-        const response = await fetch(`/api/youtube-search?q=${encodeURIComponent(searchQuery)}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.videoUrl) {
-            youtubeUrl = data.videoUrl;
+      // Try to find YouTube equivalent if not already provided
+      if (!song.external_urls?.youtube) {
+        try {
+          const response = await fetch(`/api/youtube-search?q=${encodeURIComponent(searchQuery)}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.videoUrl) {
+              youtubeUrl = data.videoUrl;
+            }
           }
+        } catch (error) {
+          console.error('Failed to fetch YouTube video:', error);
         }
-      } catch (error) {
-        console.error('Failed to fetch YouTube video:', error);
       }
 
       onSelectSong({
         id: song.id,
         name: song.name,
-        artist: song.artists.map(a => a.name).join(', '),
-        album: song.album.name,
-        imageUrl: song.album.images[0]?.url,
+        artist: song.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+        album: song.album?.name || '',
+        imageUrl: song.album?.images?.[0]?.url,
         previewUrl: song.preview_url,
-        spotifyUrl: song.external_urls.spotify,
+        spotifyUrl: song.external_urls?.spotify,
         youtubeUrl: youtubeUrl,
       });
     }
@@ -233,31 +288,53 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
               <p className="text-sm text-white/60 mb-4">
                 Found {songs.length} result{songs.length !== 1 ? 's' : ''}
               </p>
-              {songs.map((song) => (
-                <div
-                  key={song.id}
-                  onClick={() => handleSelectSong(song)}
-                  className="flex items-center gap-4 p-3 bg-white/5 hover:bg-white/10 active:bg-white/10 rounded-lg border border-white/10 cursor-pointer transition-colors"
-                >
-                  {song.album.images[0] && (
-                    <img
-                      src={song.album.images[0].url}
-                      alt={song.album.name}
-                      className="w-12 h-12 rounded"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium truncate">{song.name}</p>
-                    <p className="text-sm text-white/60 truncate">
-                      {song.artists.map(a => a.name).join(', ')}
-                    </p>
+              {songs.map((song, index) => {
+                const isYouTube = song._platform === 'youtube' || song._source === 'youtube';
+                const imageUrl = song.album?.images?.[0]?.url || song.snippet?.thumbnails?.high?.url || song.snippet?.thumbnails?.default?.url;
+                const songName = song.name || song.snippet?.title || 'Unknown';
+                const artistName = song.artists?.map(a => a.name).join(', ') || song.snippet?.channelTitle || 'Unknown Artist';
+                const duration = song.duration_ms || 0;
+
+                return (
+                  <div
+                    key={`${song.id || song.id?.videoId || index}-${song._platform || song._source || 'unknown'}`}
+                    onClick={() => handleSelectSong(song)}
+                    className="flex items-center gap-4 p-3 bg-white/5 hover:bg-white/10 active:bg-white/10 rounded-lg border border-white/10 cursor-pointer transition-colors"
+                  >
+                    {imageUrl && (
+                      <img
+                        src={imageUrl}
+                        alt={songName}
+                        className="w-12 h-12 rounded"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-white font-medium truncate">{songName}</p>
+                        {isYouTube && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-600/20 text-red-400 border border-red-500/30 flex-shrink-0">
+                            YT
+                          </span>
+                        )}
+                        {song._platform === 'spotify' && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-green-600/20 text-green-400 border border-green-500/30 flex-shrink-0">
+                            Spotify
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-white/60 truncate">
+                        {artistName}
+                      </p>
+                    </div>
+                    {duration > 0 && (
+                      <div className="flex items-center gap-2 text-white/60 text-sm">
+                        <Clock className="h-3 w-3" />
+                        {formatDuration(duration)}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 text-white/60 text-sm">
-                    <Clock className="h-3 w-3" />
-                    {formatDuration(song.duration_ms)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {songs.length === 0 && searchQuery && !loading && (

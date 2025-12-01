@@ -208,20 +208,45 @@ function JoinGroupModal({ onClose, onSuccess }) {
     setError('');
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    // Find group by join code
-    const { data: group, error: groupError } = await supabase
-      .from('groups')
-      .select('*')
-      .eq('join_code', joinCode.toUpperCase())
-      .single();
-
-    if (groupError || !group) {
-      setError('Invalid join code');
+    if (!session) {
+      setError('You must be logged in to join a group');
       setLoading(false);
       return;
     }
+
+    // Normalize the join code: trim whitespace and convert to uppercase
+    const normalizedCode = joinCode.trim().toUpperCase().replace(/\s+/g, '');
+    
+    if (!normalizedCode || (normalizedCode.length !== 6 && normalizedCode.length !== 8)) {
+      setError('Please enter a valid 6 or 8-character join code');
+      setLoading(false);
+      return;
+    }
+
+    console.log('[Join Group] Searching for code:', normalizedCode, 'Length:', normalizedCode.length);
+
+    // Find group by join code - use maybeSingle to avoid errors when not found
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .select('*')
+      .eq('join_code', normalizedCode)
+      .maybeSingle();
+
+    if (groupError) {
+      console.error('[Join Group] Database error:', groupError);
+      setError(`Database error: ${groupError.message}`);
+      setLoading(false);
+      return;
+    }
+
+    if (!group) {
+      console.log('[Join Group] No group found with code:', normalizedCode);
+      setError('Invalid join code. Please check the code and try again.');
+      setLoading(false);
+      return;
+    }
+
+    console.log('[Join Group] Found group:', group.id, group.name);
 
     // Join the group
     const { error: joinError } = await supabase
@@ -260,9 +285,13 @@ function JoinGroupModal({ onClose, onSuccess }) {
             <input
               type="text"
               value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value)}
-              placeholder="Enter 6-character code"
-              maxLength={6}
+              onChange={(e) => {
+                // Remove spaces and convert to uppercase as user types
+                const cleaned = e.target.value.replace(/\s/g, '').toUpperCase();
+                setJoinCode(cleaned);
+              }}
+              placeholder="Enter 6 or 8-character code"
+              maxLength={8}
               className="w-full px-4 py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/20 [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm sm:text-base"
               required
             />
@@ -284,7 +313,7 @@ function JoinGroupModal({ onClose, onSuccess }) {
             </button>
             <button
               type="submit"
-              disabled={loading || joinCode.length !== 6}
+              disabled={loading || (joinCode.length !== 6 && joinCode.length !== 8)}
               className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? 'Joining...' : 'Join Group'}

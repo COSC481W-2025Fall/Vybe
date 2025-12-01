@@ -1,53 +1,78 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# next / build
+.next/
+out/
+build/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# deps
+node_modules/
 
-# testing
-/coverage
-/test-results
-/playwright-report
-/playwright/.cache
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-Thumbs.db
-Desktop.ini
-
-# debug
+# logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env
 .env*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# vercel
-.vercel
-
-# typescript
+# misc
+.DS_Store
+.vercel/
 *.tsbuildinfo
-next-env.d.ts
+Thumbs.db
+Desktop.ini
+
+# test files
+clean.txt
+bad.txt
+secret.txt
+
+# Python
+venv/
+.venv/
+backend/.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.coverage
+backend/htmlcov/
+backend/coverage.xml
+
+# Playwright
+playwright-report/
+test-results/
+playwright/.cache/
+
+# docs (if you want to ignore extracted wireframes)
+docs/
+
+# Cursor/IDE
+.cursorignore
+.claude/
+
+# Scripts and temporary files
+get-issues.ps1
+update-*.ps1
+issue_*_update.json
+*.ps1
+
+# Sprint/assignee files (if temporary)
+sprint-*-assignee-breakdown.txt
+*-assignee-breakdown.txt
 
 # IDE
 .idea/
@@ -55,14 +80,26 @@ next-env.d.ts
 *.swp
 *.swo
 *~
+.project
+.classpath
+.settings/
 
 # OS
 .DS_Store
 .DS_Store?
 ._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Testing outputs
-/coverage/
+# Testing
+coverage/
 *.lcov
 .nyc_output/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+issues/
