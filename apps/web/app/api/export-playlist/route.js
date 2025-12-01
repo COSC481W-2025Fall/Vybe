@@ -365,8 +365,6 @@ export async function POST(request) {
 
               external_id,
 
-              platform,
-
               position,
 
               smart_sorted_order
@@ -511,8 +509,6 @@ export async function POST(request) {
 
               external_id,
 
-              platform,
-
               position,
 
               smart_sorted_order
@@ -607,8 +603,9 @@ export async function POST(request) {
 
       console.log(`[export-playlist] Converting ${totalTracks} tracks to Spotify URIs (playlist platform: ${playlist.platform})`);
 
-      // Always convert each song based on its individual platform
-      // This handles mixed playlists and single-platform playlists with songs from different sources
+      // Convert each song based on its platform
+      // For 'all' export: use song.playlist_platform (set during merge)
+      // For single playlist: use playlist.platform
 
       try {
 
@@ -618,8 +615,8 @@ export async function POST(request) {
 
           try {
 
-            // Use song's own platform, fall back to playlist_platform (for 'all' export), then playlist.platform
-            const songPlatform = song.platform || song.playlist_platform || playlist.platform || 'youtube';
+            // Use playlist_platform (for 'all' export) or fall back to playlist.platform
+            const songPlatform = song.playlist_platform || playlist.platform || 'youtube';
 
             if (songPlatform === 'spotify' && song.external_id) {
 
