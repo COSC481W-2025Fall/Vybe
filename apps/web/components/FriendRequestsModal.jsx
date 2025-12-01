@@ -4,13 +4,22 @@
 import { Check, Mail, UserPlus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export default function FriendRequestsModal({ onClose }) {
+export default function FriendRequestsModal({ onClose, onRefresh }) {
   const [sent, setSent] = useState([]);
   const [received, setReceived] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchRequests();
+    
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+    
+    // Cleanup: restore body scroll when modal closes
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, []);
 
   const fetchRequests = async () => {
@@ -19,12 +28,35 @@ export default function FriendRequestsModal({ onClose }) {
       const response = await fetch('/api/friends/requests');
       const data = await response.json();
 
+      console.log('Friend requests API response:', JSON.stringify(data, null, 2));
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       if (data.success) {
         setSent(data.sent || []);
         setReceived(data.received || []);
+        setError(null);
+        console.log('Set friend requests:', { 
+          sent: data.sent?.length || 0, 
+          received: data.received?.length || 0,
+          sentData: data.sent,
+          receivedData: data.received
+        });
+      } else {
+        console.error('API returned error:', data.error);
+        setError(data.error || 'Failed to fetch friend requests');
+        // Still set empty arrays to show "no requests" message
+        setSent([]);
+        setReceived([]);
       }
     } catch (error) {
       console.error('Error fetching requests:', error);
+      setError(error.message || 'Failed to fetch friend requests');
+      // Set empty arrays on error too
+      setSent([]);
+      setReceived([]);
     } finally {
       setLoading(false);
     }
@@ -44,7 +76,8 @@ export default function FriendRequestsModal({ onClose }) {
       const data = await response.json();
 
       if (data.success) {
-        fetchRequests(); // Refresh
+        await fetchRequests(); // Refresh
+        if (onRefresh) onRefresh(); // Notify parent to refresh count
       } else {
         alert(data.error || 'Failed to accept request');
       }
@@ -67,7 +100,8 @@ export default function FriendRequestsModal({ onClose }) {
       const data = await response.json();
 
       if (data.success) {
-        fetchRequests(); // Refresh
+        await fetchRequests(); // Refresh
+        if (onRefresh) onRefresh(); // Notify parent to refresh count
       } else {
         alert(data.error || 'Failed to reject request');
       }
@@ -77,8 +111,19 @@ export default function FriendRequestsModal({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="vybe-aurora glass-card rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-scroll">
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="vybe-aurora glass-card rounded-2xl p-6 w-full max-w-4xl my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
@@ -99,6 +144,16 @@ export default function FriendRequestsModal({ onClose }) {
           <div className="text-center py-12">
             <p className="text-white/60">Loading...</p>
           </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-400 mb-2">Error: {error}</p>
+            <button
+              onClick={fetchRequests}
+              className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-sm transition-colors border border-purple-500/30"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <div className="space-y-6">
             {/* Received Requests */}
@@ -108,7 +163,7 @@ export default function FriendRequestsModal({ onClose }) {
                 Received ({received.length})
               </h3>
               {received.length > 0 ? (
-                <div className="space-y-2">
+                <div className="h-64 overflow-y-auto space-y-2 pr-2 modal-scroll">
                   {received.map((request) => (
                     <div
                       key={request.friendship_id}
@@ -138,7 +193,9 @@ export default function FriendRequestsModal({ onClose }) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-white/60">No pending requests</p>
+                <div className="h-64 flex items-center justify-center">
+                  <p className="text-sm text-white/60">No pending requests</p>
+                </div>
               )}
             </div>
 
@@ -149,7 +206,7 @@ export default function FriendRequestsModal({ onClose }) {
                 Sent ({sent.length})
               </h3>
               {sent.length > 0 ? (
-                <div className="space-y-2">
+                <div className="h-64 overflow-y-auto space-y-2 pr-2 modal-scroll">
                   {sent.map((request) => (
                     <div
                       key={request.friendship_id}
@@ -166,7 +223,9 @@ export default function FriendRequestsModal({ onClose }) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-white/60">No sent requests</p>
+                <div className="h-64 flex items-center justify-center">
+                  <p className="text-sm text-white/60">No sent requests</p>
+                </div>
               )}
             </div>
           </div>

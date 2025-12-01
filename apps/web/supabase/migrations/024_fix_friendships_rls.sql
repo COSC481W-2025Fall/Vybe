@@ -92,3 +92,69 @@ BEGIN
     RAISE EXCEPTION 'Failed to enable RLS on friendships table!';
   END IF;
 END $$;
+
+-- ============================================================================
+-- CREATE RPC FUNCTION TO FETCH FRIEND REQUESTS
+-- ============================================================================
+-- This function uses SECURITY DEFINER to bypass RLS and fetch friend requests
+-- for a given user, properly categorizing them as sent or received
+
+-- Drop existing function if it exists
+DROP FUNCTION IF EXISTS get_friend_requests(UUID);
+
+-- Create RPC function to fetch friend requests with SECURITY DEFINER
+CREATE OR REPLACE FUNCTION get_friend_requests(p_user_id UUID)
+RETURNS TABLE (
+  friendship_id UUID,
+  friendship_user_id UUID,
+  friendship_friend_id UUID,
+  friendship_status TEXT,
+  friendship_created_at TIMESTAMPTZ,
+  friendship_updated_at TIMESTAMPTZ,
+  friend_username TEXT,
+  friend_display_name TEXT,
+  request_type TEXT  -- 'sent' or 'received'
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Return all pending friend requests for this user
+  -- SENT: where p_user_id = user_id (user sent the request)
+  -- RECEIVED: where p_user_id = friend_id (user received the request)
+  RETURN QUERY
+  SELECT 
+    f.id AS friendship_id,
+    f.user_id AS friendship_user_id,
+    f.friend_id AS friendship_friend_id,
+    f.status::TEXT AS friendship_status,
+    f.created_at AS friendship_created_at,
+    f.updated_at AS friendship_updated_at,
+    u.username::TEXT AS friend_username,
+    u.display_name::TEXT AS friend_display_name,
+    CASE 
+      WHEN f.user_id = p_user_id THEN 'sent'
+      WHEN f.friend_id = p_user_id THEN 'received'
+      ELSE NULL
+    END::TEXT AS request_type
+  FROM public.friendships f
+  LEFT JOIN public.users u ON (
+    CASE 
+      WHEN f.user_id = p_user_id THEN u.id = f.friend_id
+      WHEN f.friend_id = p_user_id THEN u.id = f.user_id
+      ELSE false
+    END
+  )
+  WHERE f.status = 'pending'
+    AND (f.user_id = p_user_id OR f.friend_id = p_user_id)
+  ORDER BY f.created_at DESC;
+END;
+$$;
+
+-- Set ownership to postgres
+ALTER FUNCTION get_friend_requests(UUID) OWNER TO postgres;
+
+-- Grant execute to authenticated users and anon
+GRANT EXECUTE ON FUNCTION get_friend_requests(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION get_friend_requests(UUID) TO anon;

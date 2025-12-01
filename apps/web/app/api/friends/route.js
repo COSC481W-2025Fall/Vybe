@@ -15,24 +15,31 @@ export async function GET(request) {
     }
 
     // Get all accepted friends for the current user
-    const { data: friendships, error: friendsError } = await supabase
+    // Use two separate queries to avoid RLS issues with .or()
+    const { data: friendshipsAsUser, error: error1 } = await supabase
       .from('friendships')
-      .select(`
-        id,
-        user_id,
-        friend_id,
-        status,
-        created_at
-      `)
-      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+      .select('id, user_id, friend_id, status, created_at')
+      .eq('user_id', user.id)
       .eq('status', 'accepted');
 
-    if (friendsError) {
-      console.error('Error fetching friends:', friendsError);
+    const { data: friendshipsAsFriend, error: error2 } = await supabase
+      .from('friendships')
+      .select('id, user_id, friend_id, status, created_at')
+      .eq('friend_id', user.id)
+      .eq('status', 'accepted');
+
+    if (error1 || error2) {
+      console.error('Error fetching friends:', { error1, error2 });
       return NextResponse.json({ error: 'Failed to fetch friends' }, { status: 500 });
     }
 
-    console.log('Friendships found:', friendships);
+    const friendships = [...(friendshipsAsUser || []), ...(friendshipsAsFriend || [])];
+
+    console.log('Friendships found:', {
+      total: friendships.length,
+      asUser: friendshipsAsUser?.length || 0,
+      asFriend: friendshipsAsFriend?.length || 0
+    });
 
     // Get unique friend IDs
     const friendIds = [...new Set(friendships.map(f => f.user_id === user.id ? f.friend_id : f.user_id))];

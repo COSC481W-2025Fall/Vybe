@@ -817,6 +817,7 @@ function ProfileSettingsContent() {
             loadFriends(); // Refresh friends list
             loadPendingRequestsCount(); // Refresh request count
           }}
+          onRefresh={loadPendingRequestsCount}
         />
       )}
     </div>
