@@ -1,7 +1,7 @@
 // app/auth/callback/route.js
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 
 export async function GET(request) {
   const url = new URL(request.url);
@@ -20,7 +20,35 @@ export async function GET(request) {
   }
 
   const cookieStore = await cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  
+  // Track cookies that need to be set on the response
+  const cookiesToSet = [];
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookies) {
+          cookies.forEach(({ name, value, options }) => {
+            cookiesToSet.push({ name, value, options });
+          });
+        },
+      },
+    }
+  );
+  
+  // Helper function to create redirect with cookies
+  const createRedirectWithCookies = (redirectUrl) => {
+    const response = NextResponse.redirect(redirectUrl);
+    cookiesToSet.forEach(({ name, value, options }) => {
+      response.cookies.set(name, value, options);
+    });
+    return response;
+  };
 
   if (code) {
     // Let Supabase handle the code exchange (it uses PKCE which we can't replicate)
@@ -40,7 +68,7 @@ export async function GET(request) {
       const errorUrl = new URL('/sign-in', request.url);
       errorUrl.searchParams.set('error', 'auth_failed');
       errorUrl.searchParams.set('message', exchangeError.message || 'Failed to authenticate');
-      return NextResponse.redirect(errorUrl);
+      return createRedirectWithCookies(errorUrl);
     }
 
     // Use session from exchangeCodeForSession response first, then fallback to getSession
@@ -53,7 +81,7 @@ export async function GET(request) {
       const errorUrl = new URL('/sign-in', request.url);
       errorUrl.searchParams.set('error', 'no_session');
       errorUrl.searchParams.set('message', 'Failed to create session. Please try again.');
-      return NextResponse.redirect(errorUrl);
+      return createRedirectWithCookies(errorUrl);
     }
 
     console.log('[callback] session user:', session?.user?.id);
@@ -175,7 +203,7 @@ export async function GET(request) {
         }
 
         console.log('[callback] Redirecting to:', nextUrl.toString());
-        return NextResponse.redirect(nextUrl);
+        return createRedirectWithCookies(nextUrl);
       }
     }
   }
@@ -186,5 +214,5 @@ export async function GET(request) {
   for (const param of sensitiveParams) {
     fallbackUrl.searchParams.delete(param);
   }
-  return NextResponse.redirect(fallbackUrl);
+  return createRedirectWithCookies(fallbackUrl);
 }

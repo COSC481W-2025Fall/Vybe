@@ -1,6 +1,6 @@
 // middleware.js
 import { NextResponse } from 'next/server'
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { CONFIG } from './config/constants.js'
 
 // Paths that are always public (exclude '/sign-in' so we can handle it explicitly)
@@ -20,9 +20,36 @@ export async function middleware(req) {
   // Public routes - allow without auth
   if (PUBLIC.has(pathname)) return NextResponse.next()
 
-  // Create a response up front so auth-helpers can refresh cookies if needed
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+  // Create a response up front so we can modify cookies
+  let res = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
+          res = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+  
   const { data: { session } } = await supabase.auth.getSession()
   console.log('[mw] path:', req.nextUrl.pathname, 'session?', !!session)
 
