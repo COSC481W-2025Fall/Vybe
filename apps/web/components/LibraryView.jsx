@@ -116,6 +116,7 @@ export default function LibraryView() {
 
   // User identity and provider
   const [userInfo, setUserInfo] = useState(null);
+  const [vybeProfile, setVybeProfile] = useState(null); // Vybe profile with custom picture
   const [provider, setProvider] = useState(null);
   const [hasSpotify, setHasSpotify] = useState(false);
   const [hasYoutube, setHasYoutube] = useState(false);
@@ -150,12 +151,17 @@ export default function LibraryView() {
         const urlParams = new URLSearchParams(window.location.search);
         const fromParam = urlParams.get('from');
 
-        // Get last_used_provider from database (saved during auth callback)
+        // Get user's Vybe profile (includes custom profile picture)
         const { data: userData } = await sb
           .from('users')
-          .select('last_used_provider')
+          .select('last_used_provider, display_name, username, profile_picture_url')
           .eq('id', user.id)
           .maybeSingle();
+        
+        // Save Vybe profile for display
+        if (userData) {
+          setVybeProfile(userData);
+        }
 
         const lastUsedProvider = userData?.last_used_provider;
 
@@ -629,15 +635,16 @@ export default function LibraryView() {
           {meError && <span className="text-xs text-red-500 break-all">{meError}</span>}
           {userInfo && (
             <>
-              {userInfo.images?.[0]?.url && (
+              {/* Use Vybe profile picture if set, otherwise fall back to provider avatar */}
+              {(vybeProfile?.profile_picture_url || userInfo.images?.[0]?.url) && (
                 <img
-                  src={userInfo.images[0].url}
-                  alt={`${provider === 'google' ? 'Google' : 'Spotify'} avatar`}
+                  src={vybeProfile?.profile_picture_url || userInfo.images[0].url}
+                  alt="Profile picture"
                   className="h-6 w-6 sm:h-8 sm:w-8 rounded-full object-cover flex-shrink-0"
                 />
               )}
               <span className="text-xs sm:text-sm text-[var(--foreground)]">
-                Signed in as <span className="font-medium">{userInfo.display_name}</span>
+                Signed in as <span className="font-medium">{vybeProfile?.display_name || userInfo.display_name}</span>
                 {provider === 'google' && <span className="text-xs text-[var(--muted-foreground)] ml-1 sm:ml-2">(Google)</span>}
                 {provider === 'spotify' && <span className="text-xs text-[var(--muted-foreground)] ml-1 sm:ml-2">(Spotify)</span>}
               </span>
