@@ -55,7 +55,7 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
             Owner
           </span>
         ) : (
-          <span className="px-3 py-1 bg-white/5 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 text-[var(--muted-foreground)] rounded-full text-xs font-medium">
+          <span className="px-3 py-1 surface-elevated rounded-full text-xs font-medium text-[var(--muted-foreground)]">
             Public
           </span>
         )}
@@ -94,13 +94,13 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
             </div>
           ))}
           {remainingCount > 0 && (
-            <div className="w-8 h-8 rounded-full bg-white/10 [data-theme='light']:bg-black/10 border-2 border-gray-900 [data-theme='light']:border-gray-100 flex items-center justify-center text-[var(--foreground)] text-xs">
+            <div className="w-8 h-8 rounded-full surface-elevated border-2 border-[var(--background)] flex items-center justify-center text-[var(--foreground)] text-xs">
               +{remainingCount}
             </div>
           )}
         </div>
 
-        <div className="px-3 py-1.5 bg-white/5 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-md text-[var(--muted-foreground)] text-sm font-mono font-semibold">
+        <div className="px-3 py-1.5 surface-elevated rounded-md text-[var(--muted-foreground)] text-sm font-mono font-semibold">
           {group.join_code || 'GENERATING...'}
         </div>
       </div>

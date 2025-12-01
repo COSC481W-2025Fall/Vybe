@@ -123,7 +123,7 @@ export function HomePage({ onNavigate } = {}) {
           </div>
           <Dialog open={createGroupDialog.isOpen} onOpenChange={createGroupDialog.setIsOpen}>
             <DialogTrigger asChild>
-              <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start">
+              <button className="flex items-center gap-2 px-3 sm:px-4 py-2 btn-primary rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start">
                 <Plus className="h-4 w-4" />
                 <span>Create Group</span>
               </button>
@@ -169,14 +169,14 @@ export function HomePage({ onNavigate } = {}) {
                   <button
                     type="button"
                     onClick={createGroupDialog.close}
-                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
+                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={groupsLoading}
-                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     {groupsLoading ? "Creating..." : "Create Group"}
                   </button>
@@ -216,7 +216,7 @@ export function HomePage({ onNavigate } = {}) {
               action={
                 <button
                   onClick={createGroupDialog.open}
-                  className="px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base w-full sm:w-auto"
+                  className="px-4 sm:px-6 py-2 sm:py-3 btn-primary rounded-lg text-sm sm:text-base w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-2 inline" />
                   Create Your First Group
@@ -236,7 +236,7 @@ export function HomePage({ onNavigate } = {}) {
           </div>
           <button
             onClick={shareSongDialog.open}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 btn-primary rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
           >
             <Plus className="h-4 w-4" />
             Share Song
@@ -332,7 +332,7 @@ export function HomePage({ onNavigate } = {}) {
           </div>
           <button
             onClick={communitiesDialog.open}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 btn-secondary rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
           >
             Browse All
           </button>

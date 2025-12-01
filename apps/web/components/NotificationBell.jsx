@@ -54,16 +54,18 @@ export default function NotificationBell() {
         data-notification-bell
         onClick={handleToggle}
         className={[
-          'relative rounded-lg p-2 text-gray-400 hover:bg-white/10 hover:text-white',
-          'transition-all touch-manipulation',
-          'focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:ring-offset-2 focus:ring-offset-black',
-          isOpen && 'bg-white/10 text-white',
+          'relative h-9 w-9 rounded-full flex items-center justify-center',
+          'bg-white/10 hover:bg-white/15 border border-white/15 hover:border-white/25',
+          "[data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:border-black/10",
+          'text-[var(--foreground)] transition-all touch-manipulation',
+          'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
+          isOpen && 'bg-white/15 border-white/25 [data-theme="light"]:bg-black/10',
         ].join(' ')}
         aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-4 w-4" />
         
         {/* Badge with unread count */}
         {unreadCount > 0 && (
@@ -72,7 +74,7 @@ export default function NotificationBell() {
               'absolute -top-1 -right-1 flex items-center justify-center',
               'min-w-[18px] h-[18px] px-1',
               'bg-red-500 text-white text-[10px] font-bold rounded-full',
-              'border-2 border-[#0f0f0f]',
+              'border-2 border-[var(--background)]',
               'animate-pulse',
             ].join(' ')}
             aria-label={`${unreadCount} unread notifications`}

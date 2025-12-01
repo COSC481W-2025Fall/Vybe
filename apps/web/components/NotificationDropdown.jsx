@@ -80,17 +80,17 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
   return (
     <div
       ref={dropdownRef}
-      className="w-80 max-w-[calc(100vw-2rem)] bg-[#0f0f0f] border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+      className="w-80 max-w-[calc(100vw-2rem)] bg-[var(--dropdown-bg)] border border-[var(--glass-border)] rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 backdrop-blur-xl"
       style={dropdownStyle}
       role="dialog"
       aria-modal="true"
       aria-label="Notifications"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--glass-border)] bg-gradient-to-r from-purple-500/10 to-blue-500/10">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5 text-purple-400" />
-          <h3 className="text-sm font-semibold text-white">Notifications</h3>
+          <h3 className="text-sm font-semibold text-[var(--foreground)]">Notifications</h3>
           {unreadCount > 0 && (
             <span className="px-2 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full">
               {unreadCount} new
@@ -102,7 +102,7 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
             <button
               onClick={handleMarkAllRead}
               disabled={markAllRead.isPending}
-              className="p-1.5 rounded-lg text-gray-400 hover:bg-white/10 hover:text-white transition-colors touch-manipulation"
+              className="p-1.5 rounded-lg text-[var(--muted-foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition-colors touch-manipulation"
               aria-label="Mark all as read"
               title="Mark all as read"
             >
@@ -111,7 +111,7 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
           )}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:bg-white/10 hover:text-white transition-colors touch-manipulation"
+            className="p-1.5 rounded-lg text-[var(--muted-foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition-colors touch-manipulation"
             aria-label="Close notifications"
           >
             <X className="h-4 w-4" />
@@ -120,7 +120,7 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
       </div>
 
       {/* Content */}
-      <div className="max-h-[400px] overflow-y-auto">
+      <div className="max-h-[400px] overflow-y-auto modal-scroll">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400"></div>
@@ -131,17 +131,17 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
           </div>
         ) : notifications.length === 0 ? (
           <div className="px-4 py-12 text-center">
-            <Bell className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-400">No notifications</p>
-            <p className="text-xs text-gray-500 mt-1">You're all caught up!</p>
+            <Bell className="h-12 w-12 text-[var(--muted-foreground)] mx-auto mb-3 opacity-50" />
+            <p className="text-sm text-[var(--muted-foreground)]">No notifications</p>
+            <p className="text-xs text-[var(--muted-foreground)] opacity-70 mt-1">You're all caught up!</p>
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-[var(--glass-border)]">
             {notifications.map((notification) => (
               <div
                 key={notification.id}
                 className={[
-                  'px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer',
+                  'px-4 py-3 hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 transition-colors cursor-pointer',
                   !notification.read && 'bg-purple-500/5',
                 ].join(' ')}
                 onClick={() => {
@@ -151,13 +151,13 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
               >
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">
+                    <p className="text-sm font-medium text-[var(--foreground)] truncate">
                       {notification.title}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                    <p className="text-xs text-[var(--muted-foreground)] mt-1 line-clamp-2">
                       {notification.message}
                     </p>
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-[var(--muted-foreground)] opacity-70 mt-2">
                       {formatTime(notification.timestamp)}
                     </p>
                   </div>
@@ -173,7 +173,7 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
 
       {/* Footer (optional - could add "View all" link) */}
       {notifications.length > 0 && (
-        <div className="px-4 py-2 border-t border-white/10 bg-white/5">
+        <div className="px-4 py-2 border-t border-[var(--glass-border)] bg-white/5 [data-theme='light']:bg-black/5">
           <button
             className="w-full text-xs text-center text-purple-400 hover:text-purple-300 transition-colors py-1"
             onClick={() => {

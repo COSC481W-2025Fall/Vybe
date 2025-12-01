@@ -9,11 +9,23 @@ export function Input({ className, type, ...props }) {
       type={type}
       data-slot="input"
       className={cn(
-        "file:text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] selection:bg-primary selection:text-primary-foreground backdrop-blur-[60px] saturate-[180%] flex h-9 w-full min-w-0 rounded-md border px-3 py-1 text-base transition-[color,box-shadow,background] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-[var(--foreground)]",
-        "bg-white/15 border-white/12",
-        "[data-theme='light']:bg-gray-100 [data-theme='light']:border-gray-300",
-        "focus-visible:ring-[3px] focus-visible:border-primary/30 focus-visible:ring-primary/10 focus-visible:bg-white/25 focus-visible:border-white/25 focus-visible:ring-white/10",
-        "[data-theme='light']:focus-visible:bg-gray-200 [data-theme='light']:focus-visible:border-gray-400 [data-theme='light']:focus-visible:ring-black/10",
+        // Base styles
+        "flex h-10 w-full min-w-0 rounded-lg border-2 px-3 py-2 text-base transition-all outline-none md:text-sm",
+        "text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]",
+        "file:text-[var(--foreground)] file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium",
+        "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+        
+        // Dark mode - visible borders and background
+        "bg-[var(--background)] border-[var(--glass-border)]",
+        
+        // Light mode - black borders for high contrast
+        "[data-theme='light']:bg-white [data-theme='light']:border-black/20",
+        
+        // Focus states
+        "focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30 focus-visible:border-[var(--accent)]",
+        "[data-theme='light']:focus-visible:border-black [data-theme='light']:focus-visible:ring-black/20",
+        
+        // Invalid states
         "aria-invalid:ring-red-500/20 aria-invalid:border-red-500",
         className,
       )}

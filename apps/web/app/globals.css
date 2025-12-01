@@ -1,23 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  /* Automatically generate muted foreground based on foreground color for better contrast */
-  --muted-foreground: color-mix(in srgb, var(--foreground), transparent 40%);
-  --accent: #8b5cf6;
+  /* High contrast dark mode - Pure black with white text and neon blue accents */
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted-foreground: #b0b0b0;
+  --accent: #00d4ff; /* Neon blue */
 
-  /* Glass tokens - Dark Default */
-  --glass-bg: rgba(17, 24, 39, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --glass-shadow: rgba(0, 0, 0, 0.2);
+  /* Glass tokens - Dark with neon blue borders */
+  --glass-bg: rgba(10, 10, 15, 0.95);
+  --glass-border: rgba(0, 212, 255, 0.3); /* Neon blue border */
+  --glass-border-hover: rgba(0, 212, 255, 0.5);
+  --glass-shadow: rgba(0, 0, 0, 0.6);
+
+  /* Dropdown/popover specific - SOLID for visibility */
+  --dropdown-bg: #050508;
+
+  /* Secondary element styling with neon blue */
+  --secondary-bg: rgba(0, 212, 255, 0.08);
+  --secondary-border: rgba(0, 212, 255, 0.25);
+  --secondary-hover: rgba(0, 212, 255, 0.15);
 
   /* Dark mode scrollbar colors */
   --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
-  --scrollbar-thumb-active: rgba(255, 255, 255, 0.45);
+  --scrollbar-thumb: rgba(0, 212, 255, 0.3);
+  --scrollbar-thumb-hover: rgba(0, 212, 255, 0.5);
+  --scrollbar-thumb-active: rgba(0, 212, 255, 0.6);
 }
 
 @theme inline {
@@ -30,42 +38,59 @@
 }
 
 [data-theme="light"] {
+  /* High contrast light mode - Pure white with black text and BLACK borders */
   --background: #ffffff;
-  --foreground: #171717;
-  --muted-foreground: #52525b;
-  --accent: #7c3aed;
+  --foreground: #000000;
+  --muted-foreground: #404040;
+  --accent: #000000; /* Black accent for light mode */
 
-  /* Glass tokens - Light Mode */
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-border-hover: rgba(0, 0, 0, 0.15);
-  --glass-shadow: rgba(0, 0, 0, 0.05);
+  /* Glass tokens - Light Mode with solid BLACK borders */
+  --glass-bg: rgba(255, 255, 255, 0.98);
+  --glass-border: rgba(0, 0, 0, 0.25);
+  --glass-border-hover: rgba(0, 0, 0, 0.5);
+  --glass-shadow: rgba(0, 0, 0, 0.2);
 
-  /* Light mode scrollbar colors */
+  /* Dropdown/popover specific - pure white with black border */
+  --dropdown-bg: #ffffff;
+
+  /* Secondary element styling with BLACK borders */
+  --secondary-bg: rgba(0, 0, 0, 0.02);
+  --secondary-border: rgba(0, 0, 0, 0.2);
+  --secondary-hover: rgba(0, 0, 0, 0.06);
+
+  /* Light mode scrollbar colors - black */
   --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(0, 0, 0, 0.2);
-  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.35);
-  --scrollbar-thumb-active: rgba(0, 0, 0, 0.45);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.3);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.5);
+  --scrollbar-thumb-active: rgba(0, 0, 0, 0.6);
 }
 
 [data-theme="custom"] {
   /* Custom theme variables will be set via inline styles on the root element */
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  /* Automatically generate muted foreground based on foreground color for better contrast */
-  --muted-foreground: color-mix(in srgb, var(--foreground), transparent 40%);
-  --accent: #8b5cf6;
+  /* These are fallback defaults - actual values come from ThemeProvider */
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted-foreground: #b0b0b0;
+  --accent: #00d4ff;
 
-  /* Glass tokens - Custom (Default to dark-ish) */
-  --glass-bg: rgba(17, 24, 39, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --glass-shadow: rgba(0, 0, 0, 0.2);
+  /* Glass tokens - Custom (defaults match dark mode) */
+  --glass-bg: #0a0a0f;
+  --glass-border: rgba(0, 212, 255, 0.3);
+  --glass-border-hover: rgba(0, 212, 255, 0.5);
+  --glass-shadow: rgba(0, 0, 0, 0.6);
+
+  /* Dropdown/popover specific - SOLID */
+  --dropdown-bg: #050508;
+
+  /* Secondary element styling */
+  --secondary-bg: rgba(0, 212, 255, 0.08);
+  --secondary-border: rgba(0, 212, 255, 0.25);
+  --secondary-hover: rgba(0, 212, 255, 0.15);
 
   --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
-  --scrollbar-thumb-active: rgba(255, 255, 255, 0.45);
+  --scrollbar-thumb: rgba(0, 212, 255, 0.3);
+  --scrollbar-thumb-hover: rgba(0, 212, 255, 0.5);
+  --scrollbar-thumb-active: rgba(0, 212, 255, 0.6);
 }
 
 @keyframes gradient-move {
@@ -268,10 +293,10 @@
     animation: pulseGlow 3s ease-in-out infinite;
   }
 
-  /* Glass card variants */
+  /* Glass card variants - SOLID backgrounds for visibility */
   .glass-card {
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-shadow:
@@ -281,8 +306,225 @@
 
   .glass-card:hover,
   .glass-card:active {
-    background: var(--glass-bg);
+    background: var(--dropdown-bg);
     border-color: var(--glass-border-hover);
+  }
+
+  /* Light mode glass-card - pure white with black border */
+  [data-theme="light"] .glass-card {
+    background: #ffffff;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  [data-theme="light"] .glass-card:hover,
+  [data-theme="light"] .glass-card:active {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.3);
+  }
+
+  /* Modal specific - fully opaque backgrounds */
+  .modal-content,
+  [role="dialog"] {
+    background: var(--dropdown-bg) !important;
+  }
+
+  [data-theme="light"] .modal-content,
+  [data-theme="light"] [role="dialog"] {
+    background: #ffffff !important;
+  }
+
+  /* ========================================
+     BUTTON SYSTEM - Consistent across themes
+     ======================================== */
+
+  /* Primary Button - High contrast CTA */
+  .btn-primary {
+    background: var(--foreground);
+    color: var(--background);
+    border: 1px solid transparent;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    opacity: 0.95;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Secondary Button - Ghost/outline style using CSS variables */
+  .btn-secondary {
+    background: var(--secondary-bg);
+    color: var(--foreground);
+    border: 1px solid var(--secondary-border);
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+  }
+
+  .btn-secondary:active {
+    background: var(--secondary-hover);
+  }
+
+  [data-theme="light"] .btn-secondary {
+    background: #ffffff;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    color: #000000;
+  }
+
+  [data-theme="light"] .btn-secondary:hover {
+    background: #fafafa;
+    border-color: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  }
+
+  [data-theme="light"] .btn-secondary:active {
+    background: #f5f5f5;
+    border-color: rgba(0, 0, 0, 0.5);
+  }
+
+  /* Secondary button with accent border - for special CTAs */
+  .btn-secondary-accent {
+    background: var(--secondary-bg);
+    color: var(--foreground);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary-accent:hover {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  .btn-secondary-accent:active {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  /* Accent Button - Uses the accent color variable */
+  .btn-accent {
+    background: var(--accent);
+    color: white;
+    border: 1px solid color-mix(in srgb, var(--accent) 80%, transparent);
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  .btn-accent:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 50%, transparent);
+    transform: translateY(-1px);
+  }
+
+  .btn-accent:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+
+  /* Ghost Button - Minimal, text-like */
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted-foreground);
+    border: 1px solid transparent;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--foreground);
+  }
+
+  [data-theme="light"] .btn-ghost:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  /* Danger Button - For destructive actions */
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .btn-danger:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+  }
+
+  /* Form Input Global Styles for visibility */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  textarea {
+    color: var(--foreground);
+    background: var(--background);
+    border: 2px solid var(--glass-border);
+  }
+
+  [data-theme="light"] input[type="text"],
+  [data-theme="light"] input[type="email"],
+  [data-theme="light"] input[type="password"],
+  [data-theme="light"] input[type="search"],
+  [data-theme="light"] input[type="url"],
+  [data-theme="light"] input[type="tel"],
+  [data-theme="light"] input[type="number"],
+  [data-theme="light"] textarea {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.2);
+  }
+
+  [data-theme="light"] input:focus,
+  [data-theme="light"] textarea:focus {
+    border-color: rgba(0, 0, 0, 0.4);
+  }
+
+  /* Surface utilities for consistent backgrounds */
+  .surface-elevated {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="light"] .surface-elevated {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(0, 0, 0, 0.15);
+  }
+
+  .surface-sunken {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  [data-theme="light"] .surface-sunken {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(100, 100, 140, 0.08);
   }
 
   .nav-item:hover {
@@ -294,9 +536,9 @@
 
   [data-theme="light"] .nav-item:hover {
     box-shadow:
-      0 0 20px rgba(0, 0, 0, 0.10),
-      0 0 40px rgba(0, 0, 0, 0.06),
-      0 6px 24px rgba(0, 0, 0, 0.12) !important;
+      0 0 20px rgba(139, 92, 246, 0.12),
+      0 0 40px rgba(139, 92, 246, 0.06),
+      0 6px 24px rgba(100, 100, 140, 0.10) !important;
   }
 }
 
@@ -311,10 +553,10 @@
 
   [data-theme="light"] .hover-glow:hover {
     box-shadow:
-      0 0 30px rgba(0, 0, 0, 0.10),
-      0 0 60px rgba(0, 0, 0, 0.06),
-      0 10px 32px rgba(0, 0, 0, 0.15);
-    border-color: rgba(0, 0, 0, 0.15) !important;
+      0 0 30px rgba(139, 92, 246, 0.15),
+      0 0 60px rgba(139, 92, 246, 0.08),
+      0 10px 32px rgba(100, 100, 140, 0.12);
+    border-color: rgba(139, 92, 246, 0.25) !important;
   }
 }
 
@@ -339,7 +581,7 @@
   }
 
   [data-theme="light"] .vybe-logo-text {
-    text-shadow: 0 1px 2px rgba(255, 255, 255, .35);
+    text-shadow: 0 1px 3px rgba(100, 100, 140, .25);
   }
 
   .purple-gradient-bg {
@@ -348,7 +590,7 @@
   }
 
   [data-theme="light"] .purple-gradient-bg {
-    background: linear-gradient(#ffffff 0% 50%, #f3e8ff 85%, #e9d5ff 100%);
+    background: linear-gradient(180deg, #f0f0f5 0%, #e8e0f5 50%, #ddd5ef 85%, #d5cce8 100%);
   }
 
   .icon-glow-pulse {
@@ -367,11 +609,12 @@ body {
 /* Theme overrides for background elements */
 [data-theme="light"] .vybe-aurora-fixed {
   background:
-    radial-gradient(1200px 600px at 15% 10%, rgba(99, 102, 241, .08), transparent 70%),
-    radial-gradient(900px 450px at 85% 15%, rgba(139, 92, 246, .06), transparent 65%),
-    radial-gradient(800px 400px at 25% 80%, rgba(168, 85, 247, .05), transparent 60%),
-    radial-gradient(900px 450px at 70% 85%, rgba(34, 211, 238, .06), transparent 65%),
-    linear-gradient(#ffffff, #f8fafc);
+    radial-gradient(1200px 600px at 15% 10%, rgba(99, 102, 241, .22), transparent 70%),
+    radial-gradient(900px 450px at 85% 15%, rgba(139, 92, 246, .18), transparent 65%),
+    radial-gradient(800px 400px at 25% 80%, rgba(168, 85, 247, .15), transparent 60%),
+    radial-gradient(900px 450px at 70% 85%, rgba(34, 211, 238, .16), transparent 65%),
+    radial-gradient(700px 350px at 50% 50%, rgba(236, 72, 153, .10), transparent 55%),
+    linear-gradient(180deg, #f0f0f5 0%, #e8e8f0 50%, #e0e0ec 100%);
   background-size: 120% 120%;
   animation: vybeShift 18s ease-in-out infinite;
 }
@@ -383,7 +626,7 @@ body {
 
 [data-theme="light"] .chroma-bg::before,
 [data-theme="light"] .chroma-bg::after {
-  opacity: 0.05;
+  opacity: 0.12;
   mix-blend-mode: multiply;
 }
 
@@ -416,10 +659,10 @@ main {
 
   [data-theme="light"] .glow-shadow--soft {
     box-shadow:
-      0 0 0 1px rgba(0, 0, 0, .30),
-      0 0 10px 6px rgba(0, 0, 0, .12),
-      0 0 28px 16px rgba(168, 85, 247, .18),
-      0 0 48px 28px rgba(168, 85, 247, .10);
+      0 0 0 1px rgba(100, 100, 140, .20),
+      0 0 10px 6px rgba(100, 100, 140, .08),
+      0 0 28px 16px rgba(139, 92, 246, .20),
+      0 0 48px 28px rgba(139, 92, 246, .12);
     animation: glowShadowPulseSoftLight 4.6s ease-in-out infinite;
   }
 
@@ -427,18 +670,18 @@ main {
     0%,
     100% {
       box-shadow:
-        0 0 0 1px rgba(0, 0, 0, .28),
-        0 0 8px 5px rgba(0, 0, 0, .10),
-        0 0 24px 14px rgba(168, 85, 247, .16),
-        0 0 40px 24px rgba(168, 85, 247, .08);
+        0 0 0 1px rgba(100, 100, 140, .18),
+        0 0 8px 5px rgba(100, 100, 140, .06),
+        0 0 24px 14px rgba(139, 92, 246, .18),
+        0 0 40px 24px rgba(139, 92, 246, .10);
     }
 
     50% {
       box-shadow:
-        0 0 0 1px rgba(0, 0, 0, .36),
-        0 0 12px 7px rgba(0, 0, 0, .14),
-        0 0 34px 20px rgba(168, 85, 247, .20),
-        0 0 56px 30px rgba(168, 85, 247, .10);
+        0 0 0 1px rgba(100, 100, 140, .24),
+        0 0 12px 7px rgba(100, 100, 140, .10),
+        0 0 34px 20px rgba(139, 92, 246, .24),
+        0 0 56px 30px rgba(139, 92, 246, .14);
     }
   }
 
@@ -518,6 +761,23 @@ main {
   }
 }
 
+/* Light mode aurora effect */
+[data-theme="light"] .vybe-aurora::before {
+  --ink: #f0f0f5;
+  --indigo: #818cf8;
+  --peri: #a5b4fc;
+  --lav: #c4b5fd;
+  --cyan: #67e8f9;
+  background:
+    radial-gradient(120% 90% at 20% 0%, color-mix(in oklab, var(--indigo) 50%, transparent) 0%, transparent 60%),
+    radial-gradient(120% 95% at 80% 10%, color-mix(in oklab, var(--lav) 45%, transparent) 0%, transparent 62%),
+    radial-gradient(110% 95% at 50% 100%, color-mix(in oklab, var(--cyan) 45%, transparent) 0%, transparent 65%),
+    linear-gradient(180deg, var(--ink) 0%, var(--indigo) 30%, var(--peri) 55%, var(--lav) 75%, var(--cyan) 100%);
+  background-blend-mode: multiply, multiply, multiply, normal;
+  filter: blur(18px) saturate(130%);
+  opacity: .22;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vybe-aurora::before {
     animation: none;
@@ -567,8 +827,8 @@ main {
   }
 
   [data-theme="light"] .glass-select {
-    background: rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0, 0, 0, 0.10);
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(100, 100, 140, 0.15);
   }
 
   .glass-select:focus {
@@ -577,8 +837,8 @@ main {
   }
 
   [data-theme="light"] .glass-select:focus {
-    border-color: rgba(0, 0, 0, 0.15);
-    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(139, 92, 246, 0.4);
+    background: rgba(255, 255, 255, 0.85);
   }
 
   .glass-select:hover {
@@ -587,8 +847,8 @@ main {
   }
 
   [data-theme="light"] .glass-select:hover {
-    background: rgba(0, 0, 0, 0.10);
-    border-color: rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(100, 100, 140, 0.25);
   }
 
   .glass-select option {

@@ -237,21 +237,21 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={() => setShowFriendRequestsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 active:bg-white/20 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
               >
                 <Mail className="h-4 w-4" />
                 Requests
               </button>
               <button
                 onClick={() => setShowAddFriendsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg font-medium transition-colors text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg text-sm sm:text-base"
               >
                 <UserPlus className="h-4 w-4" />
                 Add Friend
               </button>
               <Link
                 href="/settings"
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 active:bg-white/20 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
               >
                 <Settings className="h-4 w-4" />
                 Settings
@@ -294,7 +294,7 @@ export default function ProfilePage() {
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3">
                   <button
                     onClick={() => setShowSongSearchModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 active:bg-white/20 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
                   >
                     Change Song
                   </button>
@@ -303,7 +303,7 @@ export default function ProfilePage() {
                       href={songOfDay.spotify_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 [data-theme='light']:bg-black/5 hover:!bg-green-600 active:!bg-green-700 text-[var(--foreground)] hover:!text-white rounded-lg font-medium transition-all backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 hover:!border-green-500 text-sm sm:text-base"
+                      className="group flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary hover:!bg-green-600 active:!bg-green-700 hover:!text-white hover:!border-green-500 rounded-lg text-sm sm:text-base"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Open in Spotify
@@ -314,7 +314,7 @@ export default function ProfilePage() {
                       href={songOfDay.youtube_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 [data-theme='light']:bg-black/5 hover:!bg-red-600 active:!bg-red-700 text-[var(--foreground)] hover:!text-white rounded-lg font-medium transition-all backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 hover:!border-red-500 text-sm sm:text-base"
+                      className="group flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary hover:!bg-red-600 active:!bg-red-700 hover:!text-white hover:!border-red-500 rounded-lg text-sm sm:text-base"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Open in YouTube
@@ -330,7 +330,7 @@ export default function ProfilePage() {
               <p className="section-subtitle text-xs sm:text-sm mb-4">Share your current favorite song with friends</p>
               <button
                 onClick={() => setShowSongSearchModal(true)}
-                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg font-medium transition-colors text-sm sm:text-base"
+                className="px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg text-sm sm:text-base"
               >
                 Set Song of the Day
               </button>
@@ -378,7 +378,7 @@ export default function ProfilePage() {
                 <p className="section-subtitle text-xs sm:text-sm mb-4">Start connecting with friends to share music</p>
                 <button
                   onClick={() => setShowAddFriendsModal(true)}
-                  className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg font-medium transition-colors text-sm sm:text-base"
+                  className="px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg text-sm sm:text-base"
                 >
                   Add Friends
                 </button>

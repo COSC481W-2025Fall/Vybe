@@ -8,11 +8,23 @@ export function Textarea({ className, ...props }) {
     <textarea
       data-slot="textarea"
       className={cn(
-        "resize-none placeholder:text-[var(--muted-foreground)] focus-visible:ring-primary/50 aria-invalid:ring-red-500/20 aria-invalid:border-red-500 flex field-sizing-content min-h-16 w-full rounded-md border backdrop-blur-[60px] px-3 py-2 text-base text-[var(--foreground)] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "border-white/12 bg-white/10",
-        "[data-theme='light']:bg-gray-100 [data-theme='light']:border-gray-300",
-        "focus-visible:border-white/25 focus-visible:bg-white/15",
-        "[data-theme='light']:focus-visible:bg-gray-200 [data-theme='light']:focus-visible:border-gray-400",
+        // Base styles
+        "resize-none flex field-sizing-content min-h-16 w-full rounded-lg border-2 px-3 py-2 text-base transition-all outline-none md:text-sm",
+        "text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]",
+        "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+        
+        // Dark mode - visible borders and background
+        "bg-[var(--background)] border-[var(--glass-border)]",
+        
+        // Light mode - black borders for high contrast
+        "[data-theme='light']:bg-white [data-theme='light']:border-black/20",
+        
+        // Focus states
+        "focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30 focus-visible:border-[var(--accent)]",
+        "[data-theme='light']:focus-visible:border-black [data-theme='light']:focus-visible:ring-black/20",
+        
+        // Invalid states
+        "aria-invalid:ring-red-500/20 aria-invalid:border-red-500",
         className,
       )}
       {...props}

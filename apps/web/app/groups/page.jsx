@@ -115,7 +115,7 @@ export default function GroupsPage() {
                 <>
                   <button
                     onClick={() => setShowJoinModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 btn-secondary rounded-lg text-sm sm:text-base"
                   >
                     <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>Join Group</span>
@@ -123,7 +123,7 @@ export default function GroupsPage() {
 
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base"
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 btn-primary rounded-lg text-sm sm:text-base"
                   >
                     <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span>Create Group</span>
@@ -152,14 +152,14 @@ export default function GroupsPage() {
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <button
                 onClick={() => setShowJoinModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white/10 hover:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 btn-secondary rounded-lg text-sm sm:text-base"
               >
                 <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                 Join Group
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 text-sm sm:text-base"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 btn-primary rounded-lg text-sm sm:text-base"
               >
                 <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                 Create Group
@@ -282,8 +282,8 @@ function JoinGroupModal({ onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 [data-theme='light']:bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="glass-card rounded-xl max-w-md w-full p-4 sm:p-6 shadow-2xl">
+    <div className="fixed inset-0 bg-black/80 [data-theme='light']:bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-[var(--dropdown-bg)] [data-theme='light']:bg-white rounded-xl max-w-md w-full p-4 sm:p-6 shadow-2xl border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20">
         <h2 className="text-xl sm:text-2xl font-bold mb-4 text-[var(--foreground)]">Join Group</h2>
 
         <form onSubmit={handleJoin} className="space-y-4">
@@ -301,7 +301,7 @@ function JoinGroupModal({ onClose, onSuccess }) {
               }}
               placeholder="Enter 6 or 8-character code"
               maxLength={8}
-              className="w-full px-4 py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/20 [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm sm:text-base"
+              className="w-full px-4 py-3 bg-[var(--background)] [data-theme='light']:bg-white border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] uppercase focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] [data-theme='light']:focus:border-black text-sm sm:text-base"
               required
             />
           </div>
@@ -316,14 +316,14 @@ function JoinGroupModal({ onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
+              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || (joinCode.length !== 6 && joinCode.length !== 8)}
-              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? 'Joining...' : 'Join Group'}
             </button>
@@ -369,8 +369,8 @@ function CreateGroupModal({ onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 [data-theme='light']:bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="glass-card rounded-xl max-w-md w-full p-4 sm:p-6 shadow-2xl">
+    <div className="fixed inset-0 bg-black/80 [data-theme='light']:bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+      <div className="bg-[var(--dropdown-bg)] [data-theme='light']:bg-white rounded-xl max-w-md w-full p-4 sm:p-6 shadow-2xl border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20">
         <h2 className="text-xl sm:text-2xl font-bold mb-4 text-[var(--foreground)]">Create Group</h2>
 
         <form onSubmit={handleCreate} className="space-y-4">
@@ -383,7 +383,7 @@ function CreateGroupModal({ onClose, onSuccess }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="My Music Group"
-              className="w-full px-4 py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/20 [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm sm:text-base"
+              className="w-full px-4 py-3 bg-[var(--background)] [data-theme='light']:bg-white border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] [data-theme='light']:focus:border-black text-sm sm:text-base"
               required
             />
           </div>
@@ -397,7 +397,7 @@ function CreateGroupModal({ onClose, onSuccess }) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What's this group about?"
               rows={3}
-              className="w-full px-4 py-2 bg-white/10 [data-theme='light']:bg-black/5 border border-white/20 [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm sm:text-base resize-none"
+              className="w-full px-4 py-3 bg-[var(--background)] [data-theme='light']:bg-white border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] [data-theme='light']:focus:border-black text-sm sm:text-base resize-none"
             />
           </div>
 
@@ -411,14 +411,14 @@ function CreateGroupModal({ onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 active:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/20 [data-theme='light']:border-black/20 text-sm sm:text-base"
+              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !name}
-              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-gray-200 active:bg-gray-200 [data-theme='light']:bg-white [data-theme='light']:hover:bg-gray-100 [data-theme='light']:active:bg-gray-100 text-black rounded-lg font-medium transition-colors border border-gray-300 [data-theme='light']:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {loading ? 'Creating...' : 'Create Group'}
             </button>
