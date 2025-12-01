@@ -32,8 +32,8 @@ export async function GET(request) {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookies) {
-          cookies.forEach(({ name, value, options }) => {
+        setAll(cookiesToSetFromSupabase) {
+          cookiesToSetFromSupabase.forEach(({ name, value, options }) => {
             cookiesToSet.push({ name, value, options });
           });
         },

@@ -11,6 +11,11 @@ const PUBLIC = new Set([
   '/api/health',
 ])
 
+// Path prefixes that are public (for dynamic routes)
+const PUBLIC_PREFIXES = [
+  '/u/', // Public user profiles
+]
+
 export async function middleware(req) {
   const { pathname } = req.nextUrl
 
@@ -19,12 +24,16 @@ export async function middleware(req) {
 
   // Public routes - allow without auth
   if (PUBLIC.has(pathname)) return NextResponse.next()
+  
+  // Public prefixes - allow without auth
+  if (PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix))) return NextResponse.next()
 
-  // Create a response up front so we can modify cookies
+  // Track cookies that need to be set
+  const cookiesToSet = []
+
+  // Create response first
   let res = NextResponse.next({
-    request: {
-      headers: req.headers,
-    },
+    request: { headers: req.headers },
   })
 
   const supabase = createServerClient(
@@ -35,23 +44,37 @@ export async function middleware(req) {
         getAll() {
           return req.cookies.getAll()
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
-          res = NextResponse.next({
-            request: {
-              headers: req.headers,
-            },
+        setAll(cookies) {
+          // Store cookies to set later
+          cookies.forEach(({ name, value, options }) => {
+            cookiesToSet.push({ name, value, options })
+            // Also set on request for downstream
+            req.cookies.set(name, value)
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
+          // Update response with new cookies
+          res = NextResponse.next({
+            request: { headers: req.headers },
+          })
+          cookiesToSet.forEach(({ name, value, options }) => {
             res.cookies.set(name, value, options)
-          )
+          })
         },
       },
     }
   )
   
+  // getSession will refresh the token if needed and set cookies
   const { data: { session } } = await supabase.auth.getSession()
   console.log('[mw] path:', req.nextUrl.pathname, 'session?', !!session)
+
+  // Helper to create redirect while preserving cookies
+  const redirectWithCookies = (url) => {
+    const redirectResponse = NextResponse.redirect(url)
+    cookiesToSet.forEach(({ name, value, options }) => {
+      redirectResponse.cookies.set(name, value, options)
+    })
+    return redirectResponse
+  }
 
   // If not authenticated:
   // - allow access to '/sign-in'
@@ -64,7 +87,7 @@ export async function middleware(req) {
     const url = req.nextUrl.clone()
     url.pathname = CONFIG.AUTH_REDIRECT_PATH
     url.searchParams.set('next', pathname + req.nextUrl.search)
-    return NextResponse.redirect(url)
+    return redirectWithCookies(url)
   }
 
   // If authenticated and visiting '/sign-in' → bounce to next or home page
@@ -80,7 +103,7 @@ export async function middleware(req) {
       url.pathname = '/' // Redirect to home instead of library
       url.search = ''
     }
-    return NextResponse.redirect(url)
+    return redirectWithCookies(url)
   }
 
   return res
