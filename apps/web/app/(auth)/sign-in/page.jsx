@@ -44,6 +44,10 @@ export default function SignInPage() {
           'https://www.googleapis.com/auth/youtube.readonly',
           'https://www.googleapis.com/auth/youtube.force-ssl', // Allow playlist creation
         ].join(' '),
+        queryParams: {
+          access_type: 'offline',  // Required to get a refresh token
+          prompt: 'consent',       // Force consent screen to ensure refresh token is returned
+        },
       },
     });
     if (error) console.error('Google/YouTube login error:', error.message);
