@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   XCircle,
   Music,
-  ExternalLink,
   UserPlus,
   Users,
   Trash2,
@@ -733,69 +732,6 @@ function ProfileSettingsContent() {
             )}
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
-
-          {/* Connected Accounts */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-[var(--foreground)]">Connected Accounts</h3>
-
-            {/* Spotify Connection */}
-            <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 [data-theme='light']:border-black/20 bg-white/10 [data-theme='light']:bg-black/10">
-              <div className="flex items-center gap-3">
-                <Music className="h-5 w-5 text-green-400" />
-                <div>
-                  <div className="text-sm font-medium text-[var(--foreground)]">Spotify</div>
-                  <div className="text-xs text-[var(--muted-foreground)]">
-                    {profileData?.spotify_connected
-                      ? profileData?.spotify_account?.display_name ||
-                        profileData?.spotify_account?.id ||
-                        'Connected'
-                      : 'Not connected'}
-                  </div>
-                </div>
-              </div>
-              {profileData?.spotify_connected ? (
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-400" />
-                  <span className="text-xs text-green-400">Connected</span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                >
-                  Connect <ExternalLink className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-
-            {/* YouTube Connection */}
-            <div className="flex items-center justify-between p-4 rounded-lg border border-white/10 [data-theme='light']:border-black/20 bg-white/10 [data-theme='light']:bg-black/10">
-              <div className="flex items-center gap-3">
-                <Music className="h-5 w-5 text-red-400" />
-                <div>
-                  <div className="text-sm font-medium text-[var(--foreground)]">YouTube</div>
-                  <div className="text-xs text-[var(--muted-foreground)]">
-                    {profileData?.youtube_connected ? 'Connected' : 'Not connected'}
-                  </div>
-                </div>
-              </div>
-              {profileData?.youtube_connected ? (
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-400" />
-                  <span className="text-xs text-green-400">Connected</span>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                >
-                  Connect <ExternalLink className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       </form>
 
