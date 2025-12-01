@@ -348,6 +348,11 @@ export default function ProfilePage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-[var(--foreground)] truncate">{friend.name}</p>
                     <p className="text-sm text-[var(--muted-foreground)] truncate">@{friend.username}</p>
+                    {friend.bio && (
+                      <p className="text-xs text-[var(--muted-foreground)] mt-1 line-clamp-2 opacity-80">
+                        {friend.bio}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => {

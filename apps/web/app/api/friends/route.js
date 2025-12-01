@@ -57,6 +57,7 @@ export async function GET(request) {
       email: '',
       name: f.friend_display_name || f.friend_username,
       username: f.friend_username,
+      bio: f.friend_bio || null,
       friendship_id: f.friendship_id,
       created_at: f.friendship_created_at
     }));
@@ -111,7 +112,7 @@ async function getFriendsFallback(supabase, userId) {
   for (const friendId of friendIds) {
     const { data: friendUser } = await supabase
       .from('users')
-      .select('id, username, display_name')
+      .select('id, username, display_name, bio')
       .eq('id', friendId)
       .single();
 
@@ -122,6 +123,7 @@ async function getFriendsFallback(supabase, userId) {
         email: '',
         name: friendUser.display_name || friendUser.username,
         username: friendUser.username,
+        bio: friendUser.bio || null,
         friendship_id: friendship?.id,
         created_at: friendship?.created_at
       });

@@ -718,6 +718,11 @@ function ProfileSettingsContent() {
                       <div>
                         <p className="text-[var(--foreground)] font-medium">{friend.name || friend.username}</p>
                         <p className="text-sm text-[var(--muted-foreground)]">@{friend.username}</p>
+                        {friend.bio && (
+                          <p className="text-xs text-[var(--muted-foreground)] mt-1 line-clamp-2 opacity-80">
+                            {friend.bio}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button
