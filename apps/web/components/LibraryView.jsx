@@ -131,6 +131,7 @@ export default function LibraryView() {
   const [playlists, setPlaylists]   = useState([]);   // normalized playlists for UI
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [playlistsError, setPlaylistsError] = useState(null);
+  const [playlistsFetched, setPlaylistsFetched] = useState(false); // track if playlists have been fetched at least once
 
   // --- load user identity based on provider ---
   useEffect(() => {
@@ -379,10 +380,10 @@ export default function LibraryView() {
   // --- load playlists (for both Spotify and YouTube) ---
   const loadPlaylists = useCallback(async () => {
     if (provider !== 'spotify' && provider !== 'google') return;
-    
+
     try {
       setLoadingPlaylists(true);
-      
+
       if (provider === 'spotify') {
         console.log('[LibraryView] Loading Spotify playlists...');
         const res = await fetch('/api/spotify/me/playlists?limit=50', { cache: 'no-store' });
@@ -411,8 +412,9 @@ export default function LibraryView() {
         const items = (json.items || []).map(mapYouTubePlaylist);
         setPlaylists(items);
       }
-      
+
       setPlaylistsError(null);
+      setPlaylistsFetched(true); // Mark playlists as fetched successfully
     } catch (err) {
       console.error('Failed to load playlists', err);
       setPlaylistsError(String(err?.message || err));
@@ -423,10 +425,10 @@ export default function LibraryView() {
 
   // --- load playlists when tab changes to saved ---
   useEffect(() => {
-    if (tab === 'saved' && (provider === 'spotify' || provider === 'google') && playlists.length === 0 && !loadingPlaylists) {
+    if (tab === 'saved' && (provider === 'spotify' || provider === 'google') && !playlistsFetched && !loadingPlaylists) {
       loadPlaylists();
     }
-  }, [tab, provider, playlists.length, loadingPlaylists, loadPlaylists]);
+  }, [tab, provider, playlistsFetched, loadingPlaylists, loadPlaylists]);
 
   const content = useMemo(() => {
     // Show "connect account" message if no provider
