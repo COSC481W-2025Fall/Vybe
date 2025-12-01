@@ -102,60 +102,42 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Action must be accept or reject' }, { status: 400 });
     }
 
-    // Check if friendship exists and user is the recipient
-    const { data: friendship, error: checkError } = await supabase
-      .from('friendships')
-      .select('id, user_id, friend_id, status')
-      .eq('id', friendshipId)
-      .eq('status', 'pending')
-      .single();
+    // Use RPC to atomically validate and accept/reject (bypasses RLS safely)
+    const { data: result, error: rpcError } = await supabase.rpc('update_friend_request', {
+      p_user_id: user.id,
+      p_friendship_id: friendshipId,
+      p_action: action
+    });
 
-    if (checkError || !friendship) {
-      return NextResponse.json({ error: 'Friend request not found or already processed' }, { status: 404 });
-    }
-
-    // Verify user is the recipient (friend_id)
-    if (friendship.friend_id !== user.id) {
-      return NextResponse.json({ error: 'Unauthorized to perform this action' }, { status: 403 });
-    }
-
-    if (action === 'accept') {
-      // Update status to accepted
-      const { error: updateError } = await supabase
-        .from('friendships')
-        .update({
-          status: 'accepted',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', friendshipId);
-
-      if (updateError) {
-        console.error('Error accepting friend request:', updateError);
-        return NextResponse.json({ error: 'Failed to accept friend request' }, { status: 500 });
+    if (rpcError) {
+      const msg = rpcError.message || '';
+      if (msg.includes('not found')) {
+        return NextResponse.json({ error: 'Friend request not found or already processed' }, { status: 404 });
       }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Friend request accepted'
-      });
-
-    } else if (action === 'reject') {
-      // Delete the friendship record
-      const { error: deleteError } = await supabase
-        .from('friendships')
-        .delete()
-        .eq('id', friendshipId);
-
-      if (deleteError) {
-        console.error('Error rejecting friend request:', deleteError);
-        return NextResponse.json({ error: 'Failed to reject friend request' }, { status: 500 });
+      if (msg.includes('already processed')) {
+        return NextResponse.json({ error: 'Friend request not found or already processed' }, { status: 404 });
       }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Friend request rejected'
+      if (msg.includes('Unauthorized')) {
+        return NextResponse.json({ error: 'Unauthorized to perform this action' }, { status: 403 });
+      }
+      if (msg.includes('Invalid action')) {
+        return NextResponse.json({ error: 'Action must be accept or reject' }, { status: 400 });
+      }
+      console.error('RPC update_friend_request error:', {
+        code: rpcError.code,
+        message: rpcError.message,
+        details: rpcError.details,
+        hint: rpcError.hint
       });
+      return NextResponse.json({ error: 'Failed to update friend request' }, { status: 500 });
     }
+
+    // If we reach here, action succeeded
+    return NextResponse.json({
+      success: true,
+      message: action === 'accept' ? 'Friend request accepted' : 'Friend request rejected',
+      friendship: Array.isArray(result) ? result[0] : result
+    });
 
   } catch (error) {
     console.error('Unexpected error:', error);
