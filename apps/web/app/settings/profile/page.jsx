@@ -554,29 +554,6 @@ function ProfileSettingsContent() {
             </div>
           </div>
 
-          {/* Public / Private toggle */}
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
-                Profile Visibility
-              </label>
-              <p className="text-xs text-[var(--muted-foreground)]">
-                When public, other users can view your profile.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                id="is_public"
-                type="checkbox"
-                {...register('is_public')}
-                className="h-4 w-4 rounded border-[var(--glass-border)] bg-transparent accent-[var(--accent)]"
-              />
-              <label htmlFor="is_public" className="text-sm text-[var(--foreground)]">
-                Public profile
-              </label>
-            </div>
-          </div>
-
           {/* Profile Picture */}
           <ProfilePictureUpload
             currentImageUrl={watch('profile_picture_url') || null}

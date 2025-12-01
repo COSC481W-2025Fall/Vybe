@@ -30,7 +30,7 @@ export async function GET(req, { params }) {
 
     const { data, error } = await supabase
       .from('users')
-      .select('id, username, display_name, bio, profile_picture_url, is_public')
+      .select('id, username, display_name, bio, profile_picture_url')
       .eq('username', username)
       .single();
 
@@ -42,14 +42,7 @@ export async function GET(req, { params }) {
       );
     }
 
-    // If profile is private, return 403
-    if (!data.is_public) {
-      return NextResponse.json(
-        { error: 'Profile is private' },
-        { status: 403 }
-      );
-    }
-
+    // All profiles are now publicly visible
     return NextResponse.json(
       {
         profile: {

@@ -112,7 +112,6 @@ export async function GET() {
             display_name: displayName,
             profile_picture_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
             bio: null,
-            is_public: false,
             created_at: user.created_at,
             updated_at: new Date().toISOString(),
           };
@@ -143,7 +142,6 @@ export async function GET() {
               display_name: displayName,
               profile_picture_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
               bio: null,
-              is_public: false,
               created_at: user.created_at,
               updated_at: new Date().toISOString(),
             };
@@ -266,7 +264,6 @@ export async function PATCH(req) {
       display_name,
       bio,
       profile_picture_url,
-      is_public, // must match your column name
     } = body;
 
     // 3) Validate and sanitize input
@@ -336,18 +333,12 @@ export async function PATCH(req) {
       profile_picture_url = null;
     }
 
-    // Ensure is_public is a boolean
-    if (typeof is_public !== 'boolean') {
-      is_public = is_public === 'true' || is_public === true || is_public === 1 || is_public === '1';
-    }
-
     // 4) Simple direct UPDATE - RLS is disabled, so this will work
     console.log('[Profile PATCH] Attempting to update profile for user:', user.id);
     console.log('[Profile PATCH] Update payload:', {
       display_name,
       bio,
       profile_picture_url,
-      is_public: Boolean(is_public)
     });
     
     // Try direct update first
@@ -357,7 +348,6 @@ export async function PATCH(req) {
         display_name: display_name,
         bio,
         profile_picture_url,
-        is_public: Boolean(is_public),
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id)
@@ -393,7 +383,6 @@ export async function PATCH(req) {
             display_name: display_name,
             bio: bio,
             profile_picture_url: profile_picture_url,
-            is_public: Boolean(is_public),
           })
           .select()
           .single();
@@ -432,7 +421,6 @@ export async function PATCH(req) {
         id: updatedProfile?.id,
         display_name: updatedProfile?.display_name,
         bio: updatedProfile?.bio,
-        is_public: updatedProfile?.is_public
       });
     }
 
@@ -447,113 +435,6 @@ export async function PATCH(req) {
     console.log('[Profile PATCH] Successfully updated profile:', {
       display_name: updatedProfile?.display_name,
       bio: updatedProfile?.bio,
-      is_public: updatedProfile?.is_public,
-    });
-
-    // Return the updated profile so the frontend can use it immediately
-    return NextResponse.json({ 
-      ok: true,
-      profile: updatedProfile 
-    }, { status: 200 });
-
-    // Legacy code path - keeping for reference but should not be reached
-    /*
-    if (checkError && checkError.code === 'PGRST116') {
-      // Profile doesn't exist, create it first
-      console.log('[Profile PATCH] Profile not found, creating one...');
-      
-      // Extract username from email or metadata
-      const username = user.user_metadata?.username || 
-                       user.user_metadata?.preferred_username ||
-                       user.email?.split('@')[0] || 
-                       `user_${user.id.slice(0, 8)}`;
-
-      // Try to create profile using RPC function (bypasses RLS)
-      const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_profile_manual', {
-        p_user_id: user.id,
-        p_username: username,
-        p_display_name: display_name,
-        p_profile_picture_url: profile_picture_url
-      });
-
-      if (rpcError) {
-        console.error('[Profile PATCH] RPC failed, trying direct insert:', rpcError);
-        
-        // Fallback: Try direct insert
-        const { data: newProfile, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            username: username,
-            display_name: display_name,
-            bio: bio,
-            profile_picture_url: profile_picture_url,
-            is_public: Boolean(is_public),
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('[Profile PATCH] Failed to create profile:', createError);
-          return NextResponse.json(
-            { error: 'Failed to create profile', details: createError.message },
-            { status: 500 }
-          );
-        }
-        updatedProfile = newProfile;
-      } else if (rpcData && rpcData.length > 0) {
-        // RPC succeeded and returned the profile
-        updatedProfile = rpcData[0];
-        // Update the fields that weren't set by RPC
-        if (bio !== null || is_public !== undefined) {
-          const { data: updated, error: updateErr } = await supabase
-            .from('users')
-            .update({
-              bio,
-              is_public: Boolean(is_public),
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', user.id)
-            .select()
-            .single();
-          
-          if (updateErr) {
-            console.error('[Profile PATCH] Failed to update bio/is_public:', updateErr);
-            updatedProfile = rpcData[0]; // Use RPC result even if update failed
-          } else {
-            updatedProfile = updated;
-          }
-        }
-      } else {
-        // RPC succeeded but no data, try fetching
-        const { data: fetchedProfile, error: fetchError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        
-        if (fetchError || !fetchedProfile) {
-          return NextResponse.json(
-            { error: 'Profile created but could not be retrieved', details: fetchError?.message },
-            { status: 500 }
-          );
-        }
-        updatedProfile = fetchedProfile;
-      }
-    */
-
-    if (!updatedProfile) {
-      console.error('[Profile PATCH] No profile returned after create/update');
-      return NextResponse.json(
-        { error: 'Profile operation succeeded but no profile data returned', code: 'NO_PROFILE_DATA' },
-        { status: 500 }
-      );
-    }
-
-    console.log('[Profile PATCH] Successfully updated profile:', {
-      display_name: updatedProfile?.display_name,
-      bio: updatedProfile?.bio,
-      is_public: updatedProfile?.is_public,
     });
 
     // Return the updated profile so the frontend can use it immediately
