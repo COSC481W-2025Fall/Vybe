@@ -239,32 +239,32 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="vybe-aurora glass-card rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-6 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
-              <Music className="h-5 w-5 text-purple-400" />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="vybe-aurora glass-card rounded-xl sm:rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 sm:p-6 pb-3 sm:pb-4 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
+              <Music className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
             </div>
-            <h2 className="page-title text-xl">Search for a Song</h2>
+            <h2 className="page-title text-lg sm:text-xl">Search for a Song</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
+            className="p-1.5 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
             aria-label="Close"
           >
             <X className="h-5 w-5 text-white/60" />
           </button>
         </div>
 
-        <div className="px-6 pb-4">
+        <div className="px-4 sm:px-6 pb-3 sm:pb-4 flex-shrink-0">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50"
+              className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white text-base sm:text-sm placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50"
               placeholder="Search by song name or artist..."
               autoFocus
             />
@@ -277,15 +277,15 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
         </div>
 
         {error && (
-          <div className="mx-6 mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+          <div className="mx-4 sm:mx-6 mb-3 sm:mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg flex-shrink-0">
             <p className="text-sm text-red-400">{error}</p>
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6 modal-scroll">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 modal-scroll min-h-0">
           {songs.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm text-white/60 mb-4">
+              <p className="text-sm text-white/60 mb-3 sm:mb-4">
                 Found {songs.length} result{songs.length !== 1 ? 's' : ''}
               </p>
               {songs.map((song, index) => {
@@ -299,35 +299,35 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
                   <div
                     key={`${song.id || song.id?.videoId || index}-${song._platform || song._source || 'unknown'}`}
                     onClick={() => handleSelectSong(song)}
-                    className="flex items-center gap-4 p-3 bg-white/5 hover:bg-white/10 active:bg-white/10 rounded-lg border border-white/10 cursor-pointer transition-colors"
+                    className="flex items-center gap-2.5 sm:gap-4 p-2.5 sm:p-3 bg-white/5 hover:bg-white/10 active:bg-white/10 rounded-lg border border-white/10 cursor-pointer transition-colors"
                   >
                     {imageUrl && (
                       <img
                         src={imageUrl}
                         alt={songName}
-                        className="w-12 h-12 rounded"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded flex-shrink-0"
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-white font-medium truncate">{songName}</p>
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <p className="text-white font-medium text-sm sm:text-base truncate">{songName}</p>
                         {isYouTube && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-red-600/20 text-red-400 border border-red-500/30 flex-shrink-0">
+                          <span className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded bg-red-600/20 text-red-400 border border-red-500/30 flex-shrink-0">
                             YT
                           </span>
                         )}
                         {song._platform === 'spotify' && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-green-600/20 text-green-400 border border-green-500/30 flex-shrink-0">
+                          <span className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded bg-green-600/20 text-green-400 border border-green-500/30 flex-shrink-0">
                             Spotify
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-white/60 truncate">
+                      <p className="text-xs sm:text-sm text-white/60 truncate">
                         {artistName}
                       </p>
                     </div>
                     {duration > 0 && (
-                      <div className="flex items-center gap-2 text-white/60 text-sm">
+                      <div className="hidden sm:flex items-center gap-2 text-white/60 text-sm flex-shrink-0">
                         <Clock className="h-3 w-3" />
                         {formatDuration(duration)}
                       </div>
@@ -338,17 +338,17 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
             </div>
           )}
           {songs.length === 0 && searchQuery && !loading && (
-            <div className="text-center py-12">
-              <Music className="h-16 w-16 text-white/60 mx-auto mb-4" />
-              <p className="text-white/60">No songs found</p>
-              <p className="text-sm text-white/40 mt-2">Try a different search term</p>
+            <div className="text-center py-8 sm:py-12">
+              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-white/60 mx-auto mb-4" />
+              <p className="text-white/60 text-sm sm:text-base">No songs found</p>
+              <p className="text-xs sm:text-sm text-white/40 mt-2">Try a different search term</p>
             </div>
           )}
           {songs.length === 0 && !searchQuery && !loading && (
-            <div className="text-center py-12">
-              <Music className="h-16 w-16 text-white/60 mx-auto mb-4" />
-              <p className="text-white/60">Search for your favorite song</p>
-              <p className="text-sm text-white/40 mt-2">Enter a song name or artist above</p>
+            <div className="text-center py-8 sm:py-12">
+              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-white/60 mx-auto mb-4" />
+              <p className="text-white/60 text-sm sm:text-base">Search for your favorite song</p>
+              <p className="text-xs sm:text-sm text-white/40 mt-2">Enter a song name or artist above</p>
             </div>
           )}
         </div>

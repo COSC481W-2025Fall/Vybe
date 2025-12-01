@@ -94,16 +94,16 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-red-500/30 glass-card">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-red-500/20 p-2">
-              <AlertTriangle className="h-6 w-6 text-red-400" />
+        <div className="sticky top-0 z-10 flex items-center justify-between p-4 sm:p-6 border-b border-red-500/30 glass-card">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="rounded-lg bg-red-500/20 p-1.5 sm:p-2">
+              <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-400" />
             </div>
             <div>
-              <h2 id="delete-account-modal-title" className="text-xl font-semibold text-[var(--foreground)]">
+              <h2 id="delete-account-modal-title" className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">
                 Delete Your Account
               </h2>
-              <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
+              <p className="text-xs sm:text-sm text-[var(--muted-foreground)] mt-0.5">
                 Step {currentStep} of 4
               </p>
             </div>
@@ -111,7 +111,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
           {!isDeleting && (
             <button
               onClick={handleClose}
-              className="rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition-colors"
+              className="rounded-lg p-1.5 sm:p-2 text-[var(--muted-foreground)] hover:bg-white/5 active:bg-white/5 [data-theme='light']:hover:bg-black/5 [data-theme='light']:active:bg-black/5 hover:text-[var(--foreground)] transition-colors"
               aria-label="Close modal"
             >
               <X className="h-5 w-5" />
@@ -120,7 +120,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Step 1: Initial Warning */}
           {currentStep === 1 && (
             <div className="space-y-4">
@@ -313,13 +313,13 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
         </div>
 
         {/* Modal Footer */}
-        <div className="sticky bottom-0 flex items-center justify-between gap-4 p-6 border-t border-red-500/30 glass-card">
+        <div className="sticky bottom-0 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-4 sm:p-6 border-t border-red-500/30 glass-card">
           <button
             onClick={handleBack}
             disabled={currentStep === 1 || isDeleting}
             className={[
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-              "border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)]",
+              'w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-all',
+              "border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 active:bg-white/5 [data-theme='light']:hover:bg-black/5 [data-theme='light']:active:bg-black/5 hover:text-[var(--foreground)]",
               "[data-theme='light']:border-black/20",
               (currentStep === 1 || isDeleting) && 'opacity-50 cursor-not-allowed',
             ].join(' ')}
@@ -327,11 +327,11 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
             Back
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {!isDeleting && (
               <button
                 onClick={handleClose}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] [data-theme='light']:border-black/20"
+                className="w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-all border border-white/20 text-[var(--muted-foreground)] hover:bg-white/5 active:bg-white/5 [data-theme='light']:hover:bg-black/5 [data-theme='light']:active:bg-black/5 hover:text-[var(--foreground)] [data-theme='light']:border-black/20"
               >
                 Cancel
               </button>
@@ -341,7 +341,7 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
               <button
                 onClick={handleNext}
                 disabled={isDeleting}
-                className="px-6 py-2 rounded-lg text-sm font-medium transition-all bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-6 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-all bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 active:from-red-700 active:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue
               </button>
@@ -350,20 +350,21 @@ export default function DeleteAccountModal({ isOpen, onClose, onConfirm, isDelet
                 onClick={handleConfirm}
                 disabled={isDeleting || !password}
                 className={[
-                  'px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-                  'bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800',
+                  'w-full sm:w-auto px-6 py-2.5 sm:py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2',
+                  'bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 active:from-red-700 active:to-red-800',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                 ].join(' ')}
               >
                 {isDeleting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Deleting...
+                    <span>Deleting...</span>
                   </>
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4" />
-                    Delete Account Permanently
+                    <span className="hidden sm:inline">Delete Account Permanently</span>
+                    <span className="sm:hidden">Delete Account</span>
                   </>
                 )}
               </button>

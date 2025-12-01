@@ -644,16 +644,16 @@ function ProfileSettingsContent() {
 
           {/* Friends Management */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h3 className="text-lg font-medium text-[var(--foreground)]">Friends</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setShowFriendRequestsModal(true)}
-                  className="relative flex items-center gap-2 px-3 py-1.5 bg-[color-mix(in_srgb,var(--accent)_20%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] text-[var(--accent)] rounded-lg text-sm transition-colors border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
+                  className="relative flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2 px-3 py-2 sm:py-1.5 bg-[color-mix(in_srgb,var(--accent)_20%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] active:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] text-[var(--accent)] rounded-lg text-sm transition-colors border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
                 >
                   <MailIcon className="h-4 w-4" />
-                  Requests
+                  <span>Requests</span>
                   {pendingRequestsCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                       {pendingRequestsCount}
@@ -663,10 +663,10 @@ function ProfileSettingsContent() {
                 <button
                   type="button"
                   onClick={() => setShowAddFriendsModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg text-sm transition-colors border border-blue-500/30"
+                  className="flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2 px-3 py-2 sm:py-1.5 bg-blue-500/20 hover:bg-blue-500/30 active:bg-blue-500/30 text-blue-400 rounded-lg text-sm transition-colors border border-blue-500/30"
                 >
                   <UserPlus className="h-4 w-4" />
-                  Add Friends
+                  <span>Add Friends</span>
                 </button>
               </div>
             </div>

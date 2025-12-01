@@ -1540,46 +1540,47 @@ function EmbeddedPlayer({ song, onClose }) {
 
   if (!embedUrl) return null;
 
-  const playerWidth = song.platform === 'youtube' ? 360 : 400;
-  const playerHeight = song.platform === 'youtube' ? 203 : 152; // 16:9 for YouTube
+  // Heights: YouTube 16:9 aspect ratio, Spotify compact player
+  const playerHeight = song.platform === 'youtube' ? 203 : 152;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 glass-card rounded-lg shadow-2xl border border-white/20 [data-theme='light']:border-black/20 overflow-hidden animate-in slide-in-from-bottom-4 duration-300" style={{ width: `${playerWidth}px` }}>
-      <div className="flex items-center justify-between bg-white/5 [data-theme='light']:bg-black/5 px-4 py-2 border-b border-white/10 [data-theme='light']:border-black/10">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+    <div className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 z-50 glass-card sm:rounded-lg shadow-2xl border-t sm:border border-white/20 [data-theme='light']:border-black/20 overflow-hidden animate-in slide-in-from-bottom-4 duration-300 w-full sm:w-[360px] md:w-[400px]">
+      <div className="flex items-center justify-between bg-white/5 [data-theme='light']:bg-black/5 px-3 sm:px-4 py-2 border-b border-white/10 [data-theme='light']:border-black/10">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <img
             src={song.thumbnail_url}
             alt={song.title}
-            className="w-10 h-10 rounded object-cover flex-shrink-0"
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded object-cover flex-shrink-0"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-[var(--foreground)] font-semibold text-sm truncate">{song.title}</p>
-            <p className="text-[var(--muted-foreground)] text-xs truncate">{song.artist}</p>
+            <p className="text-[var(--foreground)] font-semibold text-xs sm:text-sm truncate">{song.title}</p>
+            <p className="text-[var(--muted-foreground)] text-[10px] sm:text-xs truncate">{song.artist}</p>
           </div>
           {song.platform === 'spotify' && (
-            <span className="ml-2 px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded border border-green-600/30 whitespace-nowrap flex-shrink-0">
+            <span className="hidden sm:inline-block ml-2 px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded border border-green-600/30 whitespace-nowrap flex-shrink-0">
               Click ▶
             </span>
           )}
         </div>
         <button
           onClick={onClose}
-          className="ml-2 p-1 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 rounded transition-colors flex-shrink-0 border border-transparent hover:border-white/10 [data-theme='light']:hover:border-black/10"
+          className="ml-2 p-1.5 sm:p-1 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 rounded transition-colors flex-shrink-0 border border-transparent hover:border-white/10 [data-theme='light']:hover:border-black/10"
         >
           <svg className="w-5 h-5 text-[var(--muted-foreground)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
-      <iframe
-        src={embedUrl}
-        width={playerWidth}
-        height={playerHeight}
-        frameBorder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        className="block w-full"
-      />
+      <div className="relative w-full" style={{ paddingBottom: song.platform === 'youtube' ? '56.25%' : `${playerHeight}px` }}>
+        <iframe
+          src={embedUrl}
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className={`${song.platform === 'youtube' ? 'absolute inset-0' : ''} block w-full h-full`}
+          style={song.platform === 'spotify' ? { height: `${playerHeight}px` } : {}}
+        />
+      </div>
     </div>
   );
 }

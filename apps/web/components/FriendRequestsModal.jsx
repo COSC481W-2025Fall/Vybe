@@ -112,7 +112,7 @@ export default function FriendRequestsModal({ onClose, onRefresh }) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto"
       onClick={(e) => {
         // Close modal when clicking backdrop
         if (e.target === e.currentTarget) {
@@ -121,19 +121,19 @@ export default function FriendRequestsModal({ onClose, onRefresh }) {
       }}
     >
       <div 
-        className="vybe-aurora glass-card rounded-2xl p-6 w-full max-w-4xl my-auto"
+        className="vybe-aurora glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-lg sm:max-w-2xl lg:max-w-4xl my-auto max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
-              <Mail className="h-5 w-5 text-purple-400" />
+        <div className="flex items-center justify-between mb-4 sm:mb-6 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
+              <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
             </div>
-            <h2 className="page-title text-xl">Friend Requests</h2>
+            <h2 className="page-title text-lg sm:text-xl">Friend Requests</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
+            className="p-1.5 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
             aria-label="Close"
           >
             <X className="h-5 w-5 text-white/60" />
@@ -149,41 +149,41 @@ export default function FriendRequestsModal({ onClose, onRefresh }) {
             <p className="text-red-400 mb-2">Error: {error}</p>
             <button
               onClick={fetchRequests}
-              className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-sm transition-colors border border-purple-500/30"
+              className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 active:bg-purple-500/30 text-purple-400 rounded-lg text-sm transition-colors border border-purple-500/30"
             >
               Retry
             </button>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 overflow-y-auto flex-1 min-h-0">
             {/* Received Requests */}
             <div>
-              <h3 className="section-subtitle mb-3 flex items-center gap-2">
+              <h3 className="section-subtitle mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
                 <Mail className="h-4 w-4" />
                 Received ({received.length})
               </h3>
               {received.length > 0 ? (
-                <div className="h-64 overflow-y-auto space-y-2 pr-2 modal-scroll">
+                <div className="max-h-48 sm:max-h-64 overflow-y-auto space-y-2 pr-2 modal-scroll">
                   {received.map((request) => (
                     <div
                       key={request.friendship_id}
-                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
+                      className="flex items-center justify-between p-2.5 sm:p-3 bg-white/5 rounded-lg border border-white/10 gap-2"
                     >
-                      <div>
-                        <p className="text-white font-medium">{request.name}</p>
-                        <p className="text-sm text-white/60">@{request.username}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-medium text-sm sm:text-base truncate">{request.name}</p>
+                        <p className="text-xs sm:text-sm text-white/60 truncate">@{request.username}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
                         <button
                           onClick={() => handleAccept(request.friendship_id)}
-                          className="p-2 bg-green-400/20 hover:bg-green-400/30 rounded-lg transition-colors border border-green-400/30"
+                          className="p-1.5 sm:p-2 bg-green-400/20 hover:bg-green-400/30 active:bg-green-400/30 rounded-lg transition-colors border border-green-400/30"
                           title="Accept"
                         >
                           <Check className="h-4 w-4 text-green-400" />
                         </button>
                         <button
                           onClick={() => handleReject(request.friendship_id)}
-                          className="p-2 bg-red-400/20 hover:bg-red-400/30 rounded-lg transition-colors border border-red-400/30"
+                          className="p-1.5 sm:p-2 bg-red-400/20 hover:bg-red-400/30 active:bg-red-400/30 rounded-lg transition-colors border border-red-400/30"
                           title="Reject"
                         >
                           <X className="h-4 w-4 text-red-400" />
@@ -193,7 +193,7 @@ export default function FriendRequestsModal({ onClose, onRefresh }) {
                   ))}
                 </div>
               ) : (
-                <div className="h-64 flex items-center justify-center">
+                <div className="py-8 sm:py-12 flex items-center justify-center bg-white/5 rounded-lg border border-white/10">
                   <p className="text-sm text-white/60">No pending requests</p>
                 </div>
               )}
@@ -201,29 +201,29 @@ export default function FriendRequestsModal({ onClose, onRefresh }) {
 
             {/* Sent Requests */}
             <div>
-              <h3 className="section-subtitle mb-3 flex items-center gap-2">
+              <h3 className="section-subtitle mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
                 <UserPlus className="h-4 w-4" />
                 Sent ({sent.length})
               </h3>
               {sent.length > 0 ? (
-                <div className="h-64 overflow-y-auto space-y-2 pr-2 modal-scroll">
+                <div className="max-h-48 sm:max-h-64 overflow-y-auto space-y-2 pr-2 modal-scroll">
                   {sent.map((request) => (
                     <div
                       key={request.friendship_id}
-                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
+                      className="flex items-center justify-between p-2.5 sm:p-3 bg-white/5 rounded-lg border border-white/10 gap-2"
                     >
-                      <div>
-                        <p className="text-white font-medium">{request.name}</p>
-                        <p className="text-sm text-white/60">@{request.username}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-medium text-sm sm:text-base truncate">{request.name}</p>
+                        <p className="text-xs sm:text-sm text-white/60 truncate">@{request.username}</p>
                       </div>
-                      <span className="px-3 py-1 bg-yellow-400/20 text-yellow-400 rounded-lg text-sm border border-yellow-400/30">
+                      <span className="px-2 sm:px-3 py-1 bg-yellow-400/20 text-yellow-400 rounded-lg text-xs sm:text-sm border border-yellow-400/30 flex-shrink-0">
                         Pending
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="h-64 flex items-center justify-center">
+                <div className="py-8 sm:py-12 flex items-center justify-center bg-white/5 rounded-lg border border-white/10">
                   <p className="text-sm text-white/60">No sent requests</p>
                 </div>
               )}
