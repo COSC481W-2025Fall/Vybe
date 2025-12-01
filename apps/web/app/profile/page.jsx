@@ -114,7 +114,9 @@ export default function ProfilePage() {
       const response = await fetch(`/api/youtube/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&q=${query}&maxResults=1`);
 
       if (!response.ok) {
-        throw new Error('Failed to search YouTube');
+        // If API fails, fall back to regular search
+        window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+        return;
       }
 
       const data = await response.json();
@@ -128,8 +130,7 @@ export default function ProfilePage() {
         window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
       }
     } catch (error) {
-      console.error('Error searching YouTube:', error);
-      // Fallback to regular search
+      // Silently fallback to regular search if anything fails
       const query = encodeURIComponent(`${songTitle} ${artist}`);
       window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
     }
