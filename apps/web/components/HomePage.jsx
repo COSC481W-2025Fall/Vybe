@@ -16,6 +16,7 @@ import { CommunitiesDialog } from "./shared/CommunitiesDialog";
 import { ShareSongDialog } from "./shared/ShareSongDialog";
 import { toast } from "sonner";
 import ExportPlaylistButton from "./ExportPlaylistButton";
+import ExportToSpotifyButton from "./ExportToSpotifyButton";
 import { supabaseBrowser } from "@/lib/supabase/client";
 /**
  * HomePage component - Main dashboard view for authenticated users
@@ -44,6 +45,7 @@ export function HomePage({ onNavigate } = {}) {
   const [communitySongs, setCommunitySongs] = useState([]);
   const [loadingSongs, setLoadingSongs] = useState(false);
   const [hasYouTube, setHasYouTube] = useState(false);
+  const [hasSpotify, setHasSpotify] = useState(false);
 
   // Admin access easter egg
   const [adminClickCount, setAdminClickCount] = useState(0);
@@ -82,17 +84,27 @@ export function HomePage({ onNavigate } = {}) {
     };
   }, []);
 
-  // Check if user has YouTube/Google connected
+  // Check if user has YouTube/Google and Spotify connected
   useEffect(() => {
-    const checkYouTubeConnection = async () => {
+    const checkConnections = async () => {
       const supabase = supabaseBrowser();
       const { data: { user } } = await supabase.auth.getUser();
       if (user && user.identities) {
         const hasGoogle = user.identities.some(id => id.provider === 'google');
+        const hasSpotifyIdentity = user.identities.some(id => id.provider === 'spotify');
         setHasYouTube(hasGoogle);
+        
+        // Also check database for Spotify tokens
+        const { data: spotifyToken } = await supabase
+          .from('spotify_tokens')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        setHasSpotify(hasSpotifyIdentity || !!spotifyToken);
       }
     };
-    checkYouTubeConnection();
+    checkConnections();
   }, []);
 
   const handleCreateGroup = async (e) => {
@@ -433,12 +445,26 @@ export function HomePage({ onNavigate } = {}) {
                   {selectedCommunity?.description || 'Music community'}
                 </DialogDescription>
               </div>
-              {hasYouTube && selectedCommunity && (
-                <ExportPlaylistButton
-                  sourceType="community"
-                  sourceId={selectedCommunity.id}
-                  defaultName={selectedCommunity.name}
-                />
+              {/* Export Buttons */}
+              {selectedCommunity && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Export to Spotify Button - Only shown for Spotify-connected users */}
+                  {hasSpotify && (
+                    <ExportToSpotifyButton
+                      sourceType="community"
+                      sourceId={selectedCommunity.id}
+                      defaultName={selectedCommunity.name}
+                    />
+                  )}
+                  {/* Export to YouTube Button - Only shown for YouTube-connected users */}
+                  {hasYouTube && (
+                    <ExportPlaylistButton
+                      sourceType="community"
+                      sourceId={selectedCommunity.id}
+                      defaultName={selectedCommunity.name}
+                    />
+                  )}
+                </div>
               )}
             </div>
           </DialogHeader>

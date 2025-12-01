@@ -25,7 +25,7 @@ export default function SignInPage() {
       provider: 'spotify',
       options: {
         redirectTo: `${location.origin}/auth/callback?next=/library&provider=spotify`,
-        scopes: 'user-read-email user-read-private playlist-read-private user-read-recently-played',
+        scopes: 'user-read-email user-read-private playlist-read-private playlist-modify-private playlist-modify-public user-read-recently-played',
       },
       queryParams: { show_dialog: 'true' },
     });

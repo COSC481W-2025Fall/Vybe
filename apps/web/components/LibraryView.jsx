@@ -68,6 +68,96 @@ function Row({ item }) {
 }
 
 function PlaylistRow({ playlist }) {
+  const [exporting, setExporting] = useState(false);
+  const [exportingCSV, setExportingCSV] = useState(false);
+
+  async function handleExport() {
+    try {
+      setExporting(true);
+      // Ask the user for a custom playlist name to create on their Spotify account
+      const name = window.prompt('Enter a name for the new Spotify playlist:', playlist.name || 'Vybe playlist');
+      if (!name) {
+        setExporting(false);
+        return;
+      }
+
+      const res = await fetch('/api/spotify/create-playlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistId: playlist.id, newPlaylistName: name }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Export failed: ${res.status} ${text}`);
+      }
+
+      const json = await res.json();
+      if (!json.success || !json.playlist) throw new Error(json.error || 'Invalid response');
+
+      // Open the created playlist in a new tab and inform the user
+      if (json.playlist.url) {
+        window.open(json.playlist.url, '_blank');
+        alert('Playlist created on Spotify: it should open in a new tab.');
+      } else {
+        alert('Playlist created on Spotify.');
+      }
+    } catch (err) {
+      console.error('Export error', err);
+      alert(String(err?.message || err));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleExportCSV() {
+    try {
+      setExportingCSV(true);
+      const res = await fetch('/api/export-playlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistId: playlist.id }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Export failed: ${res.status} ${text}`);
+      }
+
+      const json = await res.json();
+      if (!json.success || !json.playlist) throw new Error(json.error || 'Invalid response');
+
+      // Convert ordered tracks to CSV (preserve index order)
+      const tracks = json.playlist.tracks || [];
+      const headers = ['order', 'id', 'title', 'artist', 'duration_seconds', 'thumbnail'];
+      const rows = tracks.map((t, idx) => [
+        idx + 1,
+        t.id || '',
+        (t.title || '').replace(/"/g, '""'),
+        (t.artist || '').replace(/"/g, '""'),
+        t.duration_seconds ?? '',
+        t.thumbnail || '',
+      ]);
+
+      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+
+      const filename = `${(json.playlist.name || 'playlist').replace(/[^a-z0-9\-_\. ]/gi, '_')}.csv`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export CSV error', err);
+      alert(String(err?.message || err));
+    } finally {
+      setExportingCSV(false);
+    }
+  }
   return (
     <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card">
       <div className="relative flex-shrink-0">
@@ -97,7 +187,7 @@ function PlaylistRow({ playlist }) {
           {playlist.tracks} tracks • by {playlist.owner}
         </div>
       </div>
-      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-[var(--foreground)] bg-white/10 [data-theme='light']:bg-black/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0 border border-white/10 [data-theme='light']:border-black/20">
+      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0">
         <ListMusic className="h-3 w-3 sm:h-4 sm:w-4" />
         <span className="font-medium whitespace-nowrap">{playlist.public ? 'Public' : 'Private'}</span>
       </div>
@@ -211,8 +301,14 @@ export default function LibraryView() {
           console.log('[LibraryView] Loading Spotify profile...');
           const res = await fetch('/api/spotify/me', { cache: 'no-store' });
           if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            const errorMessage = errorData.message || `HTTP ${res.status}`;
+            let errorData = {};
+            if (res && typeof res.json === 'function') {
+              errorData = await res.json().catch(() => ({}));
+            } else {
+              const txt = await (res && typeof res.text === 'function' ? res.text().catch(() => '') : Promise.resolve(''));
+              errorData = { message: txt };
+            }
+            const errorMessage = errorData && errorData.message ? `HTTP ${res.status} ${errorData.message}` : `HTTP ${res.status}`;
             // If it's a token error, provide a helpful message
             if (errorData.code === 'NO_TOKENS' || res.status === 401) {
               throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
@@ -334,15 +430,21 @@ export default function LibraryView() {
           console.log('[LibraryView] Loading Spotify recent plays...');
           const res = await fetch('/api/spotify/me/player/recently-played?limit=20', { cache: 'no-store' });
           if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            const errorMessage = errorData.message || `HTTP ${res.status}`;
+            let errorData = {};
+            if (res && typeof res.json === 'function') {
+              errorData = await res.json().catch(() => ({}));
+            } else {
+              const txt = await (res && typeof res.text === 'function' ? res.text().catch(() => '') : Promise.resolve(''));
+              errorData = { message: txt };
+            }
+            const errorMessage = errorData && errorData.message ? `HTTP ${res.status} ${errorData.message}` : `HTTP ${res.status}`;
             // If it's a token error, provide a helpful message
             if (errorData.code === 'NO_TOKENS' || res.status === 401) {
               throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
             }
             throw new Error(errorMessage);
           }
-          const json = await res.json();              // { items: [...], cursors, next }
+          const json = await parseJson(res) || {};              // { items: [...], cursors, next }
           console.log('[LibraryView] Raw Spotify API response:', json);
           const items = (json.items || []).map(mapItem);
           setRecent(items);
@@ -380,15 +482,21 @@ export default function LibraryView() {
       const url = `/api/spotify/me/player/recently-played?limit=20&before=${before}`;
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData.message || `HTTP ${res.status}`;
+          let errorData = {};
+          if (res && typeof res.json === 'function') {
+            errorData = await res.json().catch(() => ({}));
+          } else {
+            const txt = await (res && typeof res.text === 'function' ? res.text().catch(() => '') : Promise.resolve(''));
+            errorData = { message: txt };
+          }
+          const errorMessage = errorData && errorData.message ? `HTTP ${res.status} ${errorData.message}` : `HTTP ${res.status}`;
         // If it's a token error, provide a helpful message
         if (errorData.code === 'NO_TOKENS' || res.status === 401) {
           throw new Error(errorMessage + ' Go to Settings to connect your Spotify account.');
         }
         throw new Error(errorMessage);
       }
-      const json = await res.json();              // { items: [...], cursors, next }
+      const json = await parseJson(res) || {};              // { items: [...], cursors, next }
       const more = (json.items || []).map(mapItem);
       setRecent(prev => [...prev, ...more]);
       // Check if there's a 'next' URL to determine if more data is available
@@ -664,4 +772,14 @@ export default function LibraryView() {
       {content}
     </section>
   );
+}
+
+// Robust response parser: some tests/mocks return already-parsed objects
+// If `res` has a `json` method, call it and let any errors propagate
+// (so callers' try/catch can handle malformed JSON). If `res` is
+// already a parsed object, return it directly.
+async function parseJson(res) {
+  if (!res) return null;
+  if (typeof res.json === 'function') return await res.json();
+  return res;
 }
