@@ -1,24 +1,58 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { Music } from 'lucide-react';
 
 export default function SignInPage() {
   const supabase = supabaseBrowser();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [debugInfo, setDebugInfo] = useState('');
 
   useEffect(() => {
+    // Show any error from URL
+    const error = searchParams.get('error');
+    const message = searchParams.get('message');
+    if (error) {
+      console.error('[sign-in] Error from callback:', error, message);
+      setDebugInfo(`Error: ${error} - ${message || 'Unknown'}`);
+    }
+
     // Check if user is already logged in
     async function checkAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[sign-in] Checking auth state...');
+      console.log('[sign-in] All cookies:', document.cookie);
+      
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      console.log('[sign-in] Session check result:', {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        error: sessionError?.message,
+      });
+      
       if (session) {
+        console.log('[sign-in] Session found, redirecting to /library');
         router.push('/library');
+      } else {
+        console.log('[sign-in] No session found');
+        setDebugInfo(prev => prev + '\nNo session found. Cookies: ' + document.cookie.substring(0, 100));
       }
     }
     checkAuth();
-  }, [router]);
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[sign-in] Auth state changed:', event, !!session);
+      if (event === 'SIGNED_IN' && session) {
+        router.push('/library');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router, searchParams, supabase.auth]);
 
   const signInWithSpotify = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -95,6 +129,13 @@ export default function SignInPage() {
             <span>Continue with Google</span>
           </button>
         </div>
+
+        {/* Debug info - remove after fixing */}
+        {debugInfo && (
+          <div className="mt-4 p-3 bg-red-900/50 border border-red-500 rounded text-xs text-red-200 whitespace-pre-wrap">
+            <strong>Debug:</strong> {debugInfo}
+          </div>
+        )}
       </div>
     </div>
   );

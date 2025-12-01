@@ -3,41 +3,34 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { CONFIG } from './config/constants.js'
 
-// Paths that are always public (exclude '/sign-in' so we can handle it explicitly)
+// Paths that are always public
 const PUBLIC = new Set([
-  '/auth/callback', // Supabase OAuth will hit this
-  '/sign-in', // Sign-in page is public
+  '/auth/callback',
+  '/sign-in',
   '/favicon.ico',
   '/api/health',
 ])
 
-// Path prefixes that are public (for dynamic routes)
-const PUBLIC_PREFIXES = [
-  '/u/', // Public user profiles
-]
+// Path prefixes that are public
+const PUBLIC_PREFIXES = ['/u/']
 
 export async function middleware(req) {
   const { pathname } = req.nextUrl
 
-  // Skip CORS preflights quickly
+  // Skip CORS preflights
   if (req.method === 'OPTIONS') return NextResponse.next()
 
-  // Public routes - allow without auth
+  // Public routes - skip auth check entirely
   if (PUBLIC.has(pathname)) return NextResponse.next()
-  
-  // Public prefixes - allow without auth
   if (PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix))) return NextResponse.next()
 
-  // Track cookies that need to be set
-  const cookiesToSet = []
-
-  // Create response first
-  let res = NextResponse.next({
+  // Create response
+  let response = NextResponse.next({
     request: { headers: req.headers },
   })
-
-  const isProduction = process.env.NODE_ENV === 'production' ||
-                       req.url.startsWith('https://')
+  
+  // Track cookies that need to be set
+  const cookiesToSet = []
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -48,83 +41,74 @@ export async function middleware(req) {
           return req.cookies.getAll()
         },
         setAll(cookies) {
-          // Store cookies to set later
           cookies.forEach(({ name, value, options }) => {
             cookiesToSet.push({ name, value, options })
-            // Also set on request for downstream
             req.cookies.set(name, value)
           })
-          // Update response with new cookies
-          res = NextResponse.next({
+          // Rebuild response with updated cookies
+          response = NextResponse.next({
             request: { headers: req.headers },
           })
-          cookiesToSet.forEach(({ name, value, options }) => {
-            const cookieOptions = {
+          cookies.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, {
               ...options,
-              path: options?.path || '/',
-              secure: isProduction ? true : (options?.secure ?? false),
-              sameSite: options?.sameSite || 'lax',
-            }
-            res.cookies.set(name, value, cookieOptions)
+              path: '/',
+              secure: req.nextUrl.origin.startsWith('https://'),
+              sameSite: options?.sameSite ?? 'lax',
+            })
           })
         },
       },
     }
   )
   
-  // getSession will refresh the token if needed and set cookies
+  // This refreshes the session if needed
   const { data: { session } } = await supabase.auth.getSession()
-  console.log('[mw] path:', req.nextUrl.pathname, 'session?', !!session)
+  
+  console.log('[mw] path:', pathname, 'session?', !!session, 'cookies:', cookiesToSet.length)
 
-  // Helper to create redirect while preserving cookies
+  // Helper to redirect with cookies
   const redirectWithCookies = (url) => {
     const redirectResponse = NextResponse.redirect(url)
     cookiesToSet.forEach(({ name, value, options }) => {
-      const cookieOptions = {
+      redirectResponse.cookies.set(name, value, {
         ...options,
-        path: options?.path || '/',
-        secure: isProduction ? true : (options?.secure ?? false),
-        sameSite: options?.sameSite || 'lax',
-      }
-      redirectResponse.cookies.set(name, value, cookieOptions)
+        path: '/',
+        secure: req.nextUrl.origin.startsWith('https://'),
+        sameSite: options?.sameSite ?? 'lax',
+      })
     })
     return redirectResponse
   }
 
-  // If not authenticated:
-  // - allow access to '/sign-in'
-  // - allow API routes to handle their own auth (return JSON errors)
-  // - otherwise redirect to '/sign-in?next=...'
   if (!session) {
-    if (pathname === '/sign-in') return res
-    // Let API routes handle their own authentication
-    if (pathname.startsWith('/api/')) return res
+    if (pathname === '/sign-in') return response
+    if (pathname.startsWith('/api/')) return response
+    
     const url = req.nextUrl.clone()
     url.pathname = CONFIG.AUTH_REDIRECT_PATH
     url.searchParams.set('next', pathname + req.nextUrl.search)
     return redirectWithCookies(url)
   }
 
-  // If authenticated and visiting '/sign-in' → bounce to next or home page
+  // Authenticated user visiting sign-in -> redirect away
   if (pathname === '/sign-in') {
     const url = req.nextUrl.clone()
     const nextParam = req.nextUrl.searchParams.get('next')
     if (nextParam) {
-      // next may contain path + query (e.g., /groups/123)
       const dest = new URL(nextParam, req.nextUrl.origin)
       url.pathname = dest.pathname
       url.search = dest.search
     } else {
-      url.pathname = '/' // Redirect to home instead of library
+      url.pathname = '/'
       url.search = ''
     }
     return redirectWithCookies(url)
   }
 
-  return res
+  return response
 }
 
-// Run middleware on everything except static assets & well-known files
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',
