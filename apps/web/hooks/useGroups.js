@@ -24,12 +24,13 @@ export function useGroups() {
         return;
       }
 
-      // Get groups where user is owner
+      // Get groups where user is owner (with member count and playlists for song count)
       const { data: ownedGroups, error: ownedError } = await supabase
         .from('groups')
         .select(`
           *,
-          group_members(count)
+          group_members(count),
+          group_playlists(track_count)
         `)
         .eq('owner_id', session.user.id);
 
@@ -42,23 +43,31 @@ export function useGroups() {
           group_id,
           groups(
             *,
-            group_members(count)
+            group_members(count),
+            group_playlists(track_count)
           )
         `)
         .eq('user_id', session.user.id);
 
       if (memberError) throw memberError;
 
+      // Helper function to calculate total song count from playlists
+      const calculateSongCount = (playlists) => {
+        if (!playlists || playlists.length === 0) return 0;
+        return playlists.reduce((total, playlist) => total + (playlist.track_count || 0), 0);
+      };
+
       // Transform and combine groups
       const memberGroupsList = (memberGroups || []).map(m => ({
         ...m.groups,
-        memberCount: m.groups.group_members?.[0]?.count || 0
+        memberCount: m.groups.group_members?.[0]?.count || 0,
+        songCount: calculateSongCount(m.groups.group_playlists)
       }));
 
       const ownedGroupsList = (ownedGroups || []).map(g => ({
         ...g,
         memberCount: g.group_members?.[0]?.count || 0,
-        songCount: 0 // TODO: Get actual song count from playlists
+        songCount: calculateSongCount(g.group_playlists)
       }));
 
       // Combine and remove duplicates

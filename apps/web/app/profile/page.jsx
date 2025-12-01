@@ -9,6 +9,7 @@ import { Heart, Music, Users, X, ExternalLink, UserPlus, Mail, User as UserIcon 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { useGroups } from '@/hooks/useGroups';
 
 export default function ProfilePage() {
   const supabase = supabaseBrowser();
@@ -23,6 +24,9 @@ export default function ProfilePage() {
   const [showRemoveFriendModal, setShowRemoveFriendModal] = useState(false);
   const [friendToRemove, setFriendToRemove] = useState(null);
   const [songOfDay, setSongOfDay] = useState(null);
+
+  // Use the same hook as My Groups page for consistent group count
+  const { groups, loading: groupsLoading } = useGroups();
 
   useEffect(() => {
     loadProfileData();

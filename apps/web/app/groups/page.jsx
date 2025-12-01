@@ -37,12 +37,19 @@ export default function GroupsPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // Get groups where user is owner or member with member count (simpler query)
+    // Helper function to calculate total song count from playlists
+    const calculateSongCount = (playlists) => {
+      if (!playlists || playlists.length === 0) return 0;
+      return playlists.reduce((total, playlist) => total + (playlist.track_count || 0), 0);
+    };
+
+    // Get groups where user is owner or member with member count and playlists for song count
     const { data: ownedGroups, error: ownedError } = await supabase
       .from('groups')
       .select(`
         *,
-        group_members(count)
+        group_members(count),
+        group_playlists(track_count)
       `)
       .eq('owner_id', session.user.id);
 
@@ -56,7 +63,8 @@ export default function GroupsPage() {
         group_id,
         groups(
           *,
-          group_members(count)
+          group_members(count),
+          group_playlists(track_count)
         )
       `)
       .eq('user_id', session.user.id);
@@ -68,12 +76,13 @@ export default function GroupsPage() {
     const memberGroupsList = memberGroups?.map(m => m.groups) || [];
     const allGroups = [...(ownedGroups || []), ...memberGroupsList];
 
-    // Remove duplicates and count members
+    // Remove duplicates and add counts
     const uniqueGroups = Array.from(
       new Map(allGroups.map(g => [g.id, g])).values()
     ).map(group => ({
       ...group,
-      memberCount: (group.group_members?.[0]?.count || 0) + 1 // +1 for owner
+      memberCount: (group.group_members?.[0]?.count || 0) + 1, // +1 for owner
+      songCount: calculateSongCount(group.group_playlists)
     }));
 
     setGroups(uniqueGroups);
