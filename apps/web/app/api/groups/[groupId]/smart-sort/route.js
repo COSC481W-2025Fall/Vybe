@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { getTrackMetadata } from '@/lib/services/musicMetadata';
-import { analyzeAndSortPlaylists } from '@/lib/services/openaiSorting';
+import { analyzeAndSortPlaylists, analyzeAndSortByVibe } from '@/lib/services/openaiSorting';
 import { updatePlaylistOrder, updateSongOrder } from '@/lib/db/smartSorting';
 
 /**
@@ -24,6 +24,18 @@ export async function POST(request, { params }) {
   
   try {
     const { groupId } = await params;
+    
+    // Parse request body to get mode parameter
+    let mode = 'playlist'; // Default to per-playlist sorting
+    try {
+      const body = await request.json().catch(() => ({}));
+      mode = body.mode || 'playlist';
+    } catch (err) {
+      // If body parsing fails, use default
+      console.log('[smart-sort] ⚠️ Could not parse request body, using default mode: playlist');
+    }
+    
+    console.log(`[smart-sort] 📋 Mode: ${mode}`);
     
     const cookieStore = await cookies();
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
@@ -59,6 +71,282 @@ export async function POST(request, { params }) {
     if (!isMember) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
     }
+
+    // ============================================
+    // HANDLE "ALL" MODE - Unified Genre Variety Sort
+    // ============================================
+    if (mode === 'all') {
+      console.log('[smart-sort] 🎵 MODE: "all" - Sorting all songs with genre variety');
+      
+      // Fetch all playlists in the group
+      const { data: playlists, error: playlistsError } = await supabase
+        .from('group_playlists')
+        .select('*')
+        .eq('group_id', groupId);
+
+      if (playlistsError) {
+        console.error('[smart-sort] ❌ Error fetching playlists:', playlistsError);
+        return NextResponse.json({ error: 'Failed to fetch playlists' }, { status: 500 });
+      }
+
+      if (!playlists || playlists.length === 0) {
+        return NextResponse.json({ 
+          success: true, 
+          mode: 'all',
+          message: 'No playlists to sort',
+          songsProcessed: 0
+        });
+      }
+
+      // Fetch ALL songs from ALL playlists
+      const playlistIds = playlists.map(p => p.id);
+      const { data: allSongs, error: songsError } = await supabase
+        .from('playlist_songs')
+        .select('*')
+        .in('playlist_id', playlistIds);
+
+      if (songsError) {
+        console.error('[smart-sort] ❌ Error fetching songs:', songsError);
+        return NextResponse.json({ error: 'Failed to fetch songs' }, { status: 500 });
+      }
+
+      if (!allSongs || allSongs.length === 0) {
+        return NextResponse.json({ 
+          success: true, 
+          mode: 'all',
+          message: 'No songs to sort',
+          songsProcessed: 0
+        });
+      }
+
+      console.log(`[smart-sort] 📊 Found ${allSongs.length} total song entries across ${playlists.length} playlist(s)`);
+
+      // CRITICAL: Deduplicate songs by external_id (Spotify/YouTube ID)
+      // A song might appear in multiple playlists, but we only want to sort unique songs
+      const uniqueSongsMap = new Map(); // uniqueKey -> song object
+      const uniqueKeyToPlaylistId = new Map(); // uniqueKey -> playlist_id (for metadata fetching)
+      
+      allSongs.forEach(song => {
+        // Use external_id as the unique identifier (Spotify/YouTube track ID)
+        // If external_id is not available, use a combination of title+artist
+        const uniqueKey = song.external_id || `${song.title}|||${song.artist || ''}`;
+        
+        if (!uniqueSongsMap.has(uniqueKey)) {
+          // First time seeing this song - keep it and track its playlist
+          uniqueSongsMap.set(uniqueKey, song);
+          uniqueKeyToPlaylistId.set(uniqueKey, song.playlist_id);
+        }
+        // If duplicate, we ignore it (we already have one instance)
+      });
+
+      const uniqueSongs = Array.from(uniqueSongsMap.values());
+      const duplicateCount = allSongs.length - uniqueSongs.length;
+      
+      console.log(`[smart-sort] ✅ Deduplicated: ${uniqueSongs.length} unique songs (${duplicateCount} duplicates removed)`);
+      
+      if (duplicateCount > 0) {
+        console.log(`[smart-sort]    Songs appearing in multiple playlists: ${duplicateCount}`);
+      }
+
+      // Check song limit
+      if (uniqueSongs.length > 300) {
+        return NextResponse.json({ 
+          error: `Too many songs. Maximum 300 songs supported for sorting. You have ${uniqueSongs.length} unique songs.`,
+          songsCount: uniqueSongs.length
+        }, { status: 400 });
+      }
+
+      // Get Spotify tokens for metadata fetching
+      const userIds = [...new Set(playlists.map(p => p.added_by))];
+      const { data: spotifyTokens } = await supabase
+        .from('spotify_tokens')
+        .select('user_id, access_token')
+        .in('user_id', userIds);
+
+      const tokenMap = {};
+      spotifyTokens?.forEach(token => {
+        tokenMap[token.user_id] = token.access_token;
+      });
+
+      // Group unique songs by platform for metadata fetching
+      // Use the playlist info from the first occurrence of each unique song
+      const songsByPlatform = {};
+      uniqueSongs.forEach(song => {
+        // Get the playlist_id for this unique song
+        const uniqueKey = song.external_id || `${song.title}|||${song.artist || ''}`;
+        const playlistId = uniqueKeyToPlaylistId.get(uniqueKey);
+        const playlist = playlists.find(p => p.id === playlistId);
+        
+        if (!playlist) {
+          console.warn(`[smart-sort] ⚠️ Could not find playlist for song: ${song.title}`);
+          return;
+        }
+
+        const key = `${playlist.platform}_${playlist.added_by}`;
+        if (!songsByPlatform[key]) {
+          songsByPlatform[key] = {
+            platform: playlist.platform,
+            spotifyToken: tokenMap[playlist.added_by] || null,
+            songs: [],
+          };
+        }
+        songsByPlatform[key].songs.push(song);
+      });
+
+      // Fetch metadata for all unique songs
+      console.log(`[smart-sort] 📊 Fetching metadata for ${uniqueSongs.length} unique songs...`);
+      const allSongsMetadata = [];
+      const metadataStartTime = Date.now();
+
+      const platformPromises = Object.entries(songsByPlatform).map(async ([key, group]) => {
+        try {
+          const { getBatchTrackMetadata } = await import('@/lib/services/musicMetadata');
+          const metadata = await getBatchTrackMetadata(
+            group.songs,
+            group.platform,
+            group.spotifyToken,
+            { concurrency: 30 }
+          );
+          return metadata;
+        } catch (error) {
+          console.error(`[smart-sort] ❌ Error fetching metadata for ${key}:`, error.message);
+          // Fallback: return basic metadata
+          return group.songs.map(song => ({
+            songId: song.id,
+            title: song.title,
+            artist: song.artist || 'Unknown Artist',
+            genres: [],
+            popularity: 0,
+            audioFeatures: {},
+            sources: [],
+          }));
+        }
+      });
+
+      const metadataResults = await Promise.all(platformPromises);
+      metadataResults.forEach(metadata => {
+        allSongsMetadata.push(...metadata);
+      });
+
+      const metadataTime = ((Date.now() - metadataStartTime) / 1000).toFixed(2);
+      console.log(`[smart-sort] ✅ Metadata fetched in ${metadataTime}s`);
+
+      // Call the genre variety sorting function
+      console.log(`[smart-sort] 🧠 Calling analyzeAndSortByVibe for genre variety sort...`);
+      const aiStartTime = Date.now();
+      
+      const { sortedSongIds, summary } = await analyzeAndSortByVibe(allSongsMetadata);
+      
+      const aiTime = ((Date.now() - aiStartTime) / 1000).toFixed(2);
+      console.log(`[smart-sort] ✅ AI sorting completed in ${aiTime}s`);
+      console.log(`[smart-sort]    Strategy: ${summary.sortingStrategy || 'genre-interleaved'}`);
+      console.log(`[smart-sort]    Songs sorted: ${sortedSongIds.length}`);
+      
+      // Log Standard Genre distribution for verification
+      if (summary.genreDistribution && Object.keys(summary.genreDistribution).length > 0) {
+        console.log(`[smart-sort] 🎸 Standard Genre Distribution (macro-genres):`);
+        const standardGenres = ['Pop', 'Hip-Hop/Rap', 'Rock', 'Electronic/Dance', 'R&B/Soul', 'Latin', 'Country', 'Jazz/Blues', 'Classical/Instrumental', 'Other'];
+        Object.entries(summary.genreDistribution)
+          .sort((a, b) => b[1] - a[1])
+          .forEach(([genre, count]) => {
+            const isStandard = standardGenres.includes(genre);
+            console.log(`[smart-sort]    ${isStandard ? '✅' : '⚠️'} ${genre}: ${count} songs`);
+          });
+      } else {
+        console.warn(`[smart-sort] ⚠️ No genreDistribution in summary - macro-genre mapping may not be working`);
+      }
+
+      // Store in groups table
+      console.log(`[smart-sort] 💾 Storing sort order in groups table...`);
+      console.log(`[smart-sort]    Group ID: ${groupId}`);
+      console.log(`[smart-sort]    Sort order array length: ${sortedSongIds.length}`);
+      console.log(`[smart-sort]    First 5 IDs:`, sortedSongIds.slice(0, 5));
+      
+      const dbStartTime = Date.now();
+      
+      const { data: updateData, error: updateError } = await supabase
+        .from('groups')
+        .update({
+          all_songs_sort_order: sortedSongIds,
+          all_songs_sorted_at: new Date().toISOString()
+        })
+        .eq('id', groupId)
+        .select('id, all_songs_sort_order, all_songs_sorted_at'); // Select to verify update
+
+      if (updateError) {
+        console.error('[smart-sort] ❌ Error updating groups table:', updateError);
+        console.error('[smart-sort]    Error details:', JSON.stringify(updateError, null, 2));
+        return NextResponse.json({ error: 'Failed to save sort order', details: updateError.message }, { status: 500 });
+      }
+
+      if (!updateData || updateData.length === 0) {
+        console.error('[smart-sort] ❌ Update returned no rows - RLS might be blocking or group not found');
+        console.error('[smart-sort]    Group ID:', groupId);
+        return NextResponse.json({ error: 'Failed to save sort order - no rows updated' }, { status: 500 });
+      }
+
+      const dbTime = ((Date.now() - dbStartTime) / 1000).toFixed(2);
+      console.log(`[smart-sort] ✅ Sort order saved in ${dbTime}s`);
+      console.log(`[smart-sort]    Updated rows: ${updateData.length}`);
+      console.log(`[smart-sort]    Updated data:`, {
+        id: updateData[0].id,
+        sortOrderLength: updateData[0].all_songs_sort_order?.length || 0,
+        sortedAt: updateData[0].all_songs_sorted_at
+      });
+
+      // Verify the update with a fresh query
+      const { data: verifyGroup, error: verifyError } = await supabase
+        .from('groups')
+        .select('all_songs_sort_order, all_songs_sorted_at')
+        .eq('id', groupId)
+        .single();
+
+      if (verifyError) {
+        console.error('[smart-sort] ⚠️  Error verifying update:', verifyError);
+      } else if (verifyGroup) {
+        const verifyLength = verifyGroup.all_songs_sort_order?.length || 0;
+        console.log(`[smart-sort] ✅ Verified: ${verifyLength} songs in sort order`);
+        console.log(`[smart-sort]    Sorted at: ${verifyGroup.all_songs_sorted_at || 'N/A'}`);
+        
+        if (verifyLength === 0) {
+          console.error('[smart-sort] ❌ WARNING: Update succeeded but verification shows empty sort order!');
+          console.error('[smart-sort]    This suggests RLS or data type mismatch');
+        }
+      } else {
+        console.error('[smart-sort] ⚠️  Verification query returned no data');
+      }
+
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+      
+      console.log('\n========== [SMART SORT - ALL MODE] Summary ==========');
+      console.log(`✅ Completed in ${totalTime}s`);
+      console.log(`   Mode: all (genre variety)`);
+      console.log(`   Unique songs: ${uniqueSongs.length}`);
+      console.log(`   Songs sorted: ${sortedSongIds.length}`);
+      console.log(`   Metadata: ${metadataTime}s`);
+      console.log(`   AI Analysis: ${aiTime}s`);
+      console.log(`   Database: ${dbTime}s`);
+      console.log('==========================================\n');
+
+      return NextResponse.json({
+        success: true,
+        mode: 'all',
+        message: 'All songs sorted with genre variety',
+        songsProcessed: sortedSongIds.length,
+        uniqueSongs: uniqueSongs.length,
+        duplicatesRemoved: duplicateCount,
+        summary: {
+          totalSongs: summary.totalSongs || sortedSongIds.length,
+          sortingStrategy: summary.sortingStrategy || 'genre-interleaved-with-macro-genres',
+          genreDistribution: summary.genreDistribution || {} // Standard Genres with counts
+        }
+      });
+    }
+
+    // ============================================
+    // HANDLE "PLAYLIST" MODE - Existing Per-Playlist Sort
+    // ============================================
+    console.log('[smart-sort] 📋 MODE: "playlist" - Sorting per-playlist (existing behavior)');
 
     // Fetch all playlists in the group
     console.log('[smart-sort] 📋 Fetching playlists...');
