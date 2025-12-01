@@ -30,7 +30,15 @@ export async function GET(request) {
       });
       
       // Fallback to direct query if RPC doesn't exist yet
-      if (rpcError.code === '42883' || rpcError.message?.includes('does not exist')) {
+      // PGRST202 = PostgREST "Could not find the function" error
+      // 42883 = PostgreSQL "function does not exist" error
+      const isRpcNotFound = 
+        rpcError.code === 'PGRST202' || 
+        rpcError.code === '42883' || 
+        rpcError.message?.includes('Could not find the function') ||
+        rpcError.message?.includes('does not exist');
+      
+      if (isRpcNotFound) {
         console.log('[GET /api/friends] RPC not found, falling back to direct query');
         return await getFriendsFallback(supabase, user.id);
       }
