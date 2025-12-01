@@ -1,14 +1,11 @@
 // app/profile/page.jsx
 'use client';
 
-import AddFriendsModal from '@/components/AddFriendsModal';
-import FriendRequestsModal from '@/components/FriendRequestsModal';
 import SongSearchModal from '@/components/SongSearchModal';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { Heart, Music, Users, X, ExternalLink, UserPlus, Mail, User as UserIcon } from 'lucide-react';
+import { Heart, Music, Users, X, ExternalLink, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { useGroups } from '@/hooks/useGroups';
 
 export default function ProfilePage() {
@@ -19,11 +16,7 @@ export default function ProfilePage() {
   const [friends, setFriends] = useState([]);
   const [friendSongs, setFriendSongs] = useState({});
   const [loading, setLoading] = useState(true);
-  const [showAddFriendsModal, setShowAddFriendsModal] = useState(false);
-  const [showFriendRequestsModal, setShowFriendRequestsModal] = useState(false);
   const [showSongSearchModal, setShowSongSearchModal] = useState(false);
-  const [showRemoveFriendModal, setShowRemoveFriendModal] = useState(false);
-  const [friendToRemove, setFriendToRemove] = useState(null);
   const [songOfDay, setSongOfDay] = useState(null);
 
   // Use the same hook as My Groups page for consistent group count
@@ -109,6 +102,36 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Error fetching song of the day:', error);
+    }
+  };
+
+  const searchAndOpenYouTubeVideo = async (songTitle, artist) => {
+    try {
+      // Construct search query
+      const query = encodeURIComponent(`${songTitle} ${artist} official music video`);
+
+      // Search YouTube for the first music video
+      const response = await fetch(`/api/youtube/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&q=${query}&maxResults=1`);
+
+      if (!response.ok) {
+        throw new Error('Failed to search YouTube');
+      }
+
+      const data = await response.json();
+
+      if (data.items && data.items.length > 0) {
+        const videoId = data.items[0].id.videoId;
+        // Open the video directly
+        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
+      } else {
+        // Fallback to regular search if no results
+        window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+      }
+    } catch (error) {
+      console.error('Error searching YouTube:', error);
+      // Fallback to regular search
+      const query = encodeURIComponent(`${songTitle} ${artist}`);
+      window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
     }
   };
 
@@ -328,35 +351,13 @@ export default function ProfilePage() {
               <Heart className="h-5 w-5" />
               <span>Friends ({friends.length})</span>
             </h3>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowFriendRequestsModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 text-[var(--foreground)] rounded-lg text-sm font-medium transition-colors border border-white/20 [data-theme='light']:border-black/20"
-              >
-                <Mail className="h-4 w-4" />
-                <span className="hidden sm:inline">Requests</span>
-              </button>
-              <button
-                onClick={() => setShowAddFriendsModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg text-sm font-medium transition-colors"
-              >
-                <UserPlus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Friend</span>
-              </button>
-            </div>
           </div>
 
           {friends.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" />
               <h3 className="section-title mb-2 text-lg sm:text-xl">No friends yet</h3>
-              <p className="section-subtitle text-xs sm:text-sm mb-4">Start connecting with friends to share music</p>
-              <button
-                onClick={() => setShowAddFriendsModal(true)}
-                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-[var(--foreground)] hover:bg-[var(--muted-foreground)] text-[var(--background)] rounded-lg font-medium transition-colors text-sm sm:text-base"
-              >
-                Add Friends
-              </button>
+              <p className="section-subtitle text-xs sm:text-sm">Start connecting with friends to share music</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -390,9 +391,14 @@ export default function ProfilePage() {
                         {friend.bio}
                       </p>
                     )}
+                    {friendSong && (
+                      <p className="text-xs text-[var(--foreground)] mt-2 font-medium truncate">
+                        🎵 {friendSong.title || 'Untitled'} - {friendSong.artist || 'Unknown Artist'}
+                      </p>
+                    )}
                   </div>
                   {(hasSpotify || hasYouTube) && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex flex-col gap-2 flex-shrink-0">
                       {hasSpotify && (
                         <a
                           href={friendSong.spotifyUrl}
@@ -406,29 +412,17 @@ export default function ProfilePage() {
                         </a>
                       )}
                       {hasYouTube && (
-                        <a
-                          href={friendSong.youtubeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          onClick={() => searchAndOpenYouTubeVideo(friendSong.title, friendSong.artist)}
                           className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg border border-white/20 [data-theme='light']:border-black/20 text-[var(--foreground)] hover:bg-red-600/80 hover:text-white transition-colors"
                           title={`Open ${friend.name}'s song in YouTube`}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                           <span>YouTube</span>
-                        </a>
+                        </button>
                       )}
                     </div>
                   )}
-                  <button
-                    onClick={() => {
-                      setFriendToRemove(friend);
-                      setShowRemoveFriendModal(true);
-                    }}
-                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
-                    title="Remove friend"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
                 </div>
               )})}
               {friends.length > 5 && (
@@ -444,98 +438,12 @@ export default function ProfilePage() {
         <div className="h-16 sm:h-20"></div>
       </div>
 
-      {/* Add Friends Modal */}
-      {showAddFriendsModal && (
-        <AddFriendsModal
-          onClose={() => {
-            setShowAddFriendsModal(false);
-            fetchFriends(); // Refresh friends list after closing modal
-            fetchFriendsSongs();
-          }}
-        />
-      )}
-
-      {/* Friend Requests Modal */}
-      {showFriendRequestsModal && (
-        <FriendRequestsModal
-          onClose={() => {
-            setShowFriendRequestsModal(false);
-            fetchFriends(); // Refresh friends list after closing modal
-            fetchFriendsSongs();
-          }}
-        />
-      )}
-
       {/* Song Search Modal */}
       {showSongSearchModal && (
         <SongSearchModal
           onClose={() => setShowSongSearchModal(false)}
           onSelectSong={handleSetSongOfDay}
         />
-      )}
-
-      {/* Remove Friend Confirmation Modal */}
-      {showRemoveFriendModal && friendToRemove && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="glass-card rounded-2xl p-6 max-w-md w-full border border-white/20 [data-theme='light']:border-black/20 shadow-2xl">
-            <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
-              Remove Friend?
-            </h3>
-            <p className="text-[var(--muted-foreground)] mb-6">
-              Are you sure you want to remove <span className="font-semibold text-[var(--foreground)]">{friendToRemove.name}</span> from your friends?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowRemoveFriendModal(false);
-                  setFriendToRemove(null);
-                }}
-                className="flex-1 px-4 py-2.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors border border-white/20 [data-theme='light']:border-black/20"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/friends', {
-                      method: 'DELETE',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ friendId: friendToRemove.id }),
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                      throw new Error(data.error || 'Failed to remove friend');
-                    }
-
-                    // Refresh friends list
-                    setFriends(friends.filter(f => f.id !== friendToRemove.id));
-                    setFriendSongs((prev) => {
-                      if (!friendToRemove.username) return prev;
-                      const key = friendToRemove.username.toLowerCase();
-                      if (!prev[key]) return prev;
-                      const updated = { ...prev };
-                      delete updated[key];
-                      return updated;
-                    });
-                    toast.success(`${friendToRemove.name} has been removed from your friends.`);
-                    setShowRemoveFriendModal(false);
-                    setFriendToRemove(null);
-                  } catch (error) {
-                    console.error('Error removing friend:', error);
-                    toast.error(error.message || 'Failed to remove friend. Please try again.');
-                    setShowRemoveFriendModal(false);
-                    setFriendToRemove(null);
-                  }
-                }}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
