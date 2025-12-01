@@ -114,7 +114,7 @@ describe('SignInPage', () => {
       provider: 'spotify',
       options: {
         redirectTo: 'http://localhost:3000/auth/callback?next=/library&provider=spotify',
-        scopes: 'user-read-email user-read-private playlist-read-private user-read-recently-played',
+        scopes: 'user-read-email user-read-private playlist-read-private playlist-modify-private playlist-modify-public user-read-recently-played',
       },
       queryParams: { show_dialog: 'true' },
     });
@@ -137,7 +137,11 @@ describe('SignInPage', () => {
       provider: 'google',
       options: {
         redirectTo: 'http://localhost:3000/auth/callback?next=/library&provider=google',
-        scopes: 'openid email profile https://www.googleapis.com/auth/youtube.readonly',
+        scopes: 'openid email profile https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     });
   });
@@ -235,6 +239,53 @@ describe('SignInPage', () => {
       expect(spotifyButton).toHaveClass('text-sm');
       expect(spotifyButton).toHaveClass('sm:text-base');
       expect(spotifyButton).toHaveClass('touch-manipulation');
+    });
+  });
+
+  it('renders page container', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+
+    const { container } = render(<SignInPage />);
+
+    await waitFor(() => {
+      expect(container.firstChild).toBeInTheDocument();
+    });
+  });
+
+  it('buttons are clickable', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+    mockSignInWithOAuth.mockResolvedValue({ error: null });
+
+    render(<SignInPage />);
+
+    await waitFor(() => {
+      const spotifyButton = screen.getByTestId('spotify-signin');
+      expect(spotifyButton).not.toBeDisabled();
+    });
+  });
+
+  it('google button is clickable', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+    mockSignInWithOAuth.mockResolvedValue({ error: null });
+
+    render(<SignInPage />);
+
+    await waitFor(() => {
+      const googleButton = screen.getByTestId('google-signin');
+      expect(googleButton).not.toBeDisabled();
+    });
+  });
+
+  it('renders page with correct structure', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } });
+
+    render(<SignInPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Welcome to Vybe')).toBeInTheDocument();
+      expect(screen.getByText('Connect with friends and share your musical journey')).toBeInTheDocument();
+      expect(screen.getByTestId('spotify-signin')).toBeInTheDocument();
+      expect(screen.getByTestId('google-signin')).toBeInTheDocument();
     });
   });
 });

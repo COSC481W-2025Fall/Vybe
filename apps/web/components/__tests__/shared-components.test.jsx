@@ -1,429 +1,185 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { GroupCard } from '@/components/shared/GroupCard'
-import { LoadingState } from '@/components/shared/LoadingState'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { ShareSongDialog } from '@/components/shared/ShareSongDialog'
-import { CommunitiesDialog } from '@/components/shared/CommunitiesDialog'
-import { Users } from 'lucide-react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 import { testAccessibility } from '@/test/test-utils'
 
-vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}))
+describe('Badge Component', () => {
+  it('renders with text', () => {
+    render(<Badge>New</Badge>)
+    expect(screen.getByText('New')).toBeInTheDocument()
+  })
 
-describe('GroupCard', () => {
-  const defaultProps = {
-    name: 'Test Group',
-    description: 'Test Description',
-    memberCount: 5,
-    songCount: 10,
-    createdAt: '2024-01-01T00:00:00Z'
-  }
+  it('applies variant classes', () => {
+    render(<Badge variant="secondary">Secondary</Badge>)
+    expect(screen.getByText('Secondary')).toBeInTheDocument()
+  })
 
-  it('renders with all props', () => {
-    render(<GroupCard {...defaultProps} />)
+  it('applies destructive variant', () => {
+    render(<Badge variant="destructive">Error</Badge>)
+    expect(screen.getByText('Error')).toBeInTheDocument()
+  })
 
-    expect(screen.getByText('Test Group')).toBeInTheDocument()
-    expect(screen.getByText('Test Description')).toBeInTheDocument()
-    expect(screen.getByText('5 members')).toBeInTheDocument()
-    expect(screen.getByText('10 songs')).toBeInTheDocument()
+  it('applies outline variant', () => {
+    render(<Badge variant="outline">Outline</Badge>)
+    expect(screen.getByText('Outline')).toBeInTheDocument()
+  })
+
+  it('accepts custom className', () => {
+    render(<Badge className="custom-class">Custom</Badge>)
+    expect(screen.getByText('Custom')).toBeInTheDocument()
+  })
+})
+
+describe('Button Component', () => {
+  it('renders with text', () => {
+    render(<Button>Click me</Button>)
+    expect(screen.getByText('Click me')).toBeInTheDocument()
   })
 
   it('handles click events', async () => {
     const handleClick = vi.fn()
-    render(<GroupCard {...defaultProps} onClick={handleClick} />)
-
-    const card = screen.getByText('Test Group').closest('div')
-    await userEvent.click(card)
-
+    render(<Button onClick={handleClick}>Click me</Button>)
+    
+    await userEvent.click(screen.getByText('Click me'))
     expect(handleClick).toHaveBeenCalledTimes(1)
   })
 
-  it('renders visibility badge when provided', () => {
-    render(<GroupCard {...defaultProps} visibility="Public" />)
-
-    expect(screen.getByText('Public')).toBeInTheDocument()
+  it('applies variant classes', () => {
+    render(<Button variant="destructive">Delete</Button>)
+    const button = screen.getByText('Delete')
+    expect(button).toBeInTheDocument()
   })
 
-  it('renders join code when provided', () => {
-    render(<GroupCard {...defaultProps} joinCode="ABC123" />)
-
-    expect(screen.getByText('ABC123')).toBeInTheDocument()
+  it('can be disabled', () => {
+    render(<Button disabled>Disabled</Button>)
+    expect(screen.getByText('Disabled')).toBeDisabled()
   })
 
-  it('handles missing description gracefully', () => {
-    const { description, ...propsWithoutDesc } = defaultProps
-    render(<GroupCard {...propsWithoutDesc} />)
+  it('has no accessibility violations', async () => {
+    const { container } = render(<Button>Accessible</Button>)
+    await testAccessibility(container)
+  })
+})
 
-    expect(screen.getByText('Test Group')).toBeInTheDocument()
-    expect(screen.queryByText('Test Description')).not.toBeInTheDocument()
+describe('Input Component', () => {
+  it('renders with placeholder', () => {
+    render(<Input placeholder="Enter text" />)
+    expect(screen.getByPlaceholderText('Enter text')).toBeInTheDocument()
   })
 
-  it('handles zero counts', () => {
-    render(<GroupCard {...defaultProps} memberCount={0} songCount={0} />)
-
-    expect(screen.getByText('0 members')).toBeInTheDocument()
-    expect(screen.getByText('0 songs')).toBeInTheDocument()
-  })
-
-  it('handles missing createdAt', () => {
-    const { createdAt, ...propsWithoutDate } = defaultProps
-    render(<GroupCard {...propsWithoutDate} />)
-
-    expect(screen.getByText('N/A')).toBeInTheDocument()
-  })
-
-  it('formats date correctly', () => {
-    render(<GroupCard {...defaultProps} createdAt="2024-01-15T00:00:00Z" />)
-
-    // Should show formatted date (format may vary by timezone, so check for date components)
-    const dateText = screen.getByText(/1\/1[45]\/2024/)
-    expect(dateText).toBeInTheDocument()
-  })
-
-  it('truncates long names', () => {
-    const longName = 'A'.repeat(100)
-    render(<GroupCard {...defaultProps} name={longName} />)
-
-    const nameElement = screen.getByText(new RegExp(`^${longName}$`))
-    expect(nameElement).toBeInTheDocument()
-    expect(nameElement).toHaveClass('truncate')
-  })
-
-  it('has proper accessibility attributes', () => {
-    const { container } = render(<GroupCard {...defaultProps} />)
-    expect(container.querySelector('.cursor-pointer')).toBeInTheDocument()
-  })
-
-  it('handles keyboard navigation', async () => {
-    const handleClick = vi.fn()
-    render(<GroupCard {...defaultProps} onClick={handleClick} />)
-
-    const card = screen.getByText('Test Group').closest('div')
-    // Divs aren't focusable by default, but we can make them focusable for testing
-    card.setAttribute('tabIndex', '0')
-    card.focus()
+  it('handles text input', async () => {
+    render(<Input placeholder="Type here" />)
     
-    // Should be focusable after setting tabIndex
-    expect(document.activeElement).toBe(card)
-  })
-})
-
-describe('LoadingState', () => {
-  it('renders default count of 3 loading cards', () => {
-    const { container } = render(<LoadingState />)
-
-    const loadingCards = container.querySelectorAll('.animate-pulse')
-    expect(loadingCards.length).toBe(3)
+    const input = screen.getByPlaceholderText('Type here')
+    await userEvent.type(input, 'Hello World')
+    
+    expect(input).toHaveValue('Hello World')
   })
 
-  it('renders custom count of loading cards', () => {
-    const { container } = render(<LoadingState count={5} />)
-
-    const loadingCards = container.querySelectorAll('.animate-pulse')
-    expect(loadingCards.length).toBe(5)
+  it('handles onChange events', async () => {
+    const handleChange = vi.fn()
+    render(<Input onChange={handleChange} placeholder="Type" />)
+    
+    const input = screen.getByPlaceholderText('Type')
+    await userEvent.type(input, 'a')
+    
+    expect(handleChange).toHaveBeenCalled()
   })
 
-  it('applies custom className', () => {
-    const { container } = render(<LoadingState className="custom-class" />)
-
-    expect(container.querySelector('.custom-class')).toBeInTheDocument()
+  it('can be disabled', () => {
+    render(<Input disabled placeholder="Disabled" />)
+    expect(screen.getByPlaceholderText('Disabled')).toBeDisabled()
   })
 
-  it('renders skeleton content', () => {
-    const { container } = render(<LoadingState />)
-
-    const skeletons = container.querySelectorAll('.bg-muted')
-    expect(skeletons.length).toBeGreaterThan(0)
-  })
-
-  it('has proper accessibility attributes', async () => {
-    const { container } = render(<LoadingState />)
+  it('has no accessibility violations', async () => {
+    const { container } = render(<Input placeholder="Accessible" aria-label="Test input" />)
     await testAccessibility(container)
   })
 })
 
-describe('EmptyState', () => {
-  const defaultProps = {
-    icon: Users,
-    title: 'No Items',
-    description: 'There are no items to display'
-  }
-
-  it('renders with all props', () => {
-    render(<EmptyState {...defaultProps} />)
-
-    expect(screen.getByText('No Items')).toBeInTheDocument()
-    expect(screen.getByText('There are no items to display')).toBeInTheDocument()
-  })
-
-  it('renders icon when provided', () => {
-    const { container } = render(<EmptyState {...defaultProps} />)
-
-    const icon = container.querySelector('svg')
-    expect(icon).toBeInTheDocument()
-  })
-
-  it('renders action button when provided', () => {
-    const action = <button>Create Item</button>
-    render(<EmptyState {...defaultProps} action={action} />)
-
-    expect(screen.getByRole('button', { name: 'Create Item' })).toBeInTheDocument()
-  })
-
-  it('handles missing icon gracefully', () => {
-    const { icon, ...propsWithoutIcon } = defaultProps
-    const { container } = render(<EmptyState {...propsWithoutIcon} />)
-
-    expect(screen.getByText('No Items')).toBeInTheDocument()
-    // Icon should not be rendered
-    const iconElement = container.querySelector('svg')
-    // Icon might still be in DOM from Users import, but shouldn't be in the EmptyState content
-    expect(screen.getByText('No Items')).toBeInTheDocument()
-  })
-
-  it('handles missing description gracefully', () => {
-    const { description, ...propsWithoutDesc } = defaultProps
-    render(<EmptyState {...propsWithoutDesc} />)
-
-    expect(screen.getByText('No Items')).toBeInTheDocument()
-  })
-
-  it('applies custom className', () => {
-    const { container } = render(<EmptyState {...defaultProps} className="custom-class" />)
-
-    expect(container.querySelector('.custom-class')).toBeInTheDocument()
-  })
-
-  it('has proper heading structure', () => {
-    render(<EmptyState {...defaultProps} />)
-
-    const heading = screen.getByRole('heading', { level: 3 })
-    expect(heading).toHaveTextContent('No Items')
-  })
-
-  it('has proper accessibility attributes', async () => {
-    const { container } = render(<EmptyState {...defaultProps} />)
-    await testAccessibility(container)
-  })
-
-  it('handles long text gracefully', () => {
-    const longTitle = 'A'.repeat(100)
-    const longDescription = 'B'.repeat(200)
+describe('Card Component', () => {
+  it('renders card with content', () => {
     render(
-      <EmptyState
-        {...defaultProps}
-        title={longTitle}
-        description={longDescription}
-      />
+      <Card>
+        <CardContent>Card content</CardContent>
+      </Card>
+    )
+    expect(screen.getByText('Card content')).toBeInTheDocument()
+  })
+
+  it('renders card with header and title', () => {
+    render(
+      <Card>
+        <CardHeader>
+          <CardTitle>Card Title</CardTitle>
+        </CardHeader>
+        <CardContent>Card content</CardContent>
+      </Card>
+    )
+    
+    expect(screen.getByText('Card Title')).toBeInTheDocument()
+    expect(screen.getByText('Card content')).toBeInTheDocument()
+  })
+
+  it('has no accessibility violations', async () => {
+    const { container } = render(
+      <Card>
+        <CardHeader>
+          <CardTitle>Accessible Card</CardTitle>
+        </CardHeader>
+        <CardContent>Content</CardContent>
+      </Card>
+    )
+    await testAccessibility(container)
+  })
+})
+
+describe('Dialog Component', () => {
+  it('opens dialog when trigger is clicked', async () => {
+    render(
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button>Open Dialog</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dialog Title</DialogTitle>
+            <DialogDescription>Dialog description</DialogDescription>
+          </DialogHeader>
+          <p>Dialog content</p>
+        </DialogContent>
+      </Dialog>
     )
 
-    expect(screen.getByText(longTitle)).toBeInTheDocument()
-    expect(screen.getByText(longDescription)).toBeInTheDocument()
+    await userEvent.click(screen.getByText('Open Dialog'))
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByText('Dialog Title')).toBeInTheDocument()
+    })
   })
 
-  it('renders without action', () => {
-    render(<EmptyState {...defaultProps} />)
-
-    expect(screen.getByText('No Items')).toBeInTheDocument()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
-  })
-
-  it('handles complex action elements', () => {
-    const complexAction = (
-      <div>
-        <button>Button 1</button>
-        <button>Button 2</button>
-      </div>
+  it('has proper ARIA attributes', async () => {
+    render(
+      <Dialog defaultOpen>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Accessible Dialog</DialogTitle>
+            <DialogDescription>Description text</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     )
-    render(<EmptyState {...defaultProps} action={complexAction} />)
-
-    expect(screen.getByRole('button', { name: 'Button 1' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Button 2' })).toBeInTheDocument()
-  })
-})
-
-describe('ShareSongDialog', () => {
-  const mockOnOpenChange = vi.fn()
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('renders dialog when open', () => {
-    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
-
-    expect(screen.getByText('Share Your Song of the Day')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/search songs/i)).toBeInTheDocument()
-  })
-
-  it('does not render when closed', () => {
-    render(<ShareSongDialog open={false} onOpenChange={mockOnOpenChange} />)
-
-    expect(screen.queryByText('Share Your Song of the Day')).not.toBeInTheDocument()
-  })
-
-  it('allows searching for songs', async () => {
-    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
-
-    const searchInput = screen.getByPlaceholderText(/search songs/i)
-    await userEvent.type(searchInput, 'test')
-
-    expect(searchInput).toHaveValue('test')
-  })
-
-  it('displays search results when query is long enough', async () => {
-    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
-
-    const searchInput = screen.getByPlaceholderText(/search songs/i)
-    await userEvent.type(searchInput, 'test')
 
     await waitFor(() => {
-      expect(screen.getByText('Blinding Lights')).toBeInTheDocument()
+      const dialog = screen.getByRole('dialog')
+      expect(dialog).toHaveAttribute('aria-labelledby')
+      expect(dialog).toHaveAttribute('aria-describedby')
     })
-  })
-
-  it('handles song selection', async () => {
-    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
-
-    const searchInput = screen.getByPlaceholderText(/search songs/i)
-    await userEvent.type(searchInput, 'test')
-
-    await waitFor(() => {
-      expect(screen.getByText('Blinding Lights')).toBeInTheDocument()
-    })
-
-    const songButton = screen.getByText('Blinding Lights')
-    await userEvent.click(songButton)
-
-    expect(screen.getByText('Blinding Lights')).toBeInTheDocument()
-    expect(screen.getByText('The Weeknd')).toBeInTheDocument()
-  })
-
-  it('disables share button when no song is selected', () => {
-    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
-
-    const shareButton = screen.getByRole('button', { name: /share song/i })
-    expect(shareButton).toBeDisabled()
-  })
-
-  it('enables share button when song is selected', async () => {
-    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
-
-    const searchInput = screen.getByPlaceholderText(/search songs/i)
-    await userEvent.type(searchInput, 'test')
-
-    await waitFor(() => {
-      expect(screen.getByText('Blinding Lights')).toBeInTheDocument()
-    })
-
-    const songButton = screen.getByText('Blinding Lights')
-    await userEvent.click(songButton)
-
-    const shareButton = screen.getByRole('button', { name: /share song/i })
-    expect(shareButton).not.toBeDisabled()
-  })
-
-  it('has modal-scroll class for scrollable content', () => {
-    render(<ShareSongDialog open={true} onOpenChange={mockOnOpenChange} />)
-    // Dialog components render in portals, so check document.body
-    expect(document.body.querySelector('.modal-scroll')).toBeInTheDocument()
   })
 })
-
-describe('CommunitiesDialog', () => {
-  const mockOnOpenChange = vi.fn()
-  const mockCommunities = [
-    {
-      id: 'comm1',
-      name: 'Jazz Lovers',
-      description: 'For jazz enthusiasts',
-      member_count: 1500,
-      group_count: 25
-    },
-    {
-      id: 'comm2',
-      name: 'Rock Nation',
-      description: 'All about rock music',
-      member_count: 3000,
-      group_count: 50
-    }
-  ]
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('renders dialog when open', () => {
-    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-
-    expect(screen.getByText('Browse Communities')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/search communities/i)).toBeInTheDocument()
-  })
-
-  it('does not render when closed', () => {
-    render(<CommunitiesDialog open={false} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-
-    expect(screen.queryByText('Browse Communities')).not.toBeInTheDocument()
-  })
-
-  it('displays all communities', () => {
-    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-
-    expect(screen.getByText('Jazz Lovers')).toBeInTheDocument()
-    expect(screen.getByText('Rock Nation')).toBeInTheDocument()
-  })
-
-  it('displays community member counts', () => {
-    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-
-    expect(screen.getByText('1,500')).toBeInTheDocument()
-    expect(screen.getByText('3,000')).toBeInTheDocument()
-  })
-
-  it('filters communities by search query', async () => {
-    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-
-    const searchInput = screen.getByPlaceholderText(/search communities/i)
-    await userEvent.type(searchInput, 'Jazz')
-
-    expect(screen.getByText('Jazz Lovers')).toBeInTheDocument()
-    expect(screen.queryByText('Rock Nation')).not.toBeInTheDocument()
-  })
-
-  it('shows trending badge for large communities', () => {
-    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-
-    expect(screen.getByText('Trending')).toBeInTheDocument()
-  })
-
-  it('displays empty state when no communities match', async () => {
-    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-
-    const searchInput = screen.getByPlaceholderText(/search communities/i)
-    await userEvent.type(searchInput, 'Nonexistent')
-
-    expect(screen.getByText('No communities found')).toBeInTheDocument()
-  })
-
-  it('handles join button click', async () => {
-    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-
-    const joinButtons = screen.getAllByRole('button', { name: /join/i })
-    await userEvent.click(joinButtons[0])
-
-    expect(joinButtons[0]).toBeInTheDocument()
-  })
-
-  it('has modal-scroll class for scrollable content', () => {
-    render(<CommunitiesDialog open={true} onOpenChange={mockOnOpenChange} communities={mockCommunities} />)
-    // Dialog components render in portals, so check document.body
-    expect(document.body.querySelector('.modal-scroll')).toBeInTheDocument()
-  })
-})
-

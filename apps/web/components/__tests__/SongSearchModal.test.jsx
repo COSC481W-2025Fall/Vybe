@@ -235,9 +235,39 @@ describe('SongSearchModal', () => {
     await userEvent.type(searchInput, 't');
 
     // Wait for debounce delay (500ms) plus a small buffer
+    // Note: The component now searches both Spotify and YouTube in parallel, so expect 2 calls
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
     }, { timeout: 1500 });
+  });
+
+  it('renders search input field', () => {
+    render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
+    
+    const searchInput = screen.getByPlaceholderText(/search/i);
+    expect(searchInput).toBeInTheDocument();
+  });
+
+  it('has close button', () => {
+    render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
+    
+    const closeButton = screen.getByRole('button', { name: /close/i });
+    expect(closeButton).toBeInTheDocument();
+  });
+
+  it('search input accepts text', async () => {
+    render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
+    
+    const searchInput = screen.getByPlaceholderText(/search/i);
+    await userEvent.type(searchInput, 'hello');
+    
+    expect(searchInput).toHaveValue('hello');
+  });
+
+  it('renders modal container', () => {
+    const { container } = render(<SongSearchModal onClose={mockOnClose} onSelectSong={mockOnSelectSong} />);
+    
+    expect(container.firstChild).toBeInTheDocument();
   });
 });
 
