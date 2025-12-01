@@ -58,15 +58,16 @@ export function useGroups() {
       };
 
       // Transform and combine groups
+      // Member count: group_members count + 1 for owner (matching groups page)
       const memberGroupsList = (memberGroups || []).map(m => ({
         ...m.groups,
-        memberCount: m.groups.group_members?.[0]?.count || 0,
+        memberCount: (m.groups.group_members?.[0]?.count || 0) + 1, // +1 for owner
         songCount: calculateSongCount(m.groups.group_playlists)
       }));
 
       const ownedGroupsList = (ownedGroups || []).map(g => ({
         ...g,
-        memberCount: g.group_members?.[0]?.count || 0,
+        memberCount: (g.group_members?.[0]?.count || 0) + 1, // +1 for owner
         songCount: calculateSongCount(g.group_playlists)
       }));
 
