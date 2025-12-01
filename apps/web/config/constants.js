@@ -38,7 +38,6 @@ export const CONFIG = {
   NAV_LINKS: [
     { href: '/dashboard', label: 'Home' },
     { href: '/groups', label: 'Groups' },
-    { href: '/playlist', label: 'Playlist' },
     { href: '/library', label: 'Library' },
     { href: '/profile', label: 'Profile' },
     { href: '/settings', label: 'Settings' },
