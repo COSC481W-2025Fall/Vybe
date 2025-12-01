@@ -497,13 +497,13 @@ function ProfileSettingsContent() {
               {...register('display_name')}
               maxLength={50}
               className={[
-                'w-full px-4 py-2.5 rounded-lg bg-white/10 [data-theme="light"]:bg-gray-100 border backdrop-blur-[60px]',
+                'w-full px-4 py-2.5 rounded-lg bg-[var(--input-bg)] border-2 backdrop-blur-[60px]',
                 'text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-base sm:text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
                 'touch-manipulation',
                 errors.display_name
                   ? 'border-red-500/50'
-                  : 'border-white/20 [data-theme="light"]:border-gray-300 focus:border-purple-500/50 [data-theme="light"]:focus:bg-gray-200',
+                  : 'border-[var(--glass-border)] [data-theme="light"]:border-black/20 focus:border-purple-500/50',
               ].join(' ')}
               placeholder="Enter your display name"
             />
@@ -534,13 +534,13 @@ function ProfileSettingsContent() {
               maxLength={200}
               rows={4}
               className={[
-                'w-full px-4 py-2.5 rounded-lg bg-white/10 [data-theme="light"]:bg-gray-100 border resize-none backdrop-blur-[60px]',
+                'w-full px-4 py-2.5 rounded-lg bg-[var(--input-bg)] border-2 resize-none backdrop-blur-[60px]',
                 'text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-base sm:text-sm',
                 'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
                 'touch-manipulation',
                 errors.bio
                   ? 'border-red-500/50'
-                  : 'border-white/20 [data-theme="light"]:border-gray-300 focus:border-purple-500/50 [data-theme="light"]:focus:bg-gray-200',
+                  : 'border-[var(--glass-border)] [data-theme="light"]:border-black/20 focus:border-purple-500/50',
               ].join(' ')}
               placeholder="Tell us about yourself..."
             />
@@ -563,10 +563,10 @@ function ProfileSettingsContent() {
           {/* Public / Private toggle */}
           <div className="flex items-start justify-between gap-3">
             <div>
-              <label className="block text-sm font-medium text-white mb-1">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 Profile Visibility
               </label>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-[var(--muted-foreground)]">
                 When public, other users can view your profile.
               </p>
             </div>
@@ -575,9 +575,9 @@ function ProfileSettingsContent() {
                 id="is_public"
                 type="checkbox"
                 {...register('is_public')}
-                className="h-4 w-4 rounded border-white/30 bg-transparent"
+                className="h-4 w-4 rounded border-[var(--glass-border)] bg-transparent accent-[var(--accent)]"
               />
-              <label htmlFor="is_public" className="text-sm text-gray-200">
+              <label htmlFor="is_public" className="text-sm text-[var(--foreground)]">
                 Public profile
               </label>
             </div>
