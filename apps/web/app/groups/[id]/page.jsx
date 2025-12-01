@@ -25,6 +25,7 @@ export default function GroupDetailPage({ params }) {
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [hasYouTube, setHasYouTube] = useState(false);
   const [isSorting, setIsSorting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     // Unwrap params Promise
@@ -69,14 +70,34 @@ export default function GroupDetailPage({ params }) {
     if (!groupId || isSorting) return;
     
     setIsSorting(true);
-    toast.info('Starting AI smart sort... This may take a minute.', { duration: 3000 });
+    const mode = selectedPlaylist === 'all' ? 'all' : 'playlist';
+    const modeMessage = mode === 'all' 
+      ? 'Creating your vibe-sorted mix... This may take a minute.' 
+      : 'Sorting playlist... This may take a minute.';
+    
+    console.log(`[Groups] 🎵 Starting smart sort - Mode: ${mode}, Playlist: ${selectedPlaylist}`);
+    toast.info(modeMessage, { duration: 3000 });
     
     try {
+      console.log(`[Groups] 📡 Calling API: /api/groups/${groupId}/smart-sort`);
+      console.log(`[Groups] 📤 Request body:`, { mode });
+      
       const response = await fetch(`/api/groups/${groupId}/smart-sort`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
       });
       
+      console.log(`[Groups] 📥 Response status:`, response.status, response.statusText);
+      
       const data = await response.json();
+      console.log(`[Groups] 📥 Response data:`, {
+        success: data.success,
+        mode: data.mode,
+        songsProcessed: data.songsProcessed,
+        hasSummary: !!data.summary,
+        hasGenreDist: !!data.summary?.genreDistribution
+      });
       
       if (!response.ok) {
         // Extract more detailed error message
@@ -92,13 +113,54 @@ export default function GroupDetailPage({ params }) {
         }
       }
       
-      toast.success(`Successfully sorted ${data.songsProcessed || 0} songs!`, { duration: 5000 });
+      const successMessage = mode === 'all'
+        ? `Vibe mix created with ${data.songsProcessed || 0} songs!`
+        : `Successfully sorted ${data.songsProcessed || 0} songs!`;
       
-      // Reload data to show sorted order
+      toast.success(successMessage, { duration: 5000 });
+      
+      console.log(`[Groups] ✅ API call successful, reloading data...`);
+      
+      // CRITICAL: Verify the database was updated before reloading
+      // This helps catch if the API saved but we're not reading it
+      const { data: verifyGroup } = await supabase
+        .from('groups')
+        .select('all_songs_sort_order, all_songs_sorted_at')
+        .eq('id', groupId)
+        .single();
+      
+      if (verifyGroup) {
+        const hasSortOrder = verifyGroup.all_songs_sort_order && verifyGroup.all_songs_sort_order.length > 0;
+        console.log(`[Groups] 🔍 Verification check:`, {
+          hasSortOrder,
+          sortOrderLength: verifyGroup.all_songs_sort_order?.length || 0,
+          sortedAt: verifyGroup.all_songs_sorted_at || 'N/A'
+        });
+        
+        if (!hasSortOrder && mode === 'all') {
+          console.error(`[Groups] ❌ WARNING: API returned success but database has no sort order!`);
+          console.error(`[Groups]    This suggests the API didn't save correctly. Check server logs.`);
+          toast.error('Sort completed but order was not saved. Please try again.', { duration: 7000 });
+        } else if (hasSortOrder && mode === 'all') {
+          console.log(`[Groups] ✅ Verified: Sort order saved successfully!`);
+        }
+      } else {
+        console.warn(`[Groups] ⚠️  Could not verify sort order (group not found)`);
+      }
+      
+      // Reload group data first to get the new sort order
       await loadGroupData();
-      // Always reload songs after sorting - loadGroupData sets selectedPlaylist to 'all'
-      // Reload songs directly to ensure the new order is displayed
-      await loadPlaylistSongs('all');
+      
+      console.log(`[Groups] ✅ Group data reloaded, checking for sort order...`);
+      
+      // Small delay to ensure state is updated (React state updates are async)
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Reload songs to show the new order
+      console.log(`[Groups] 🔄 Reloading songs for playlist: ${selectedPlaylist}`);
+      await loadPlaylistSongs(selectedPlaylist);
+      
+      console.log(`[Groups] ✅ Sort complete!`);
     } catch (error) {
       console.error('[Groups] Error sorting:', error);
       toast.error(error.message || 'Failed to sort playlists. Please try again.', { duration: 7000 });
@@ -137,9 +199,17 @@ export default function GroupDetailPage({ params }) {
     const { data: playlistData } = playlistResult;
 
     if (groupError || !groupData) {
-      console.error('Error loading group:', groupError);
+      console.error('[Groups] Error loading group:', groupError);
       router.push('/groups');
       return;
+    }
+
+    // Log sort order status for debugging
+    if (groupData.all_songs_sort_order) {
+      console.log(`[Groups] ✅ Loaded group with sort order: ${groupData.all_songs_sort_order.length} songs`);
+      console.log(`[Groups]    Sorted at: ${groupData.all_songs_sorted_at || 'N/A'}`);
+    } else {
+      console.log(`[Groups] ℹ️  Group loaded, no sort order yet`);
     }
 
     setGroup(groupData);
@@ -257,21 +327,25 @@ export default function GroupDetailPage({ params }) {
         return;
       }
 
-      // First, get playlists in their smart-sorted order
-      const sortedPlaylists = [...playlists].sort((a, b) => {
-        if (a.smart_sorted_order !== null && b.smart_sorted_order !== null) {
-          return a.smart_sorted_order - b.smart_sorted_order;
-        }
-        if (a.smart_sorted_order !== null) return -1;
-        if (b.smart_sorted_order !== null) return 1;
-        return new Date(a.created_at) - new Date(b.created_at);
-      });
-
-      // Create a map of playlist order for sorting
-      const playlistOrderMap = new Map();
-      sortedPlaylists.forEach((playlist, idx) => {
-        playlistOrderMap.set(playlist.id, playlist.smart_sorted_order ?? idx + 1000);
-      });
+      // CRITICAL: Fetch fresh group data to get latest sort order
+      // This ensures we have the most up-to-date all_songs_sort_order
+      // React state might be stale after async operations
+      let currentGroup = group;
+      const { data: freshGroupData } = await supabase
+        .from('groups')
+        .select('all_songs_sort_order, all_songs_sorted_at')
+        .eq('id', groupId)
+        .single();
+      
+      if (freshGroupData) {
+        currentGroup = { ...currentGroup, ...freshGroupData };
+        // Update state so UI reflects the change immediately
+        setGroup(prev => ({ ...prev, ...freshGroupData }));
+        console.log('[Groups] Fetched fresh group data:', {
+          hasSortOrder: !!freshGroupData.all_songs_sort_order,
+          sortOrderLength: freshGroupData.all_songs_sort_order?.length || 0
+        });
+      }
 
       // Fetch all songs from all playlists in parallel (much faster)
       const { data: allSongsData, error: songsError } = await supabase
@@ -298,23 +372,82 @@ export default function GroupDetailPage({ params }) {
         return;
       }
 
-      // Sort songs: first by playlist order, then by song order within playlist
-      const allSongs = (allSongsData || []).sort((a, b) => {
-        const playlistA = playlistOrderMap.get(a.playlist_id) ?? 1000;
-        const playlistB = playlistOrderMap.get(b.playlist_id) ?? 1000;
+      // Check if unified sort order exists (from "All" view sorting)
+      // Use currentGroup (freshly fetched) instead of stale group state
+      if (currentGroup?.all_songs_sort_order && Array.isArray(currentGroup.all_songs_sort_order) && currentGroup.all_songs_sort_order.length > 0) {
+        console.log('[Groups] ✅ Using unified sort order from "All" view');
+        console.log(`[Groups] Sort order has ${currentGroup.all_songs_sort_order.length} songs`);
         
-        // If same playlist, sort by song order
-        if (playlistA === playlistB) {
-          const orderA = a.smart_sorted_order ?? a.position ?? 0;
-          const orderB = b.smart_sorted_order ?? b.position ?? 0;
-          return orderA - orderB;
-        }
-        
-        // Otherwise sort by playlist order
-        return playlistA - playlistB;
-      });
+        // Create a map for O(1) lookup: songId -> order index
+        const sortOrderMap = new Map();
+        currentGroup.all_songs_sort_order.forEach((songId, index) => {
+          sortOrderMap.set(songId, index);
+        });
 
-      songs = allSongs;
+        // Separate songs into: sorted (in order) and unsorted (newly added)
+        const sortedSongs = [];
+        const unsortedSongs = [];
+        
+        allSongsData.forEach(song => {
+          if (sortOrderMap.has(song.id)) {
+            sortedSongs.push(song);
+          } else {
+            unsortedSongs.push(song);
+          }
+        });
+
+        // Sort the sorted songs by their order in all_songs_sort_order
+        sortedSongs.sort((a, b) => {
+          const orderA = sortOrderMap.get(a.id) ?? 99999;
+          const orderB = sortOrderMap.get(b.id) ?? 99999;
+          return orderA - orderB;
+        });
+
+        // Append unsorted songs at the end (newly added songs)
+        songs = [...sortedSongs, ...unsortedSongs];
+        
+        console.log(`[Groups] ✅ Applied unified sort: ${sortedSongs.length} sorted, ${unsortedSongs.length} unsorted`);
+        console.log(`[Groups] First 5 song IDs in order:`, sortedSongs.slice(0, 5).map(s => s.id));
+        
+        if (unsortedSongs.length > 0) {
+          console.log(`[Groups] ${unsortedSongs.length} newly added song(s) appended to end`);
+        }
+      } else {
+        // No unified sort - use playlist-based ordering (existing behavior)
+        console.log('[Groups] No unified sort order, using playlist-based ordering');
+        
+        // First, get playlists in their smart-sorted order
+        const sortedPlaylists = [...playlists].sort((a, b) => {
+          if (a.smart_sorted_order !== null && b.smart_sorted_order !== null) {
+            return a.smart_sorted_order - b.smart_sorted_order;
+          }
+          if (a.smart_sorted_order !== null) return -1;
+          if (b.smart_sorted_order !== null) return 1;
+          return new Date(a.created_at) - new Date(b.created_at);
+        });
+
+        // Create a map of playlist order for sorting
+        const playlistOrderMap = new Map();
+        sortedPlaylists.forEach((playlist, idx) => {
+          playlistOrderMap.set(playlist.id, playlist.smart_sorted_order ?? idx + 1000);
+        });
+
+        // Sort songs: first by playlist order, then by song order within playlist
+        songs = (allSongsData || []).sort((a, b) => {
+          const playlistA = playlistOrderMap.get(a.playlist_id) ?? 1000;
+          const playlistB = playlistOrderMap.get(b.playlist_id) ?? 1000;
+          
+          // If same playlist, sort by song order
+          if (playlistA === playlistB) {
+            const orderA = a.smart_sorted_order ?? a.position ?? 0;
+            const orderB = b.smart_sorted_order ?? b.position ?? 0;
+            return orderA - orderB;
+          }
+          
+          // Otherwise sort by playlist order
+          return playlistA - playlistB;
+        });
+      }
     } else {
       // Get songs from specific playlist - also use batching
       let allPlaylistSongs = [];
@@ -370,6 +503,35 @@ export default function GroupDetailPage({ params }) {
     }));
 
     setPlaylistSongs(songsWithLikes);
+  }
+
+  async function handleResetSort() {
+    if (!groupId || isResetting) return;
+    
+    setIsResetting(true);
+    
+    try {
+      const response = await fetch(`/api/groups/${groupId}/reset-sort`, {
+        method: 'POST',
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to reset sort order');
+      }
+      
+      toast.success('Sort order reset to default');
+      
+      // Reload to show original order
+      await loadGroupData();
+      await loadPlaylistSongs('all');
+    } catch (error) {
+      console.error('[Groups] Error resetting sort:', error);
+      toast.error(error.message || 'Failed to reset sort order', { duration: 5000 });
+    } finally {
+      setIsResetting(false);
+    }
   }
 
   async function toggleLikeSong(songId, isCurrentlyLiked) {
@@ -440,7 +602,22 @@ export default function GroupDetailPage({ params }) {
                 <>
                   {/* Smart Sort Section */}
                   <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    {playlists.some(p => p.smart_sorted_order !== null) && (
+                    {/* Show "Vibe Mix Active" for "All" view when unified sort exists */}
+                    {selectedPlaylist === 'all' && group?.all_songs_sort_order && group.all_songs_sort_order.length > 0 && (
+                      <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2 flex-1">
+                        <Sparkles className="w-5 h-5 text-purple-400" />
+                        <span className="text-sm text-[var(--foreground)]">
+                          <span className="font-medium text-purple-400">Vibe Mix Active</span>
+                          {group.all_songs_sorted_at && (
+                            <span className="text-[var(--muted-foreground)] ml-2">
+                              (Sorted {new Date(group.all_songs_sorted_at).toLocaleDateString()})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {/* Show "AI Smart Sort Active" for individual playlists */}
+                    {selectedPlaylist !== 'all' && playlists.some(p => p.smart_sorted_order !== null) && (
                       <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2 flex-1">
                         <Sparkles className="w-5 h-5 text-purple-400" />
                         <span className="text-sm text-[var(--foreground)]">
@@ -453,23 +630,36 @@ export default function GroupDetailPage({ params }) {
                         </span>
                       </div>
                     )}
-                    <button
-                      onClick={handleSmartSort}
-                      disabled={isSorting || playlists.length === 0}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
-                    >
-                      {isSorting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Sorting...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          <span>AI Smart Sort</span>
-                        </>
+                    <div className="flex items-center gap-2">
+                      {/* Reset Order button - only show for "All" view when unified sort exists */}
+                      {selectedPlaylist === 'all' && group?.all_songs_sort_order && group.all_songs_sort_order.length > 0 && (
+                        <button
+                          onClick={handleResetSort}
+                          disabled={isResetting}
+                          className="px-3 py-2 text-sm rounded-lg border border-[var(--muted-foreground)]/30 hover:bg-[var(--muted-foreground)]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[var(--foreground)]"
+                        >
+                          {isResetting ? 'Resetting...' : 'Reset Order'}
+                        </button>
                       )}
-                    </button>
+                      <button
+                        onClick={handleSmartSort}
+                        disabled={isSorting || playlists.length === 0}
+                        title={selectedPlaylist === 'all' ? 'Sorts all songs by vibe: chill → energetic → wind down' : 'Sorts this playlist by AI recommendation'}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                      >
+                        {isSorting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Sorting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4" />
+                            <span>AI Smart Sort</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-[var(--muted-foreground)] mb-2">

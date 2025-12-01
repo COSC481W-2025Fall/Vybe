@@ -675,3 +675,391 @@ All song IDs must be included in the response.`;
   }
 }
 
+/**
+ * Analyze and sort ALL songs with GENRE VARIETY for the unified "All" view
+ * Primary goal: Maximize genre diversity - avoid consecutive songs of the same genre
+ * Secondary goal: Smooth transitions between genres using tempo/energy
+ * 
+ * CRITICAL: Interleave genres like shuffling a deck of cards
+ * FORBIDDEN: date_added, user_id, playlist_id, position, genre clustering
+ * 
+ * @param {Array} allSongsMetadata - Array of ALL song metadata objects from all playlists
+ * @returns {Promise<Object>} Object with sortedSongIds array and summary
+ */
+export async function analyzeAndSortByVibe(allSongsMetadata) {
+  console.log('\n========== [GENRE VARIETY SORT] Starting ==========');
+  console.log(`[genreSort] 🎵 Processing ${allSongsMetadata.length} songs for genre-diverse mix`);
+
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API key not configured');
+  }
+
+  if (!allSongsMetadata || allSongsMetadata.length === 0) {
+    console.log('[genreSort] ⚠️ No songs to sort');
+    return {
+      sortedSongIds: [],
+      summary: {
+        totalSongs: 0,
+        sortingStrategy: 'empty',
+        genreDistribution: {}
+      }
+    };
+  }
+
+  // Handle single song case
+  if (allSongsMetadata.length === 1) {
+    console.log('[genreSort] ℹ️ Only one song, returning as-is');
+    return {
+      sortedSongIds: [allSongsMetadata[0].songId],
+      summary: {
+        totalSongs: 1,
+        sortingStrategy: 'single song',
+        genreDistribution: { [allSongsMetadata[0].genres?.[0] || 'unknown']: 1 }
+      }
+    };
+  }
+
+  // Check for maximum songs limit
+  if (allSongsMetadata.length > 300) {
+    console.error(`[genreSort] ❌ Too many songs: ${allSongsMetadata.length} (max 300)`);
+    throw new Error(`Too many songs. Maximum 300 songs supported for sorting. You have ${allSongsMetadata.length} songs.`);
+  }
+
+  // Build song data for OpenAI - ONLY variety-relevant fields
+  // STRICTLY EXCLUDE: date_added, user_id, playlist_id, position, added_by, created_at
+  const songDataForAI = allSongsMetadata.map(song => ({
+    songId: song.songId,
+    title: song.title,
+    artist: song.artist || 'Unknown Artist',
+    genres: song.genres || [],
+    popularity: song.popularity || 0,
+    // Audio features for smooth transitions between genres
+    energy: song.audioFeatures?.energy ?? null,
+    tempo: song.audioFeatures?.tempo ?? null,
+    valence: song.audioFeatures?.valence ?? null,
+  }));
+
+  // Calculate genre statistics for context
+  const genreFrequency = {};
+  allSongsMetadata.forEach(song => {
+    (song.genres || []).forEach(genre => {
+      genreFrequency[genre] = (genreFrequency[genre] || 0) + 1;
+    });
+  });
+
+  const genreList = Object.entries(genreFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .map(([genre, count]) => ({ genre, count }));
+
+  const uniqueGenreCount = genreList.length;
+
+  console.log(`[genreSort] 📊 Genre distribution: ${uniqueGenreCount} unique genres`);
+  console.log(`[genreSort] 🎸 Genres:`, genreList.slice(0, 8).map(g => `${g.genre}(${g.count})`).join(', '));
+
+  // Build the GENRE VARIETY focused prompt with MACRO-GENRE MAPPING
+  const systemPrompt = `You are an expert music curator creating a DIVERSE and VARIED listening experience.
+Your PRIMARY goal is GENRE VARIETY - the listener should experience constant freshness, not genre blocks.
+
+═══════════════════════════════════════════════════════════
+STEP 1: MACRO-GENRE MAPPING (REQUIRED FIRST STEP)
+═══════════════════════════════════════════════════════════
+Before sorting, you MUST map each song to EXACTLY ONE Standard Genre.
+
+STANDARD GENRES (choose ONE per song):
+- Pop
+- Hip-Hop/Rap
+- Rock
+- Electronic/Dance
+- R&B/Soul
+- Latin
+- Country
+- Jazz/Blues
+- Classical/Instrumental
+- Other
+
+MAPPING RULES:
+- Analyze the input genre tags (e.g., "atlanta bass", "trap", "hip-hop" → map to "Hip-Hop/Rap")
+- If a song has multiple tags, choose the PRIMARY/dominant genre
+- Examples:
+  * "pop", "dance-pop", "synth-pop", "indie-pop" → "Pop"
+  * "hip-hop", "rap", "trap", "atlanta bass", "drill" → "Hip-Hop/Rap"
+  * "rock", "alternative rock", "metal", "punk" → "Rock"
+  * "edm", "house", "techno", "trance", "electronic" → "Electronic/Dance"
+  * "r&b", "soul", "neo-soul", "funk" → "R&B/Soul"
+  * "reggaeton", "latin pop", "salsa", "bachata" → "Latin"
+  * "country", "country pop", "bluegrass" → "Country"
+  * "jazz", "blues", "smooth jazz" → "Jazz/Blues"
+  * "classical", "instrumental", "orchestral", "piano" → "Classical/Instrumental"
+- If unclear or no matching tags, use "Other" as fallback
+- Each song gets EXACTLY ONE Standard Genre
+
+═══════════════════════════════════════════════════════════
+STEP 2: APPLY VARIETY LOGIC (using Standard Genres)
+═══════════════════════════════════════════════════════════
+1. NEVER place more than 2 songs of the same Standard Genre consecutively
+2. Distribute ALL Standard Genres evenly throughout the entire playlist
+3. Interleave Standard Genres like shuffling a deck of cards
+4. The listener should experience variety - not genre blocks
+
+SECONDARY: Smooth transitions
+- When switching Standard Genres, consider tempo and energy
+- Avoid jarring jumps (e.g., death metal → soft acoustic)
+- Use similar BPM or energy as bridges between genres
+
+TIE-BREAKER: Popularity
+- When multiple songs could fit the same slot, prefer higher popularity
+
+═══════════════════════════════════════════════════════════
+STRICTLY FORBIDDEN - DO NOT CONSIDER:
+═══════════════════════════════════════════════════════════
+- Who added the song
+- When it was added  
+- Which playlist it came from
+- Original position/order
+- DO NOT cluster same Standard Genres together
+
+Always respond with valid JSON only, no additional text.`;
+
+  const userPrompt = `Create a GENRE-DIVERSE mix from these ${songDataForAI.length} songs.
+
+RAW GENRE TAGS IN THIS SET (for reference - you will map these to Standard Genres):
+${genreList.slice(0, 20).map(g => `- ${g.genre}: ${g.count} songs`).join('\n')}
+${genreList.length > 20 ? `... and ${genreList.length - 20} more unique tags` : ''}
+
+Total unique raw genre tags: ${uniqueGenreCount}
+
+SONGS TO SORT:
+${JSON.stringify(songDataForAI, null, 2)}
+
+Return a JSON object with this EXACT structure:
+{
+  "sortedSongIds": ["uuid-1", "uuid-2", "uuid-3", ...],
+  "summary": {
+    "totalSongs": <number>,
+    "sortingStrategy": "<describe how you interleaved Standard Genres>",
+    "genreDistribution": {
+      "Pop": <count>,
+      "Hip-Hop/Rap": <count>,
+      "Rock": <count>,
+      "Electronic/Dance": <count>,
+      "R&B/Soul": <count>,
+      "Latin": <count>,
+      "Country": <count>,
+      "Jazz/Blues": <count>,
+      "Classical/Instrumental": <count>,
+      "Other": <count>
+    }
+  }
+}
+
+CRITICAL REQUIREMENTS:
+1. FIRST: Map each song to ONE Standard Genre (see system prompt for mapping rules)
+2. THEN: Apply variety logic using these Standard Genres (not raw tags)
+3. The "sortedSongIds" array MUST contain the EXACT UUID from each song's "songId" field
+4. DO NOT use song titles - use the "songId" field value (UUID format: 8-4-4-4-12 hex chars)  
+5. ALL ${songDataForAI.length} songs MUST be included - no duplicates, no omissions
+6. NO MORE THAN 2 consecutive songs of the same Standard Genre
+7. Spread each Standard Genre EVENLY across the playlist duration
+8. The "genreDistribution" in summary MUST count Standard Genres (e.g., "Hip-Hop/Rap": 15), NOT raw tags
+
+EXAMPLE OF GOOD INTERLEAVING (using Standard Genres):
+Position 1: Hip-Hop/Rap
+Position 2: Pop  
+Position 3: Rock
+Position 4: Hip-Hop/Rap (ok - only 1 since last)
+Position 5: Electronic/Dance
+Position 6: Pop
+Position 7: Hip-Hop/Rap
+...
+
+EXAMPLE OF BAD CLUSTERING (AVOID THIS):
+Position 1: Hip-Hop/Rap
+Position 2: Hip-Hop/Rap
+Position 3: Hip-Hop/Rap  ← ❌ 3 in a row!
+Position 4: Hip-Hop/Rap  ← ❌ 4 in a row!
+Position 5: Pop
+...
+
+REMEMBER: 
+- Use songId UUIDs, not song titles!
+- Map to Standard Genres FIRST, then sort by variety!`;
+
+  // Retry logic with exponential backoff
+  const maxRetries = 3;
+  let lastError = null;
+
+  console.log(`[genreSort] 🧠 Sending to OpenAI (${songDataForAI.length} songs, ~${userPrompt.length} chars)`);
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    if (attempt > 0) {
+      console.log(`[genreSort] 🔄 Retry attempt ${attempt + 1}/${maxRetries}`);
+    }
+
+    try {
+      const aiRequestStart = Date.now();
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        response_format: { type: 'json_object' },
+      });
+
+      const aiRequestTime = ((Date.now() - aiRequestStart) / 1000).toFixed(2);
+      console.log(`[genreSort] ✅ OpenAI response received in ${aiRequestTime}s`);
+
+      const responseText = completion.choices[0]?.message?.content;
+      if (!responseText) {
+        throw new Error('Empty response from OpenAI');
+      }
+
+      console.log(`[genreSort] 📝 Parsing response (${responseText.length} chars)...`);
+      const result = JSON.parse(responseText);
+
+      // Validate response structure
+      if (!result.sortedSongIds || !Array.isArray(result.sortedSongIds)) {
+        throw new Error('Response missing sortedSongIds array');
+      }
+
+      console.log(`[genreSort] 📋 Received ${result.sortedSongIds.length} sorted song IDs`);
+
+      // Build maps for validation and correction
+      const inputSongIds = new Set(allSongsMetadata.map(s => s.songId));
+      const titleToIdMap = new Map();
+      const idToTitleMap = new Map();
+
+      allSongsMetadata.forEach(song => {
+        const titleKey = song.title.toLowerCase().trim();
+        titleToIdMap.set(titleKey, song.songId);
+        titleToIdMap.set(`${titleKey}|||${(song.artist || '').toLowerCase().trim()}`, song.songId);
+        idToTitleMap.set(song.songId, { title: song.title, artist: song.artist });
+      });
+
+      // Validate and fix song IDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const validatedSongIds = [];
+      const seenIds = new Set();
+      let fixedCount = 0;
+      let invalidCount = 0;
+
+      for (const rawId of result.sortedSongIds) {
+        let songId = String(rawId).trim();
+        const isValidUuid = uuidRegex.test(songId);
+
+        if (!isValidUuid) {
+          // Try to fix - might be a title
+          const searchKey = songId.toLowerCase().trim();
+          const foundId = titleToIdMap.get(searchKey);
+
+          if (foundId) {
+            console.log(`[genreSort] 🔧 Fixed: "${songId}" → ${foundId}`);
+            songId = foundId;
+            fixedCount++;
+          } else {
+            console.warn(`[genreSort] ⚠️ Cannot map: "${songId}"`);
+            invalidCount++;
+            continue;
+          }
+        }
+
+        // Check if this ID exists in input and isn't a duplicate
+        if (inputSongIds.has(songId) && !seenIds.has(songId)) {
+          validatedSongIds.push(songId);
+          seenIds.add(songId);
+        } else if (seenIds.has(songId)) {
+          console.warn(`[genreSort] ⚠️ Duplicate skipped: ${songId}`);
+        } else {
+          console.warn(`[genreSort] ⚠️ Unknown ID skipped: ${songId}`);
+        }
+      }
+
+      // Add any missing songs at the end
+      let missingCount = 0;
+      for (const song of allSongsMetadata) {
+        if (!seenIds.has(song.songId)) {
+          validatedSongIds.push(song.songId);
+          seenIds.add(song.songId);
+          missingCount++;
+        }
+      }
+
+      if (missingCount > 0) {
+        console.log(`[genreSort] ⚠️ Added ${missingCount} missing song(s) to end`);
+      }
+
+      console.log(`[genreSort] 📊 Validation: ${validatedSongIds.length} valid, ${fixedCount} fixed, ${invalidCount} invalid, ${missingCount} missing added`);
+
+      // Build summary - use Standard Genres from response
+      const summary = result.summary || {
+        totalSongs: validatedSongIds.length,
+        sortingStrategy: 'genre-interleaved-with-macro-genres',
+        genreDistribution: {}
+      };
+
+      // Ensure summary has correct count
+      summary.totalSongs = validatedSongIds.length;
+
+      // Verify genreDistribution uses Standard Genres
+      const standardGenres = ['Pop', 'Hip-Hop/Rap', 'Rock', 'Electronic/Dance', 'R&B/Soul', 'Latin', 'Country', 'Jazz/Blues', 'Classical/Instrumental', 'Other'];
+      const genreDist = summary.genreDistribution || {};
+      const hasStandardGenres = Object.keys(genreDist).some(key => standardGenres.includes(key));
+      
+      if (!hasStandardGenres && Object.keys(genreDist).length > 0) {
+        console.warn(`[genreSort] ⚠️ Genre distribution may not use Standard Genres. Found: ${Object.keys(genreDist).slice(0, 5).join(', ')}`);
+      }
+
+      console.log(`[genreSort] ✅ Sorting strategy: ${summary.sortingStrategy || 'genre-interleaved'}`);
+      console.log(`[genreSort] 🎸 Standard Genre distribution:`);
+      if (Object.keys(genreDist).length > 0) {
+        Object.entries(genreDist)
+          .sort((a, b) => b[1] - a[1])
+          .forEach(([genre, count]) => {
+            const isStandard = standardGenres.includes(genre);
+            console.log(`[genreSort]    ${isStandard ? '✅' : '⚠️'} ${genre}: ${count} songs`);
+          });
+      } else {
+        console.log(`[genreSort]    ⚠️ No genre distribution provided in response`);
+      }
+      console.log('========== [GENRE VARIETY SORT] Complete ==========\n');
+
+      return {
+        sortedSongIds: validatedSongIds,
+        summary
+      };
+
+    } catch (error) {
+      lastError = error;
+
+      // Check for quota errors (don't retry these)
+      const isQuotaError = error.code === 'insufficient_quota' ||
+                          error.message?.includes('quota') ||
+                          error.message?.includes('billing');
+
+      if (isQuotaError) {
+        console.error('[genreSort] ❌ OpenAI quota exceeded');
+        throw new Error('OpenAI API quota exceeded. Please check your OpenAI account billing and plan settings.');
+      }
+
+      // Check for rate limits (retry these)
+      const isRateLimit = error.status === 429 ||
+                         error.code === 'rate_limit_exceeded' ||
+                         error.message?.includes('rate limit');
+
+      if (isRateLimit && attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt + 1) * 1000;
+        console.warn(`[genreSort] ⚠️ Rate limited, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      console.error(`[genreSort] ❌ Error on attempt ${attempt + 1}:`, error.message);
+      throw error;
+    }
+  }
+
+  throw lastError || new Error('Failed to analyze songs after retries');
+}
+
