@@ -7,6 +7,7 @@ import { Users, Heart, MoreVertical, Plus, Sparkles, Loader2 } from 'lucide-reac
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import ExportPlaylistButton from '@/components/ExportPlaylistButton';
+import ExportToSpotifyButton from '@/components/ExportToSpotifyButton';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
@@ -24,6 +25,7 @@ export default function GroupDetailPage({ params }) {
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [hasYouTube, setHasYouTube] = useState(false);
+  const [hasSpotify, setHasSpotify] = useState(false);
   const [isSorting, setIsSorting] = useState(false);
 
   useEffect(() => {
@@ -57,11 +59,21 @@ export default function GroupDetailPage({ params }) {
 
     setUser(session.user);
 
-    // Check if user has YouTube/Google connected
+    // Check if user has YouTube/Google and Spotify connected
     const { data: { user } } = await supabase.auth.getUser();
     if (user && user.identities) {
       const hasGoogle = user.identities.some(id => id.provider === 'google');
+      const hasSpotifyIdentity = user.identities.some(id => id.provider === 'spotify');
       setHasYouTube(hasGoogle);
+      
+      // Also check database for Spotify tokens
+      const { data: spotifyToken } = await supabase
+        .from('spotify_tokens')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      setHasSpotify(hasSpotifyIdentity || !!spotifyToken);
     }
   }
 
@@ -508,19 +520,34 @@ export default function GroupDetailPage({ params }) {
                           {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
                         </p>
                       </div>
-                      {/* Export to YouTube Button - Only shown for YouTube-connected users */}
-                      {hasYouTube && (
-                        <ExportPlaylistButton
-                          sourceType="group"
-                          sourceId={groupId}
-                          playlistId={selectedPlaylist}
-                          defaultName={
-                            selectedPlaylist === 'all'
-                              ? group?.name || 'Group Playlist'
-                              : playlists.find(p => p.id === selectedPlaylist)?.name || 'Playlist'
-                          }
-                        />
-                      )}
+                      {/* Export Buttons */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Export to Spotify Button - Only shown for Spotify-connected users */}
+                        {hasSpotify && (
+                          <ExportToSpotifyButton
+                            playlistId={selectedPlaylist}
+                            groupId={groupId}
+                            defaultName={
+                              selectedPlaylist === 'all'
+                                ? group?.name || 'Group Playlist'
+                                : playlists.find(p => p.id === selectedPlaylist)?.name || 'Playlist'
+                            }
+                          />
+                        )}
+                        {/* Export to YouTube Button - Only shown for YouTube-connected users */}
+                        {hasYouTube && (
+                          <ExportPlaylistButton
+                            sourceType="group"
+                            sourceId={groupId}
+                            playlistId={selectedPlaylist}
+                            defaultName={
+                              selectedPlaylist === 'all'
+                                ? group?.name || 'Group Playlist'
+                                : playlists.find(p => p.id === selectedPlaylist)?.name || 'Playlist'
+                            }
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
 

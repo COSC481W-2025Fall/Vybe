@@ -67,7 +67,7 @@ export default async function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="chroma-bg">
+      <body className="chroma-bg" suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>
             <Suspense fallback={null}>
