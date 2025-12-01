@@ -601,63 +601,75 @@ export async function POST(request) {
 
       const totalTracks = songs.length;
 
-      console.log(`[export-playlist] Converting ${totalTracks} tracks to Spotify URIs (playlist platform: ${playlist.platform})`);
+      console.log(`[export-playlist] Converting ${totalTracks} tracks to Spotify URIs (platform: ${playlist.platform})`);
 
-      // Convert each song based on its platform
-      // For 'all' export: use song.playlist_platform (set during merge)
-      // For single playlist: use playlist.platform
+      // For mixed playlists, convert each song based on its original platform
 
-      try {
+      if (playlist.platform === 'mixed') {
 
-        const { trackIdToUri, searchSpotifyTrack } = await import('@/lib/services/spotifyExport');
+        try {
 
-        const uriPromises = songs.map(async (song, index) => {
+          const { trackIdToUri, searchSpotifyTrack } = await import('@/lib/services/spotifyExport');
 
-          try {
+          const uriPromises = songs.map(async (song, index) => {
 
-            // Use playlist_platform (for 'all' export) or fall back to playlist.platform
-            const songPlatform = song.playlist_platform || playlist.platform || 'youtube';
+            try {
 
-            if (songPlatform === 'spotify' && song.external_id) {
+              const platform = song.playlist_platform || 'youtube';
 
-              return trackIdToUri(song.external_id);
+              if (platform === 'spotify' && song.external_id) {
 
-            } else {
+                return trackIdToUri(song.external_id);
 
-              // For YouTube songs or songs without external_id, search on Spotify
-              if (!song.title) {
+              } else {
 
-                console.warn(`[export-playlist] Song at index ${index} has no title, skipping`);
+                if (!song.title) {
 
-                return null;
+                  console.warn(`[export-playlist] Song at index ${index} has no title, skipping`);
+
+                  return null;
+
+                }
+
+                return await searchSpotifyTrack(song.title, song.artist, accessToken);
 
               }
 
-              console.log(`[export-playlist] Searching Spotify for: "${song.title}" by "${song.artist}" (platform: ${songPlatform})`);
+            } catch (error) {
 
-              return await searchSpotifyTrack(song.title, song.artist, accessToken);
+              console.error(`[export-playlist] Error converting song "${song.title}":`, error);
+
+              return null;
 
             }
 
-          } catch (error) {
+          });
 
-            console.error(`[export-playlist] Error converting song "${song.title}":`, error);
+          const uris = await Promise.all(uriPromises);
 
-            return null;
+          trackUris = uris.filter(uri => uri !== null && uri !== undefined);
 
-          }
+        } catch (error) {
 
-        });
+          console.error('[export-playlist] Error in mixed platform conversion:', error);
 
-        const uris = await Promise.all(uriPromises);
+          throw new Error(`Failed to convert tracks: ${error.message}`);
 
-        trackUris = uris.filter(uri => uri !== null && uri !== undefined);
+        }
 
-      } catch (error) {
+      } else {
 
-        console.error('[export-playlist] Error in track conversion:', error);
+        try {
 
-        throw new Error(`Failed to convert tracks: ${error.message}`);
+          trackUris = await convertTracksToSpotifyUris(songs, playlist.platform, accessToken);
+
+        } catch (error) {
+
+          console.error('[export-playlist] Error converting tracks:', error);
+
+          throw new Error(`Failed to convert tracks: ${error.message}`);
+
+        }
 
       }
 
