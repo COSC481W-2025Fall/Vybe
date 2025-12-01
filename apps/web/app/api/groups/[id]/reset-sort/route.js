@@ -1,16 +1,27 @@
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 /**
- * POST /api/groups/[groupId]/reset-sort
+ * POST /api/groups/[id]/reset-sort
  * Clears the "All" view sort order
  */
 export async function POST(request, { params }) {
   try {
-    const { groupId } = await params;
+    const { id: groupId } = await params;
     const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll() {},
+        },
+      }
+    );
 
     // Authenticate
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -71,4 +82,3 @@ export async function POST(request, { params }) {
     );
   }
 }
-
