@@ -340,20 +340,33 @@
     border-color: var(--glass-border-hover);
   }
 
-  /* Light mode glass-card - pure white with black border */
+  /* Light mode glass-card - uses CSS variables for custom theme support */
   [data-theme="light"] .glass-card {
-    background: #ffffff;
-    border: 2px solid rgba(0, 0, 0, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
+    box-shadow: 0 8px 32px var(--glass-shadow);
   }
 
   [data-theme="light"] .glass-card:hover,
   [data-theme="light"] .glass-card:active {
-    background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.3);
+    background: var(--dropdown-bg);
+    border-color: var(--glass-border-hover);
+  }
+  
+  /* Custom theme glass-card - fully uses CSS variables */
+  [data-theme="custom"] .glass-card {
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
+    box-shadow: 0 8px 32px var(--glass-shadow);
   }
 
-  /* Modal specific - fully opaque backgrounds */
+  [data-theme="custom"] .glass-card:hover,
+  [data-theme="custom"] .glass-card:active {
+    background: var(--dropdown-bg);
+    border-color: var(--glass-border-hover);
+  }
+
+  /* Modal specific - fully opaque backgrounds using CSS variables */
   .modal-content,
   [role="dialog"] {
     background: var(--dropdown-bg) !important;
@@ -362,15 +375,16 @@
 
   [data-theme="light"] .modal-content,
   [data-theme="light"] [role="dialog"] {
-    background: #ffffff !important;
-    border: 2px solid rgba(0, 0, 0, 0.15) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    background: var(--dropdown-bg) !important;
+    border: 2px solid var(--glass-border) !important;
+    box-shadow: 0 25px 50px -12px var(--glass-shadow) !important;
   }
   
-  /* Ensure dialog content inherits correct colors */
-  [data-theme="light"] [role="dialog"] * {
-    --dropdown-bg: #ffffff;
-    --glass-bg: #ffffff;
+  [data-theme="custom"] .modal-content,
+  [data-theme="custom"] [role="dialog"] {
+    background: var(--dropdown-bg) !important;
+    border: 2px solid var(--glass-border) !important;
+    box-shadow: 0 25px 50px -12px var(--glass-shadow) !important;
   }
 
   /* ========================================
@@ -423,21 +437,37 @@
   }
 
   [data-theme="light"] .btn-secondary {
-    background: #ffffff;
-    border: 2px solid rgba(0, 0, 0, 0.2);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    color: #000000;
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
+    box-shadow: 0 1px 3px var(--glass-shadow);
+    color: var(--foreground);
   }
 
   [data-theme="light"] .btn-secondary:hover {
-    background: #fafafa;
-    border-color: rgba(0, 0, 0, 0.4);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+    box-shadow: 0 2px 6px var(--glass-shadow);
   }
 
   [data-theme="light"] .btn-secondary:active {
-    background: #f5f5f5;
-    border-color: rgba(0, 0, 0, 0.5);
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+  }
+  
+  [data-theme="custom"] .btn-secondary {
+    background: var(--secondary-bg);
+    border: 2px solid var(--secondary-border);
+    color: var(--foreground);
+  }
+
+  [data-theme="custom"] .btn-secondary:hover {
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
+  }
+
+  [data-theme="custom"] .btn-secondary:active {
+    background: var(--secondary-hover);
+    border-color: var(--glass-border-hover);
   }
 
   /* Secondary button with accent border - for special CTAs */
@@ -541,8 +571,13 @@
   }
 
   [data-theme="light"] .surface-elevated {
-    background: rgba(255, 255, 255, 0.9);
-    border: 2px solid rgba(0, 0, 0, 0.15);
+    background: var(--dropdown-bg);
+    border: 2px solid var(--glass-border);
+  }
+  
+  [data-theme="custom"] .surface-elevated {
+    background: var(--secondary-bg);
+    border: 1px solid var(--glass-border);
   }
 
   .surface-sunken {

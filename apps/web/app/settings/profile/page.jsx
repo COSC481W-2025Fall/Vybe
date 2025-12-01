@@ -416,9 +416,9 @@ function ProfileSettingsContent() {
   if (!initialized && loading && !profileData) {
     return (
       <>
-        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-4 sm:px-6 py-4 w-full flex-shrink-0 rounded-t-xl">
           <div className="flex items-center gap-3">
-            <User className="h-6 w-6 text-purple-400" />
+            <User className="h-6 w-6 text-[var(--accent)]" />
             <div>
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
               <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
@@ -429,7 +429,7 @@ function ProfileSettingsContent() {
         </div>
         <div className="p-6">
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]" />
           </div>
         </div>
       </>
@@ -440,9 +440,9 @@ function ProfileSettingsContent() {
   if (!initialized && profileError && !profileData) {
     return (
       <>
-        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-4 sm:px-6 py-4 w-full flex-shrink-0 rounded-t-xl">
           <div className="flex items-center gap-3">
-            <User className="h-6 w-6 text-purple-400" />
+            <User className="h-6 w-6 text-[var(--accent)]" />
             <div>
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
               <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
@@ -465,9 +465,9 @@ function ProfileSettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-4 sm:px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-[var(--glass-border)] bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] px-4 sm:px-6 py-4 w-full flex-shrink-0 rounded-t-xl">
         <div className="flex items-center gap-3">
-          <User className="h-6 w-6 text-purple-400" />
+          <User className="h-6 w-6 text-[var(--accent)]" />
           <div>
             <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
@@ -493,11 +493,11 @@ function ProfileSettingsContent() {
               className={[
                 'w-full px-4 py-2.5 rounded-lg bg-[var(--input-bg)] border-2 backdrop-blur-[60px]',
                 'text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-base sm:text-sm',
-                'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30',
                 'touch-manipulation',
                 errors.display_name
                   ? 'border-red-500/50'
-                  : 'border-[var(--glass-border)] [data-theme="light"]:border-black/20 focus:border-purple-500/50',
+                  : 'border-[var(--glass-border)] focus:border-[var(--accent)]',
               ].join(' ')}
               placeholder="Enter your display name"
             />
@@ -530,11 +530,11 @@ function ProfileSettingsContent() {
               className={[
                 'w-full px-4 py-2.5 rounded-lg bg-[var(--input-bg)] border-2 resize-none backdrop-blur-[60px]',
                 'text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-base sm:text-sm',
-                'focus:outline-none focus:ring-2 focus:ring-purple-500/50',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30',
                 'touch-manipulation',
                 errors.bio
                   ? 'border-red-500/50'
-                  : 'border-[var(--glass-border)] [data-theme="light"]:border-black/20 focus:border-purple-500/50',
+                  : 'border-[var(--glass-border)] focus:border-[var(--accent)]',
               ].join(' ')}
               placeholder="Tell us about yourself..."
             />
@@ -650,7 +650,7 @@ function ProfileSettingsContent() {
                 <button
                   type="button"
                   onClick={() => setShowFriendRequestsModal(true)}
-                  className="relative flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg text-sm transition-colors border border-purple-500/30"
+                  className="relative flex items-center gap-2 px-3 py-1.5 bg-[color-mix(in_srgb,var(--accent)_20%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] text-[var(--accent)] rounded-lg text-sm transition-colors border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
                 >
                   <MailIcon className="h-4 w-4" />
                   Requests
@@ -673,17 +673,17 @@ function ProfileSettingsContent() {
 
             {friendsLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400" />
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--accent)]" />
               </div>
             ) : friends.length > 0 ? (
               <div className="space-y-2">
                 {friends.map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-white/10 [data-theme='light']:border-black/20 bg-white/5 [data-theme='light']:bg-black/5"
+                    className="flex items-center justify-between p-3 rounded-lg border border-[var(--glass-border)] bg-[var(--secondary-bg)]"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold overflow-hidden">
+                      <div className="h-10 w-10 rounded-full bg-[var(--accent)] flex items-center justify-center text-white font-semibold overflow-hidden">
                         {friend.profile_picture_url ? (
                           <img
                             src={friend.profile_picture_url}
@@ -722,7 +722,7 @@ function ProfileSettingsContent() {
                 <button
                   type="button"
                   onClick={() => setShowAddFriendsModal(true)}
-                  className="text-sm text-purple-400 hover:text-purple-300"
+                  className="text-sm text-[var(--accent)] hover:opacity-80"
                 >
                   Add your first friend
                 </button>

@@ -13,15 +13,11 @@ export function Textarea({ className, ...props }) {
         "text-[var(--foreground)] placeholder:text-[var(--muted-foreground)]",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
         
-        // Consistent background across all themes using --input-bg
+        // Consistent background and border using CSS variables for all themes
         "bg-[var(--input-bg)] border-[var(--glass-border)]",
         
-        // Light mode - ensure pure white bg with visible border
-        "[data-theme='light']:bg-white [data-theme='light']:border-black/15",
-        
-        // Focus states
+        // Focus states - uses accent color
         "focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30 focus-visible:border-[var(--accent)]",
-        "[data-theme='light']:focus-visible:border-black/40",
         
         // Invalid states
         "aria-invalid:ring-red-500/20 aria-invalid:border-red-500",

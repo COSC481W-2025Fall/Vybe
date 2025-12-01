@@ -73,7 +73,7 @@ export default function PublicProfilePage() {
   // Loading
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-[var(--muted-foreground)]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400" />
           <p>Loading profile…</p>
@@ -85,7 +85,7 @@ export default function PublicProfilePage() {
   // Error / not found
   if (error || !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--background)]">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md w-full glass-card rounded-2xl p-6 text-center">
           <div className="flex justify-center mb-3">
             <AlertCircle className="h-10 w-10 text-red-400" />
@@ -103,7 +103,7 @@ export default function PublicProfilePage() {
 
   // Public profile view
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-[var(--background)]">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="max-w-xl w-full glass-card rounded-2xl p-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">

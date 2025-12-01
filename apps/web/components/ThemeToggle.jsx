@@ -185,20 +185,21 @@ function ProviderThemeToggle({ prov }) {
                       onClick={() => applyPreset(preset)}
                       className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-[var(--glass-border)] hover:border-[var(--accent)] transition-all cursor-pointer group"
                     >
-                      {/* Color palette preview */}
-                      <div className="flex -space-x-1">
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-white/20"
-                          style={{ background: preset.background }}
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-white/20"
-                          style={{ background: preset.accent }}
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-white/20"
-                          style={{ background: preset.foreground }}
-                        />
+                      {/* Color preview - background with accent ring */}
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ 
+                          background: preset.background,
+                          border: `3px solid ${preset.accent}`,
+                          boxShadow: `0 0 0 1px rgba(255,255,255,0.1), inset 0 0 8px ${preset.accent}40`
+                        }}
+                      >
+                        <span 
+                          className="text-xs font-bold"
+                          style={{ color: preset.foreground }}
+                        >
+                          Aa
+                        </span>
                       </div>
                       <div className="flex-1 text-left">
                         <p className="text-sm font-medium text-[var(--foreground)]">{preset.name}</p>
@@ -221,20 +222,21 @@ function ProviderThemeToggle({ prov }) {
                       onClick={() => applyPreset(preset)}
                       className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-[var(--glass-border)] hover:border-[var(--accent)] transition-all cursor-pointer group"
                     >
-                      {/* Color palette preview */}
-                      <div className="flex -space-x-1">
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-black/10"
-                          style={{ background: preset.background }}
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-black/10"
-                          style={{ background: preset.accent }}
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-black/10"
-                          style={{ background: preset.foreground }}
-                        />
+                      {/* Color preview - background with accent ring */}
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ 
+                          background: preset.background,
+                          border: `3px solid ${preset.accent}`,
+                          boxShadow: `0 0 0 1px rgba(0,0,0,0.05)`
+                        }}
+                      >
+                        <span 
+                          className="text-xs font-bold"
+                          style={{ color: preset.foreground }}
+                        >
+                          Aa
+                        </span>
                       </div>
                       <div className="flex-1 text-left">
                         <p className="text-sm font-medium text-[var(--foreground)]">{preset.name}</p>
@@ -259,20 +261,21 @@ function ProviderThemeToggle({ prov }) {
                       onClick={() => applyPreset(preset)}
                       className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-[var(--glass-border)] hover:border-[var(--accent)] transition-all cursor-pointer group"
                     >
-                      {/* Color palette preview */}
-                      <div className="flex -space-x-1">
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-white/20"
-                          style={{ background: preset.background }}
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-white/20"
-                          style={{ background: preset.accent }}
-                        />
-                        <div
-                          className="w-6 h-6 rounded-full border-2 border-white/20"
-                          style={{ background: preset.foreground }}
-                        />
+                      {/* Color preview - background with accent ring */}
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ 
+                          background: preset.background,
+                          border: `3px solid ${preset.accent}`,
+                          boxShadow: `0 0 0 1px rgba(255,255,255,0.1), inset 0 0 8px ${preset.accent}40`
+                        }}
+                      >
+                        <span 
+                          className="text-xs font-bold"
+                          style={{ color: preset.foreground }}
+                        >
+                          Aa
+                        </span>
                       </div>
                       <div className="flex-1 text-left">
                         <p className="text-sm font-medium text-[var(--foreground)]">{preset.name}</p>
@@ -349,65 +352,87 @@ function ProviderThemeToggle({ prov }) {
               {/* Live Preview */}
               <div className="mt-4">
                 <h4 className="text-sm font-medium text-[var(--foreground)] mb-2">Live Preview</h4>
+                {/* Page background */}
                 <div
-                  className="p-4 rounded-xl border-2 shadow-lg"
+                  className="p-3 rounded-xl"
                   style={{
                     background: customColors.background || '#000000',
-                    borderColor: customColors.accent || '#00d4ff',
                   }}
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div
-                      className="w-8 h-8 rounded-full"
-                      style={{ background: customColors.accent || '#00d4ff' }}
-                    />
-                    <div>
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: customColors.foreground || '#ffffff' }}
-                      >
-                        Display Name
-                      </p>
-                      <p
-                        className="text-xs opacity-60"
-                        style={{ color: customColors.foreground || '#ffffff' }}
-                      >
-                        @username
-                      </p>
-                    </div>
-                  </div>
-                  <p
-                    className="text-sm mb-3"
-                    style={{ color: customColors.foreground || '#ffffff' }}
+                  {/* Card (slightly elevated from background) */}
+                  <div
+                    className="p-3 rounded-lg border-2 shadow-lg"
+                    style={{
+                      background: (() => {
+                        const bg = customColors.background || '#000000';
+                        const r = parseInt(bg.slice(1, 3), 16);
+                        const g = parseInt(bg.slice(3, 5), 16);
+                        const b = parseInt(bg.slice(5, 7), 16);
+                        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                        if (lum < 0.5) {
+                          // Dark - lighten
+                          return `rgb(${Math.min(r + 15, 255)}, ${Math.min(g + 15, 255)}, ${Math.min(b + 20, 255)})`;
+                        } else {
+                          // Light - darken slightly
+                          return `rgb(${Math.max(r - 8, 240)}, ${Math.max(g - 8, 240)}, ${Math.max(b - 8, 240)})`;
+                        }
+                      })(),
+                      borderColor: customColors.accent || '#00d4ff',
+                    }}
                   >
-                    This is how your theme will look across the app.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                      style={{
-                        background: customColors.foreground || '#ffffff',
-                        color: customColors.background || '#000000',
-                      }}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div
+                        className="w-6 h-6 rounded-full"
+                        style={{ background: customColors.accent || '#00d4ff' }}
+                      />
+                      <div>
+                        <p
+                          className="text-xs font-semibold"
+                          style={{ color: customColors.foreground || '#ffffff' }}
+                        >
+                          Display Name
+                        </p>
+                        <p
+                          className="text-[10px] opacity-60"
+                          style={{ color: customColors.foreground || '#ffffff' }}
+                        >
+                          @username
+                        </p>
+                      </div>
+                    </div>
+                    <p
+                      className="text-xs mb-2"
+                      style={{ color: customColors.foreground || '#ffffff' }}
                     >
-                      Primary
-                    </button>
-                    <button
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium border"
-                      style={{
-                        background: 'transparent',
-                        color: customColors.foreground || '#ffffff',
-                        borderColor: customColors.accent || '#00d4ff',
-                      }}
-                    >
-                      Secondary
-                    </button>
-                    <button
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-white"
-                      style={{ background: customColors.accent || '#00d4ff' }}
-                    >
-                      Accent
-                    </button>
+                      Card content preview
+                    </p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      <button
+                        className="px-2 py-1 rounded text-[10px] font-medium"
+                        style={{
+                          background: customColors.foreground || '#ffffff',
+                          color: customColors.background || '#000000',
+                        }}
+                      >
+                        Primary
+                      </button>
+                      <button
+                        className="px-2 py-1 rounded text-[10px] font-medium border"
+                        style={{
+                          background: 'transparent',
+                          color: customColors.foreground || '#ffffff',
+                          borderColor: customColors.accent || '#00d4ff',
+                        }}
+                      >
+                        Secondary
+                      </button>
+                      <button
+                        className="px-2 py-1 rounded text-[10px] font-medium text-white"
+                        style={{ background: customColors.accent || '#00d4ff' }}
+                      >
+                        Accent
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

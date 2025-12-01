@@ -96,27 +96,27 @@ function generateGlassColors(background, foreground, accent) {
   const bgLum = getLuminance(bg.r, bg.g, bg.b);
   
   if (bgLum < 0.5) {
-    // Dark background - use SOLID colors for visibility
-    const glassR = Math.min(bg.r + 10, 30);
-    const glassG = Math.min(bg.g + 10, 30);
-    const glassB = Math.min(bg.b + 15, 40);
+    // Dark background - lighten slightly for cards
+    const glassR = Math.min(bg.r + 15, 255);
+    const glassG = Math.min(bg.g + 15, 255);
+    const glassB = Math.min(bg.b + 20, 255);
     
-    // Solid colors for modal backgrounds
-    const dropdownR = Math.min(bg.r + 5, 15);
-    const dropdownG = Math.min(bg.g + 5, 15);
-    const dropdownB = Math.min(bg.b + 8, 20);
+    // Dropdown/modal background - slightly lighter than page
+    const dropdownR = Math.min(bg.r + 8, 255);
+    const dropdownG = Math.min(bg.g + 8, 255);
+    const dropdownB = Math.min(bg.b + 12, 255);
     
     // Input background - slightly lighter than page background
-    const inputR = Math.min(bg.r + 10, 25);
-    const inputG = Math.min(bg.g + 10, 25);
-    const inputB = Math.min(bg.b + 15, 35);
+    const inputR = Math.min(bg.r + 12, 255);
+    const inputG = Math.min(bg.g + 12, 255);
+    const inputB = Math.min(bg.b + 18, 255);
     
     return {
-      glassBg: rgbToHex(glassR, glassG, glassB), // SOLID
+      glassBg: rgbToHex(glassR, glassG, glassB), // SOLID - derived from background
       glassBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.3)`,
       glassBorderHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.5)`,
       glassShadow: 'rgba(0, 0, 0, 0.6)',
-      dropdownBg: rgbToHex(dropdownR, dropdownG, dropdownB), // SOLID
+      dropdownBg: rgbToHex(dropdownR, dropdownG, dropdownB), // SOLID - derived from background
       inputBg: rgbToHex(inputR, inputG, inputB), // Input background
       // Accent-based secondary styling
       secondaryBg: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.08)`,
@@ -126,14 +126,28 @@ function generateGlassColors(background, foreground, accent) {
       scrollbarThumbHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.5)`,
     };
   } else {
-    // Light background - use SOLID white
+    // Light background - darken slightly for cards (or keep near-white)
+    const glassR = Math.max(bg.r - 8, 240);
+    const glassG = Math.max(bg.g - 8, 240);
+    const glassB = Math.max(bg.b - 8, 240);
+    
+    // Dropdown - slightly darker than page
+    const dropdownR = Math.max(bg.r - 5, 245);
+    const dropdownG = Math.max(bg.g - 5, 245);
+    const dropdownB = Math.max(bg.b - 5, 245);
+    
+    // Input - same as dropdown or page
+    const inputR = Math.max(bg.r - 3, 248);
+    const inputG = Math.max(bg.g - 3, 248);
+    const inputB = Math.max(bg.b - 3, 248);
+    
     return {
-      glassBg: '#ffffff', // SOLID white
+      glassBg: rgbToHex(glassR, glassG, glassB), // SOLID - derived from background
       glassBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.2)`,
       glassBorderHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.4)`,
       glassShadow: 'rgba(0, 0, 0, 0.15)',
-      dropdownBg: '#ffffff', // SOLID white
-      inputBg: '#ffffff', // Pure white input background
+      dropdownBg: rgbToHex(dropdownR, dropdownG, dropdownB), // SOLID - derived from background
+      inputBg: rgbToHex(inputR, inputG, inputB), // Input background
       // Secondary styling
       secondaryBg: 'rgba(0, 0, 0, 0.03)',
       secondaryBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.15)`,
