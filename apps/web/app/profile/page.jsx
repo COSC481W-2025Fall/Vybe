@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [friends, setFriends] = useState([]);
+  const [friendSongs, setFriendSongs] = useState({});
   const [loading, setLoading] = useState(true);
   const [showAddFriendsModal, setShowAddFriendsModal] = useState(false);
   const [showFriendRequestsModal, setShowFriendRequestsModal] = useState(false);
@@ -46,6 +47,7 @@ export default function ProfilePage() {
     await Promise.all([
       fetchProfile(),
       fetchFriends(),
+      fetchFriendsSongs(),
       fetchSongOfDay()
     ]);
 
@@ -74,6 +76,27 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Error fetching friends:', error);
+    }
+  };
+
+  const fetchFriendsSongs = async () => {
+    try {
+      const response = await fetch('/api/friends/songs');
+      const data = await response.json();
+      if (data.success) {
+        const map = {};
+        (data.songs || []).forEach((song) => {
+          const key = song.shared_by_username?.toLowerCase() || song.shared_by?.toLowerCase();
+          if (!key) return;
+          map[key] = song;
+        });
+        setFriendSongs(map);
+      } else {
+        setFriendSongs({});
+      }
+    } catch (error) {
+      console.error('Error fetching friends songs:', error);
+      setFriendSongs({});
     }
   };
 
@@ -337,10 +360,16 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {friends.slice(0, 5).map((friend) => (
+              {friends.slice(0, 5).map((friend) => {
+                const songKey = friend.username?.toLowerCase();
+                const friendSong = songKey ? friendSongs[songKey] : undefined;
+                const hasSpotify = Boolean(friendSong?.spotifyUrl);
+                const hasYouTube = Boolean(friendSong?.youtubeUrl);
+
+                return (
                 <div
                   key={friend.id}
-                  className="flex items-center space-x-3 p-3 bg-white/5 [data-theme='light']:bg-black/5 rounded-lg border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors"
+                  className="flex items-center gap-3 p-3 bg-white/5 [data-theme='light']:bg-black/5 rounded-lg border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors"
                 >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden">
                     {friend.profile_picture_url ? (
@@ -362,6 +391,34 @@ export default function ProfilePage() {
                       </p>
                     )}
                   </div>
+                  {(hasSpotify || hasYouTube) && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {hasSpotify && (
+                        <a
+                          href={friendSong.spotifyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg border border-white/20 [data-theme='light']:border-black/20 text-[var(--foreground)] hover:bg-green-600/80 hover:text-white transition-colors"
+                          title={`Open ${friend.name}'s song in Spotify`}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          <span>Spotify</span>
+                        </a>
+                      )}
+                      {hasYouTube && (
+                        <a
+                          href={friendSong.youtubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg border border-white/20 [data-theme='light']:border-black/20 text-[var(--foreground)] hover:bg-red-600/80 hover:text-white transition-colors"
+                          title={`Open ${friend.name}'s song in YouTube`}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          <span>YouTube</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                   <button
                     onClick={() => {
                       setFriendToRemove(friend);
@@ -373,7 +430,7 @@ export default function ProfilePage() {
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-              ))}
+              )})}
               {friends.length > 5 && (
                 <p className="text-sm text-[var(--muted-foreground)] text-center pt-2">
                   +{friends.length - 5} more friends
@@ -393,6 +450,7 @@ export default function ProfilePage() {
           onClose={() => {
             setShowAddFriendsModal(false);
             fetchFriends(); // Refresh friends list after closing modal
+            fetchFriendsSongs();
           }}
         />
       )}
@@ -403,6 +461,7 @@ export default function ProfilePage() {
           onClose={() => {
             setShowFriendRequestsModal(false);
             fetchFriends(); // Refresh friends list after closing modal
+            fetchFriendsSongs();
           }}
         />
       )}
@@ -452,6 +511,14 @@ export default function ProfilePage() {
 
                     // Refresh friends list
                     setFriends(friends.filter(f => f.id !== friendToRemove.id));
+                    setFriendSongs((prev) => {
+                      if (!friendToRemove.username) return prev;
+                      const key = friendToRemove.username.toLowerCase();
+                      if (!prev[key]) return prev;
+                      const updated = { ...prev };
+                      delete updated[key];
+                      return updated;
+                    });
                     toast.success(`${friendToRemove.name} has been removed from your friends.`);
                     setShowRemoveFriendModal(false);
                     setFriendToRemove(null);

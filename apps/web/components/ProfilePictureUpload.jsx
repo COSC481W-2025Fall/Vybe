@@ -46,14 +46,14 @@ export default function ProfilePictureUpload({
 
   return (
     <div className="space-y-4">
-      <label className="block text-sm font-medium text-white mb-2">
+      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
         Profile Picture
       </label>
 
       <div className="flex items-start gap-6">
         {/* Preview */}
         <div className="flex-shrink-0">
-          <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-white/20 bg-white/5 flex items-center justify-center">
+          <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-[var(--glass-border)] bg-white/5 [data-theme='light']:bg-black/5 flex items-center justify-center">
             {preview ? (
               <img
                 src={preview}
@@ -61,7 +61,7 @@ export default function ProfilePictureUpload({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <UserIcon className="w-12 h-12 text-gray-400" />
+              <UserIcon className="w-12 h-12 text-[var(--muted-foreground)]" />
             )}
           </div>
         </div>
@@ -74,8 +74,8 @@ export default function ProfilePictureUpload({
             disabled={disabled}
             className={[
               'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-              'border border-white/20 text-white',
-              'hover:bg-white/5 hover:border-white/30',
+              'border border-[var(--glass-border)] text-[var(--foreground)]',
+              'hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 hover:border-[var(--glass-border-hover)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               'flex items-center gap-2'
             ].join(' ')}
@@ -102,7 +102,7 @@ export default function ProfilePictureUpload({
             </button>
           )}
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[var(--muted-foreground)]">
             Image is stored locally in your browser (base64), not uploaded to the server.
           </p>
         </div>

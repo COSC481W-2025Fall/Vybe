@@ -176,12 +176,12 @@ function NotificationSettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-purple-400" />
           <div>
-            <h2 className="text-xl font-semibold text-white">Notifications</h2>
-            <p className="text-sm text-gray-400 mt-0.5">
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">Notifications</h2>
+            <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
               Configure your notification preferences
             </p>
           </div>
@@ -234,7 +234,7 @@ function NotificationSettingsContent() {
               <option value="daily">Daily Digest - One email per day</option>
               <option value="weekly">Weekly Summary - One email per week</option>
             </select>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-[var(--muted-foreground)] mt-1">
               Choose how often you receive email notifications
             </p>
           </div>

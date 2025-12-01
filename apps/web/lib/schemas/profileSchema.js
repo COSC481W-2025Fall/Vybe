@@ -127,13 +127,13 @@ const profilePictureUrlSchema = z
  * });
  * ```
  */
-const baseProfileSchema = z.object({
-  display_name: displayNameSchema.optional(),
-  bio: bioSchema,
-  profile_picture_url: profilePictureUrlSchema,
-  is_public: z.boolean().default(false),
-   
-}, {
+const baseProfileSchema = z.object(
+  {
+    display_name: displayNameSchema.optional(),
+    bio: bioSchema,
+    profile_picture_url: profilePictureUrlSchema,
+  },
+  {
   required_error: 'Profile data is required',
   invalid_type_error: 'Profile data must be an object',
 });
