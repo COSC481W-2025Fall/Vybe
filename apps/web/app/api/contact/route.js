@@ -22,9 +22,35 @@ export async function POST(request) {
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Type validation - ensure all inputs are strings
+    if (typeof name !== 'string' || typeof email !== 'string' || 
+        typeof subject !== 'string' || typeof message !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid input format.' },
+        { status: 400 }
+      );
+    }
+
+    // Length validation - prevent ReDoS and abuse
+    const MAX_EMAIL_LENGTH = 254; // RFC 5321 max email length
+    const MAX_NAME_LENGTH = 100;
+    const MAX_SUBJECT_LENGTH = 200;
+    const MAX_MESSAGE_LENGTH = 5000;
+
+    if (email.length > MAX_EMAIL_LENGTH || name.length > MAX_NAME_LENGTH ||
+        subject.length > MAX_SUBJECT_LENGTH || message.length > MAX_MESSAGE_LENGTH) {
+      return NextResponse.json(
+        { error: 'Input exceeds maximum allowed length.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format (safe after length check)
+    // Simple validation: must have exactly one @, text before and after, and a dot after @
+    const atIndex = email.indexOf('@');
+    const lastAtIndex = email.lastIndexOf('@');
+    if (atIndex < 1 || atIndex !== lastAtIndex || atIndex > email.length - 4 || 
+        email.indexOf('.', atIndex) === -1 || email.includes(' ')) {
       return NextResponse.json(
         { error: 'Please enter a valid email address.' },
         { status: 400 }
