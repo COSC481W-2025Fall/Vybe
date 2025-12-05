@@ -3,7 +3,7 @@
 
 import SongSearchModal from '@/components/SongSearchModal';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { Heart, Music, Users, X, ExternalLink, User as UserIcon } from 'lucide-react';
+import { Music, Users, UserCheck, X, ExternalLink, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useGroups } from '@/hooks/useGroups';
@@ -13,11 +13,11 @@ export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [friends, setFriends] = useState([]);
-  const [friendSongs, setFriendSongs] = useState({});
   const [loading, setLoading] = useState(true);
   const [showSongSearchModal, setShowSongSearchModal] = useState(false);
   const [songOfDay, setSongOfDay] = useState(null);
+  const [friendsCount, setFriendsCount] = useState(0);
+  const [friendsLoading, setFriendsLoading] = useState(true);
 
   // Use the same hook as My Groups page for consistent group count
   const { groups, loading: groupsLoading } = useGroups();
@@ -39,13 +39,27 @@ export default function ProfilePage() {
     // Load all data in parallel
     await Promise.all([
       fetchProfile(),
-      fetchFriends(),
-      fetchFriendsSongs(),
-      fetchSongOfDay()
+      fetchSongOfDay(),
+      fetchFriendsCount()
     ]);
 
     setLoading(false);
   }
+
+  const fetchFriendsCount = async () => {
+    try {
+      setFriendsLoading(true);
+      const response = await fetch('/api/friends');
+      const data = await response.json();
+      if (data.success) {
+        setFriendsCount(data.friends?.length || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching friends count:', error);
+    } finally {
+      setFriendsLoading(false);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -56,40 +70,6 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-    }
-  };
-
-  const fetchFriends = async () => {
-    try {
-      const response = await fetch('/api/friends');
-      const data = await response.json();
-
-      if (data.success) {
-        setFriends(data.friends || []);
-      }
-    } catch (error) {
-      console.error('Error fetching friends:', error);
-    }
-  };
-
-  const fetchFriendsSongs = async () => {
-    try {
-      const response = await fetch('/api/friends/songs');
-      const data = await response.json();
-      if (data.success) {
-        const map = {};
-        (data.songs || []).forEach((song) => {
-          const key = song.shared_by_username?.toLowerCase() || song.shared_by?.toLowerCase();
-          if (!key) return;
-          map[key] = song;
-        });
-        setFriendSongs(map);
-      } else {
-        setFriendSongs({});
-      }
-    } catch (error) {
-      console.error('Error fetching friends songs:', error);
-      setFriendSongs({});
     }
   };
 
@@ -186,10 +166,14 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-[var(--foreground)]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-[var(--foreground)]"></div>
-          <p className="text-[var(--muted-foreground)] text-sm sm:text-base">Loading...</p>
+      <div className="min-h-screen text-[var(--foreground)]">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+          <div className="flex items-center justify-center py-12 sm:py-16 md:py-20">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-[var(--foreground)]"></div>
+              <p className="text-[var(--muted-foreground)] text-sm sm:text-base">Loading profile...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -257,12 +241,12 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <div className="flex items-center space-x-1">
-                    <Heart className="h-4 w-4 text-pink-400" />
-                    <span className="font-medium">{friends.length}</span>
+                    <UserCheck className="h-4 w-4 text-green-400" />
+                    <span className="font-medium">{friendsLoading ? '...' : friendsCount}</span>
                   </div>
                   <p className="text-sm text-[var(--muted-foreground)]">Friends</p>
                 </div>
-            </div>
+              </div>
           </div>
           </div>
         </div>
@@ -334,103 +318,13 @@ export default function ProfilePage() {
             <div className="text-center py-8">
               <Music className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" />
               <h3 className="section-title mb-2 text-lg sm:text-xl">No song of the day yet</h3>
-              <p className="section-subtitle text-xs sm:text-sm mb-4">Share your current favorite song with friends</p>
+              <p className="section-subtitle text-xs sm:text-sm mb-4">Share your current favorite song</p>
               <button
                 onClick={() => setShowSongSearchModal(true)}
                 className="px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg text-sm sm:text-base"
               >
                 Set Song of the Day
               </button>
-            </div>
-          )}
-        </div>
-
-        {/* Friends Section */}
-        <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="section-subtitle flex items-center space-x-2">
-              <Heart className="h-5 w-5" />
-              <span>Friends ({friends.length})</span>
-            </h3>
-          </div>
-
-          {friends.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" />
-              <h3 className="section-title mb-2 text-lg sm:text-xl">No friends yet</h3>
-              <p className="section-subtitle text-xs sm:text-sm">Start connecting with friends to share music</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {friends.slice(0, 5).map((friend) => {
-                const songKey = friend.username?.toLowerCase();
-                const friendSong = songKey ? friendSongs[songKey] : undefined;
-                const hasSpotify = Boolean(friendSong?.spotifyUrl);
-                const hasYouTube = Boolean(friendSong?.youtubeUrl);
-
-                return (
-                <div
-                  key={friend.id}
-                  className="flex items-center gap-3 p-3 bg-white/5 [data-theme='light']:bg-black/5 rounded-lg border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden">
-                    {friend.profile_picture_url ? (
-                      <img
-                        src={friend.profile_picture_url}
-                        alt={friend.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span>{friend.name?.charAt(0).toUpperCase() || 'F'}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[var(--foreground)] truncate">{friend.name}</p>
-                    <p className="text-sm text-[var(--muted-foreground)] truncate">@{friend.username}</p>
-                    {friend.bio && (
-                      <p className="text-xs text-[var(--muted-foreground)] mt-1 line-clamp-2 opacity-80">
-                        {friend.bio}
-                      </p>
-                    )}
-                    {friendSong && (
-                      <p className="text-xs text-[var(--foreground)] mt-2 font-medium truncate">
-                        🎵 {friendSong.title || 'Untitled'} - {friendSong.artist || 'Unknown Artist'}
-                      </p>
-                    )}
-                  </div>
-                  {(hasSpotify || hasYouTube) && (
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      {hasSpotify && (
-                        <a
-                          href={friendSong.spotifyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg border border-white/20 [data-theme='light']:border-black/20 text-[var(--foreground)] hover:bg-green-600/80 hover:text-white transition-colors"
-                          title={`Open ${friend.name}'s song in Spotify`}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          <span>Spotify</span>
-                        </a>
-                      )}
-                      {hasYouTube && (
-                        <button
-                          onClick={() => searchAndOpenYouTubeVideo(friendSong.title, friendSong.artist)}
-                          className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-lg border border-white/20 [data-theme='light']:border-black/20 text-[var(--foreground)] hover:bg-red-600/80 hover:text-white transition-colors"
-                          title={`Open ${friend.name}'s song in YouTube`}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          <span>YouTube</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )})}
-              {friends.length > 5 && (
-                <p className="text-sm text-[var(--muted-foreground)] text-center pt-2">
-                  +{friends.length - 5} more friends
-                </p>
-              )}
             </div>
           )}
         </div>

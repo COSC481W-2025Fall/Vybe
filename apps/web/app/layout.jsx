@@ -7,6 +7,8 @@ import { Toaster } from '@/components/ui/sonner';
 import QueryProvider from '@/components/QueryProvider';
 import UrlTokenCleanup from '@/components/UrlTokenCleanup';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { RealtimeProvider } from '@/lib/realtime/RealtimeProvider';
+import AuroraBackground from '@/components/AuroraBackground';
 
 export const metadata = {
   title: 'Vybe',
@@ -70,17 +72,19 @@ export default async function RootLayout({ children }) {
       <body className="chroma-bg" suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>
-            <Suspense fallback={null}>
-              <UrlTokenCleanup />
-            </Suspense>
-            <div className="vybe-aurora-fixed" />
-            {user && <Navbar />}
-            <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
-              <div className="w-full max-w-6xl">
-                {children}
-              </div>
-            </main>
-            <Toaster />
+            <RealtimeProvider>
+              <Suspense fallback={null}>
+                <UrlTokenCleanup />
+              </Suspense>
+              <AuroraBackground />
+              {user && <Navbar />}
+              <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
+                <div className="w-full max-w-6xl">
+                  {children}
+                </div>
+              </main>
+              <Toaster />
+            </RealtimeProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

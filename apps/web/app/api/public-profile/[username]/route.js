@@ -4,12 +4,6 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
 export const dynamic = 'force-dynamic';
 
-// Make a Supabase client bound to cookies (same style as /api/user/profile)
-function makeSupabase() {
-  const cookieStore = cookies();
-  return createRouteHandlerClient({ cookies: () => cookieStore });
-}
-
 export async function GET(req, { params }) {
   try {
     // ⚠️ In new Next versions, params might be a Promise – be defensive
@@ -23,7 +17,9 @@ export async function GET(req, { params }) {
       );
     }
 
-    const supabase = makeSupabase();
+    // Await cookies() for Next.js 15+
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
     // DEBUG: log what we're querying for
     console.log('[public-profile] looking up username:', username);

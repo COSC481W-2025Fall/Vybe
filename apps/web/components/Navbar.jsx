@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, Library, User as UserIcon, LogOut, Settings, Menu, X } from 'lucide-react';
+import { Home, Users, Library, User as UserIcon, LogOut, Settings, Menu, X, HelpCircle } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import VybeLogo from './common/VybeLogo';
 import ThemeToggle from './ThemeToggle';
@@ -148,8 +148,19 @@ export default function Navbar() {
         {/* spacer right of center */}
         <div className="flex-1 hidden md:block" />
         
-        {/* Theme Toggle and Sign out button - desktop only */}
+        {/* Theme Toggle, Help, and Sign out button - desktop only */}
         <div className="hidden md:flex items-center gap-3">
+          <Link
+            href="/help"
+            className="group relative flex items-center justify-center rounded-xl p-2 text-sm font-medium transition-all nav-item backdrop-blur-sm border text-[var(--foreground)] bg-white/10 hover:bg-white/15 border-white/15 hover:border-white/25 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:border-black/10 [data-theme='light']:hover:border-black/20"
+            title="Help"
+          >
+            <HelpCircle className="h-4 w-4 opacity-80" />
+            {/* Tooltip on hover */}
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-[var(--background)] border border-[var(--glass-border)] rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+              Help
+            </span>
+          </Link>
           <ThemeToggle />
           <button
             onClick={handleSignOut}
@@ -220,6 +231,14 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+              <Link
+                href="/help"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3.5 text-base font-medium transition-colors text-[var(--foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/5 border-t border-[var(--glass-border)]"
+              >
+                <HelpCircle className="h-5 w-5 opacity-80" />
+                <span>Help</span>
+              </Link>
               <button
                 onClick={handleSignOut}
                 disabled={isSigningOut}

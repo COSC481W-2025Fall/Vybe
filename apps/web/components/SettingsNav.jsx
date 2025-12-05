@@ -115,7 +115,7 @@ export default function SettingsNav({
         key={section.id}
         ref={buttonRef}
         onKeyDown={(e) => handleKeyDown(e, section.path, index)}
-        className="focus-within:outline-none focus-within:ring-2 focus-within:ring-purple-500/50 focus-within:ring-offset-2 focus-within:ring-offset-[#0f0f0f] rounded-xl"
+        className="focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--accent)]/50 focus-within:ring-offset-2 focus-within:ring-offset-[var(--background)] rounded-xl"
       >
         <Link
           href={section.path}
@@ -126,10 +126,10 @@ export default function SettingsNav({
           }}
           className={[
             'w-full flex items-start gap-3 rounded-xl px-4 py-3.5 text-left transition-all block',
-            'focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:ring-offset-2 focus:ring-offset-[#0f0f0f]',
+            'focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:ring-offset-2 focus:ring-offset-[var(--background)]',
             'touch-manipulation min-h-[48px]', // Better touch target for mobile
             isActive
-              ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 shadow-lg'
+              ? 'bg-gradient-to-r from-[var(--accent)]/20 to-blue-500/20 border border-[var(--accent)]/30 shadow-lg'
               : 'text-[var(--muted-foreground)] hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 hover:text-[var(--foreground)] border border-transparent',
           ].join(' ')}
           aria-current={isActive ? 'page' : undefined}
@@ -138,7 +138,7 @@ export default function SettingsNav({
           <Icon
             className={[
               'h-5 w-5 flex-shrink-0 mt-0.5 transition-colors',
-              isActive ? 'text-purple-400' : 'text-gray-500',
+              isActive ? 'text-[var(--accent)]' : 'text-[var(--muted-foreground)]',
             ].join(' ')}
             aria-hidden="true"
           />

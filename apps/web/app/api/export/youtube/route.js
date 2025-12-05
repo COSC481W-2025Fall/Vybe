@@ -113,7 +113,7 @@ export async function POST(request) {
     if (authError || !user) {
       console.error('[Export YouTube] Authentication failed:', authError);
       return NextResponse.json(
-        { error: 'Unauthorized. Please log in.' },
+        { error: 'Please sign in to continue.' },
         { status: 401 }
       );
     }
@@ -371,12 +371,29 @@ export async function POST(request) {
     if (!createPlaylistResponse.ok) {
       const errorText = await createPlaylistResponse.text();
       console.error('[Export YouTube] Failed to create playlist:', errorText);
+      
+      // Parse error for better user messaging
+      let errorMessage = 'Failed to create YouTube playlist.';
+      let actionRequired = '';
+      
+      if (createPlaylistResponse.status === 401 || createPlaylistResponse.status === 403) {
+        errorMessage = 'YouTube authorization expired or invalid.';
+        actionRequired = 'Please go to Settings > Connected Accounts and reconnect your YouTube account.';
+      } else if (errorText.includes('quotaExceeded')) {
+        errorMessage = 'YouTube API quota exceeded.';
+        actionRequired = 'Please try again tomorrow or contact support.';
+      } else if (errorText.includes('forbidden')) {
+        errorMessage = 'YouTube permissions are insufficient.';
+        actionRequired = 'Please reconnect your YouTube account in Settings with full playlist access.';
+      }
+      
       return NextResponse.json(
         { 
-          error: 'Failed to create YouTube playlist',
-          details: errorText
+          error: `${errorMessage} ${actionRequired}`.trim(),
+          details: errorText,
+          requiresReconnect: createPlaylistResponse.status === 401 || createPlaylistResponse.status === 403
         },
-        { status: 500 }
+        { status: createPlaylistResponse.status || 500 }
       );
     }
 

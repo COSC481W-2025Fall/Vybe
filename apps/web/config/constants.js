@@ -1,9 +1,9 @@
 // Centralized configuration constants
 export const CONFIG = {
-  // Base URLs
-  BASE_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://yourdomain.com' 
-    : 'http://localhost:3000',
+  // Base URLs - Use environment variable for production URL
+  BASE_URL: process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production' 
+    ? 'https://vybe-app.vercel.app' // Update this to your actual production URL
+    : 'http://localhost:3000'),
   
   // API Configuration
   API_TIMEOUT: 30000,
@@ -39,6 +39,7 @@ export const CONFIG = {
     { href: '/dashboard', label: 'Home' },
     { href: '/groups', label: 'Groups' },
     { href: '/library', label: 'Library' },
+    { href: '/friends', label: 'Friends' },
     { href: '/profile', label: 'Profile' },
     { href: '/settings', label: 'Settings' },
   ],
