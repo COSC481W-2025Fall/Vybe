@@ -113,7 +113,8 @@ export default function GroupDetailPage({ params }) {
   }, [supabase]);
 
   // Subscribe to real-time updates for this group
-  const { isConnected: realtimeConnected } = useRealtimeGroup(groupId, {
+  // Use group.id (actual UUID) not groupId (could be slug from URL)
+  const { isConnected: realtimeConnected } = useRealtimeGroup(group?.id, {
     onGroupUpdate: handleGroupUpdate,
     onPlaylistChange: handlePlaylistChange,
     onSongChange: handleSongChange,
@@ -349,10 +350,11 @@ export default function GroupDetailPage({ params }) {
       
       // CRITICAL: Verify the database was updated before reloading
       // This helps catch if the API saved but we're not reading it
+      // Use group.id (actual UUID) not groupId (could be slug from URL)
       const { data: verifyGroup } = await supabase
         .from('groups')
         .select('all_songs_sort_order, all_songs_sorted_at')
-        .eq('id', groupId)
+        .eq('id', group.id)
         .single();
       
       if (verifyGroup) {
@@ -595,11 +597,12 @@ export default function GroupDetailPage({ params }) {
       // CRITICAL: Fetch fresh group data to get latest sort order
       // This ensures we have the most up-to-date all_songs_sort_order
       // React state might be stale after async operations
+      // Use group.id (actual UUID) not groupId (could be slug from URL)
       let currentGroup = group;
       const { data: freshGroupData } = await supabase
         .from('groups')
         .select('all_songs_sort_order, all_songs_sorted_at')
-        .eq('id', groupId)
+        .eq('id', group.id)
         .single();
       
       if (freshGroupData) {
@@ -1497,12 +1500,16 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   const [userExistingPlaylist, setUserExistingPlaylist] = useState(null);
 
   useEffect(() => {
-    // Run these checks in parallel
-    Promise.all([
-      checkConnectedAccounts(),
-      checkUserExistingPlaylist()
-    ]);
+    // Run connected accounts check on mount
+    checkConnectedAccounts();
   }, []);
+
+  useEffect(() => {
+    // Check user's existing playlist once group is loaded
+    if (group?.id) {
+      checkUserExistingPlaylist();
+    }
+  }, [group?.id]);
 
   useEffect(() => {
     // Load playlists from all connected platforms
@@ -1513,13 +1520,14 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
   async function checkUserExistingPlaylist() {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session || !group?.id) return;
 
     // Check if user already has a playlist in this group
+    // Use group.id (actual UUID) not groupId (could be slug from URL)
     const { data: existingPlaylist } = await supabase
       .from('group_playlists')
       .select('name, platform')
-      .eq('group_id', groupId)
+      .eq('group_id', group.id)
       .eq('added_by', session.user.id)
       .maybeSingle();
 
