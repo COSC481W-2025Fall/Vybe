@@ -417,15 +417,30 @@ export default function GroupDetailPage({ params }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !groupId) return;
 
-    // First, fetch the group - check if groupId is UUID or slug
-    let groupQuery = supabase.from('groups').select('*');
-    if (isUUID(groupId)) {
-      groupQuery = groupQuery.eq('id', groupId);
-    } else {
-      groupQuery = groupQuery.eq('slug', groupId);
-    }
+    // First, fetch the group - try slug first, then UUID as fallback
+    // This handles edge cases where slugs might look like UUIDs
+    let groupData = null;
+    let groupError = null;
     
-    const { data: groupData, error: groupError } = await groupQuery.single();
+    // Try slug first
+    const { data: bySlug } = await supabase
+      .from('groups')
+      .select('*')
+      .eq('slug', groupId)
+      .maybeSingle();
+    
+    if (bySlug) {
+      groupData = bySlug;
+    } else if (isUUID(groupId)) {
+      // Fallback to UUID lookup
+      const { data: byId, error } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('id', groupId)
+        .single();
+      groupData = byId;
+      groupError = error;
+    }
 
     if (groupError || !groupData) {
       console.error('[Groups] Error loading group:', groupError);

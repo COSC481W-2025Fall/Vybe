@@ -9,6 +9,29 @@ function isUUID(str) {
   return uuidRegex.test(str);
 }
 
+// Lookup group by slug first (preferred), then by UUID as fallback
+async function findGroup(supabase, identifier, selectFields = 'id, owner_id') {
+  // Try slug first (handles edge case where slug looks like UUID)
+  const { data: bySlug } = await supabase
+    .from('groups')
+    .select(selectFields)
+    .eq('slug', identifier)
+    .maybeSingle();
+  
+  if (bySlug) return { data: bySlug, error: null };
+  
+  // If not found by slug and looks like UUID, try by ID
+  if (isUUID(identifier)) {
+    return await supabase
+      .from('groups')
+      .select(selectFields)
+      .eq('id', identifier)
+      .single();
+  }
+  
+  return { data: null, error: { message: 'Group not found' } };
+}
+
 export async function DELETE(request, { params }) {
   try {
     const cookieStore = await cookies();
@@ -36,15 +59,8 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 });
     }
 
-    // Lookup group by ID or slug
-    let groupQuery = supabase.from('groups').select('id, owner_id');
-    if (isUUID(groupIdOrSlug)) {
-      groupQuery = groupQuery.eq('id', groupIdOrSlug);
-    } else {
-      groupQuery = groupQuery.eq('slug', groupIdOrSlug);
-    }
-
-    const { data: group, error: groupError } = await groupQuery.single();
+    // Lookup group by slug first, then UUID as fallback
+    const { data: group, error: groupError } = await findGroup(supabase, groupIdOrSlug);
 
     if (groupError || !group) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });

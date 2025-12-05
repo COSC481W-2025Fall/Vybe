@@ -24,6 +24,12 @@ BEGIN
     base_slug := 'group';
   END IF;
   
+  -- Prevent UUID-like slugs by adding 'g-' prefix if slug matches UUID pattern
+  -- UUID pattern: 8-4-4-4-12 hex characters
+  IF base_slug ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    base_slug := 'g-' || base_slug;
+  END IF;
+  
   final_slug := base_slug;
   
   -- Check for uniqueness and append number if needed

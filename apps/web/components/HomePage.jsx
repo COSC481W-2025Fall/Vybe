@@ -200,7 +200,7 @@ export function HomePage({ onNavigate } = {}) {
                 memberCount={group.memberCount}
                 songCount={group.songCount}
                 createdAt={group.createdAt || group.created_at}
-                onClick={() => navigate('groups', { groupId: group.id })}
+                onClick={() => navigate('groups', { groupSlug: group.slug || group.id })}
               />
             ))
           ) : (
