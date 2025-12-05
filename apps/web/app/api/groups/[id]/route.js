@@ -3,6 +3,12 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+// Helper to check if string is a UUID
+function isUUID(str) {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 export async function DELETE(request, { params }) {
   try {
     const cookieStore = await cookies();
@@ -16,18 +22,21 @@ export async function DELETE(request, { params }) {
 
     // Resolve params if it's a Promise
     const resolvedParams = await Promise.resolve(params);
-    const groupId = resolvedParams.id;
+    const groupIdOrSlug = resolvedParams.id;
 
-    if (!groupId) {
+    if (!groupIdOrSlug) {
       return NextResponse.json({ error: 'Group ID is required' }, { status: 400 });
     }
 
-    // Verify the group exists and user is the owner
-    const { data: group, error: groupError } = await supabase
-      .from('groups')
-      .select('id, name, owner_id')
-      .eq('id', groupId)
-      .single();
+    // Lookup group by ID or slug
+    let groupQuery = supabase.from('groups').select('id, name, owner_id');
+    if (isUUID(groupIdOrSlug)) {
+      groupQuery = groupQuery.eq('id', groupIdOrSlug);
+    } else {
+      groupQuery = groupQuery.eq('slug', groupIdOrSlug);
+    }
+
+    const { data: group, error: groupError } = await groupQuery.single();
 
     if (groupError || !group) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
@@ -37,11 +46,14 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Only the group owner can delete the group' }, { status: 403 });
     }
 
+    // Use actual group ID for deletion operations
+    const actualGroupId = group.id;
+
     // Delete all group members first (cascade should handle this, but being explicit)
     const { error: membersError } = await supabase
       .from('group_members')
       .delete()
-      .eq('group_id', groupId);
+      .eq('group_id', actualGroupId);
 
     if (membersError) {
       console.error('Error deleting group members:', membersError);
@@ -52,7 +64,7 @@ export async function DELETE(request, { params }) {
     const { error: playlistsError } = await supabase
       .from('group_playlists')
       .delete()
-      .eq('group_id', groupId);
+      .eq('group_id', actualGroupId);
 
     if (playlistsError) {
       console.error('Error deleting group playlists:', playlistsError);
@@ -63,7 +75,7 @@ export async function DELETE(request, { params }) {
     const { error: deleteError } = await supabase
       .from('groups')
       .delete()
-      .eq('id', groupId);
+      .eq('id', actualGroupId);
 
     if (deleteError) {
       console.error('Error deleting group:', deleteError);

@@ -23,7 +23,7 @@ export const CONFIG = {
   
   // Authentication
   AUTH_REDIRECT_PATH: '/sign-in',
-  DEFAULT_REDIRECT_PATH: '/library',
+  DEFAULT_REDIRECT_PATH: '/dashboard',
   
   // Public Routes (matching middleware.js)
   PUBLIC_ROUTES: [

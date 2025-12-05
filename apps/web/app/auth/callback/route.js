@@ -6,8 +6,8 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 export async function GET(request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next') || '/';
-  const intendedProvider = url.searchParams.get('provider'); // The provider button that was clicked
+  const next = url.searchParams.get('next') || '/dashboard';
+  const intendedProvider = url.searchParams.get('provider');
   
   // Security: Remove any sensitive parameters from URL (access_token, refresh_token, etc.)
   // These should never be in the URL - they come from the OAuth provider response or session

@@ -173,7 +173,7 @@ export default function GroupsPage() {
                 key={group.id}
                 group={group}
                 isOwner={group.owner_id === user?.id}
-                onClick={() => router.push(`/groups/${group.id}`)}
+                onClick={() => router.push(`/groups/${group.slug || group.id}`)}
               />
             ))}
           </div>

@@ -14,7 +14,7 @@ export default function SignInPage() {
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/library');
+        router.push('/dashboard');
       }
     }
     checkAuth();
@@ -24,7 +24,7 @@ export default function SignInPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'spotify',
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=/library&provider=spotify`,
+        redirectTo: `${location.origin}/auth/callback?provider=spotify`,
         scopes: 'user-read-email user-read-private playlist-read-private playlist-modify-private playlist-modify-public user-read-recently-played',
       },
       queryParams: { show_dialog: 'true' },
@@ -36,17 +36,17 @@ export default function SignInPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback?next=/library&provider=google`,
+        redirectTo: `${location.origin}/auth/callback?provider=google`,
         scopes: [
           'openid',
           'email',
           'profile',
           'https://www.googleapis.com/auth/youtube.readonly',
-          'https://www.googleapis.com/auth/youtube.force-ssl', // Allow playlist creation
+          'https://www.googleapis.com/auth/youtube.force-ssl',
         ].join(' '),
         queryParams: {
-          access_type: 'offline',  // Required to get a refresh token
-          prompt: 'consent',       // Force consent screen to ensure refresh token is returned
+          access_type: 'offline',
+          prompt: 'consent',
         },
       },
     });

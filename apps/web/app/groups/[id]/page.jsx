@@ -35,9 +35,15 @@ export default function GroupDetailPage({ params }) {
   useEffect(() => {
     // Unwrap params Promise
     Promise.resolve(params).then((resolvedParams) => {
-      setGroupId(resolvedParams.id);
+      setGroupId(resolvedParams.id); // Can be UUID or slug
     });
   }, [params]);
+
+  // Helper to check if string is a UUID
+  const isUUID = (str) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
 
   useEffect(() => {
     if (groupId) {
@@ -190,34 +196,41 @@ export default function GroupDetailPage({ params }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !groupId) return;
 
-    // Fetch group, members, and playlists in parallel
-    const [groupResult, memberResult, playlistResult] = await Promise.all([
-      supabase
-        .from('groups')
-        .select('*')
-        .eq('id', groupId)
-        .single(),
-      supabase
-        .from('group_members')
-        .select('user_id, joined_at')
-        .eq('group_id', groupId),
-      supabase
-        .from('group_playlists')
-        .select('*')
-        .eq('group_id', groupId)
-        .order('smart_sorted_order', { ascending: true, nullsLast: true })
-        .order('created_at', { ascending: true })
-    ]);
-
-    const { data: groupData, error: groupError } = groupResult;
-    const { data: memberData } = memberResult;
-    const { data: playlistData } = playlistResult;
+    // First, fetch the group - check if groupId is UUID or slug
+    let groupQuery = supabase.from('groups').select('*');
+    if (isUUID(groupId)) {
+      groupQuery = groupQuery.eq('id', groupId);
+    } else {
+      groupQuery = groupQuery.eq('slug', groupId);
+    }
+    
+    const { data: groupData, error: groupError } = await groupQuery.single();
 
     if (groupError || !groupData) {
       console.error('[Groups] Error loading group:', groupError);
       router.push('/groups');
       return;
     }
+
+    // Use the actual group ID for subsequent queries
+    const actualGroupId = groupData.id;
+
+    // Fetch members and playlists in parallel using actual ID
+    const [memberResult, playlistResult] = await Promise.all([
+      supabase
+        .from('group_members')
+        .select('user_id, joined_at')
+        .eq('group_id', actualGroupId),
+      supabase
+        .from('group_playlists')
+        .select('*')
+        .eq('group_id', actualGroupId)
+        .order('smart_sorted_order', { ascending: true, nullsLast: true })
+        .order('created_at', { ascending: true })
+    ]);
+
+    const { data: memberData } = memberResult;
+    const { data: playlistData } = playlistResult;
 
     // Log sort order status for debugging
     if (groupData.all_songs_sort_order) {

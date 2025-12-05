@@ -55,8 +55,8 @@ export function HomePage({ onNavigate } = {}) {
 
   const navigate = onNavigate ?? ((screen, params) => {
     if (!screen) return;
-    if (screen === 'groups' && params?.groupId) {
-      router.push(`/groups/${params.groupId}`);
+    if (screen === 'groups' && params?.groupSlug) {
+      router.push(`/groups/${params.groupSlug}`);
       return;
     }
     router.push(`/${screen}`);

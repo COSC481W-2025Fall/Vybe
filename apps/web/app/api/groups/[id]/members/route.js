@@ -3,6 +3,12 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+// Helper to check if string is a UUID
+function isUUID(str) {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 export async function DELETE(request, { params }) {
   try {
     const cookieStore = await cookies();
@@ -16,9 +22,9 @@ export async function DELETE(request, { params }) {
 
     // Resolve params if it's a Promise
     const resolvedParams = await Promise.resolve(params);
-    const groupId = resolvedParams.id;
+    const groupIdOrSlug = resolvedParams.id;
 
-    if (!groupId) {
+    if (!groupIdOrSlug) {
       return NextResponse.json({ error: 'Group ID is required' }, { status: 400 });
     }
 
@@ -30,12 +36,15 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Member ID is required' }, { status: 400 });
     }
 
-    // Verify the group exists and user is the owner
-    const { data: group, error: groupError } = await supabase
-      .from('groups')
-      .select('id, owner_id')
-      .eq('id', groupId)
-      .single();
+    // Lookup group by ID or slug
+    let groupQuery = supabase.from('groups').select('id, owner_id');
+    if (isUUID(groupIdOrSlug)) {
+      groupQuery = groupQuery.eq('id', groupIdOrSlug);
+    } else {
+      groupQuery = groupQuery.eq('slug', groupIdOrSlug);
+    }
+
+    const { data: group, error: groupError } = await groupQuery.single();
 
     if (groupError || !group) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
@@ -50,11 +59,14 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Cannot remove the group owner' }, { status: 400 });
     }
 
+    // Use actual group ID
+    const actualGroupId = group.id;
+
     // Verify the member exists in the group
     const { data: member, error: memberCheckError } = await supabase
       .from('group_members')
       .select('user_id')
-      .eq('group_id', groupId)
+      .eq('group_id', actualGroupId)
       .eq('user_id', memberId)
       .single();
 
@@ -66,7 +78,7 @@ export async function DELETE(request, { params }) {
     const { error: deleteError } = await supabase
       .from('group_members')
       .delete()
-      .eq('group_id', groupId)
+      .eq('group_id', actualGroupId)
       .eq('user_id', memberId);
 
     if (deleteError) {
