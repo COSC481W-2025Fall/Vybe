@@ -7,6 +7,35 @@ import { analyzeAndSortPlaylists } from '@/lib/services/openaiSorting';
 import { updatePlaylistOrder, updateSongOrder } from '@/lib/db/smartSorting';
 import { rateLimitMiddleware } from '@/lib/api/rateLimiter';
 
+// Helper to check if string is a UUID
+function isUUID(str) {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+// Lookup group by slug first (preferred), then by UUID as fallback
+async function findGroup(supabase, identifier, selectFields = 'id, name, owner_id') {
+  // Try slug first (handles edge case where slug looks like UUID)
+  const { data: bySlug } = await supabase
+    .from('groups')
+    .select(selectFields)
+    .eq('slug', identifier)
+    .maybeSingle();
+  
+  if (bySlug) return { data: bySlug, error: null };
+  
+  // If not found by slug and looks like UUID, try by ID
+  if (isUUID(identifier)) {
+    return await supabase
+      .from('groups')
+      .select(selectFields)
+      .eq('id', identifier)
+      .single();
+  }
+  
+  return { data: null, error: { message: 'Group not found' } };
+}
+
 /**
  * POST /api/groups/[id]/smart-sort
  * 
@@ -44,15 +73,15 @@ export async function POST(request, { params }) {
       });
     }
 
-    // Get group ID from params
+    // Get group ID or slug from params
     const resolvedParams = await Promise.resolve(params);
-    const groupId = resolvedParams.id;
+    const groupIdOrSlug = resolvedParams.id;
 
-    if (!groupId) {
+    if (!groupIdOrSlug) {
       return NextResponse.json({ error: 'Group ID is required' }, { status: 400 });
     }
 
-    console.log(`[Smart Sort API] Group: ${groupId}, User: ${user.id}`);
+    console.log(`[Smart Sort API] Group: ${groupIdOrSlug}, User: ${user.id}`);
 
     // Parse request body
     let body;
@@ -77,17 +106,16 @@ export async function POST(request, { params }) {
     console.log(`[Smart Sort API] Mode: ${mode}, SkipAI: ${skipAI}, SkipQueue: ${skipQueue}`);
     console.log(`[Smart Sort API] Queue: ${initialQueueStatus.queued} waiting, ${initialQueueStatus.running} running`);
 
-    // Verify user has access to this group (owner or member)
-    const { data: group, error: groupError } = await supabase
-      .from('groups')
-      .select('id, name, owner_id')
-      .eq('id', groupId)
-      .single();
+    // Verify user has access to this group (owner or member) - lookup by slug first
+    const { data: group, error: groupError } = await findGroup(supabase, groupIdOrSlug);
 
     if (groupError || !group) {
       console.error('[Smart Sort API] Group not found:', groupError);
       return NextResponse.json({ error: "This group doesn't exist or has been deleted." }, { status: 404 });
     }
+
+    // Use actual group ID for all subsequent queries
+    const actualGroupId = group.id;
 
     // Check if user is owner or member
     const isOwner = group.owner_id === user.id;
@@ -95,7 +123,7 @@ export async function POST(request, { params }) {
       const { data: membership } = await supabase
         .from('group_members')
         .select('id')
-        .eq('group_id', groupId)
+        .eq('group_id', actualGroupId)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -108,7 +136,7 @@ export async function POST(request, { params }) {
     const { data: playlists, error: playlistsError } = await supabase
       .from('group_playlists')
       .select('*')
-      .eq('group_id', groupId)
+      .eq('group_id', actualGroupId)
       .order('created_at', { ascending: true });
 
     if (playlistsError) {
@@ -176,7 +204,7 @@ export async function POST(request, { params }) {
           all_songs_sort_order: sortResult.sortedSongIds,
           all_songs_sorted_at: new Date().toISOString(),
         })
-        .eq('id', groupId);
+        .eq('id', actualGroupId);
 
       if (updateError) {
         console.error('[Smart Sort API] Failed to save sort order:', updateError);
@@ -199,11 +227,11 @@ export async function POST(request, { params }) {
       console.log('[Smart Sort API] Running per-playlist sort...');
       
       try {
-        const aiResult = await analyzeAndSortPlaylists(groupId, playlists, allSongsMetadata);
+        const aiResult = await analyzeAndSortPlaylists(actualGroupId, playlists, allSongsMetadata);
         
         // Save playlist order
         if (aiResult.playlistOrder && aiResult.playlistOrder.length > 0) {
-          await updatePlaylistOrder(supabase, groupId, aiResult.playlistOrder);
+          await updatePlaylistOrder(supabase, actualGroupId, aiResult.playlistOrder);
         }
 
         // Save song orders for each playlist
@@ -231,7 +259,7 @@ export async function POST(request, { params }) {
             all_songs_sort_order: sortResult.sortedSongIds,
             all_songs_sorted_at: new Date().toISOString(),
           })
-          .eq('id', groupId);
+          .eq('id', actualGroupId);
 
         result = {
           success: true,
