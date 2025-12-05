@@ -66,7 +66,7 @@ export default function SignInPage() {
             </div>
           </div>
           <h1 className="text-xl sm:text-2xl chroma-text-gradient font-semibold mb-2 px-2">Welcome to Vybe</h1>
-          <p className="text-gray-400 text-xs sm:text-sm px-2">Connect with friends and share your musical journey</p>
+          <p className="text-[var(--muted-foreground)] text-xs sm:text-sm px-2">Connect with friends and share your musical journey</p>
         </div>
 
         <div className="space-y-3 sm:space-y-4">

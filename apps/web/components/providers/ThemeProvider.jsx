@@ -6,12 +6,14 @@ const ThemeContext = createContext({
   theme: 'system',
   setTheme: () => {},
   customColors: {
-    background: '#000000',
-    foreground: '#ffffff',
-    accent: '#00d4ff', // Neon blue
+    background: '#050507',
+    foreground: '#f0f0f5',
+    accent: '#a78bfa', // Soft violet (liquid glass)
     contrast: 'high', // 'high' or 'low'
   },
   setCustomColors: () => {},
+  animationEnabled: true,
+  setAnimationEnabled: () => {},
 });
 
 export function useTheme() {
@@ -92,68 +94,45 @@ function generateMutedForeground(background, foreground, contrastLevel) {
 // Generate glass colors based on background and accent
 function generateGlassColors(background, foreground, accent) {
   const bg = hexToRgb(background);
+  const fg = hexToRgb(foreground);
   const acc = hexToRgb(accent);
   const bgLum = getLuminance(bg.r, bg.g, bg.b);
   
   if (bgLum < 0.5) {
-    // Dark background - lighten slightly for cards
-    const glassR = Math.min(bg.r + 15, 255);
-    const glassG = Math.min(bg.g + 15, 255);
-    const glassB = Math.min(bg.b + 20, 255);
-    
-    // Dropdown/modal background - slightly lighter than page
-    const dropdownR = Math.min(bg.r + 8, 255);
-    const dropdownG = Math.min(bg.g + 8, 255);
-    const dropdownB = Math.min(bg.b + 12, 255);
-    
-    // Input background - slightly lighter than page background
-    const inputR = Math.min(bg.r + 12, 255);
-    const inputG = Math.min(bg.g + 12, 255);
-    const inputB = Math.min(bg.b + 18, 255);
-    
+    // Dark background - liquid glass effect with translucency
     return {
-      glassBg: rgbToHex(glassR, glassG, glassB), // SOLID - derived from background
-      glassBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.3)`,
-      glassBorderHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.5)`,
-      glassShadow: 'rgba(0, 0, 0, 0.6)',
-      dropdownBg: rgbToHex(dropdownR, dropdownG, dropdownB), // SOLID - derived from background
-      inputBg: rgbToHex(inputR, inputG, inputB), // Input background
-      // Accent-based secondary styling
-      secondaryBg: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.08)`,
-      secondaryBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.25)`,
-      secondaryHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.15)`,
-      scrollbarThumb: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.3)`,
-      scrollbarThumbHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.5)`,
+      // Translucent glass with subtle white overlay
+      glassBg: `rgba(255, 255, 255, 0.04)`,
+      glassBorder: `rgba(255, 255, 255, 0.1)`,
+      glassBorderHover: `rgba(255, 255, 255, 0.18)`,
+      glassShadow: `0 8px 32px rgba(0, 0, 0, 0.4), 0 0 60px rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.06)`,
+      // Dropdown - frosted glass
+      dropdownBg: `rgba(${Math.min(bg.r + 10, 30)}, ${Math.min(bg.g + 10, 30)}, ${Math.min(bg.b + 15, 40)}, 0.95)`,
+      // Input - subtle elevation
+      inputBg: `rgba(255, 255, 255, 0.05)`,
+      // Secondary styling - accent-tinted glass
+      secondaryBg: `rgba(255, 255, 255, 0.03)`,
+      secondaryBorder: `rgba(255, 255, 255, 0.08)`,
+      secondaryHover: `rgba(255, 255, 255, 0.08)`,
+      // Subtle scrollbar
+      scrollbarThumb: `rgba(255, 255, 255, 0.15)`,
+      scrollbarThumbHover: `rgba(255, 255, 255, 0.25)`,
     };
   } else {
-    // Light background - darken slightly for cards (or keep near-white)
-    const glassR = Math.max(bg.r - 8, 240);
-    const glassG = Math.max(bg.g - 8, 240);
-    const glassB = Math.max(bg.b - 8, 240);
-    
-    // Dropdown - slightly darker than page
-    const dropdownR = Math.max(bg.r - 5, 245);
-    const dropdownG = Math.max(bg.g - 5, 245);
-    const dropdownB = Math.max(bg.b - 5, 245);
-    
-    // Input - same as dropdown or page
-    const inputR = Math.max(bg.r - 3, 248);
-    const inputG = Math.max(bg.g - 3, 248);
-    const inputB = Math.max(bg.b - 3, 248);
-    
+    // Light background - clean glass with subtle shadows
     return {
-      glassBg: rgbToHex(glassR, glassG, glassB), // SOLID - derived from background
-      glassBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.2)`,
-      glassBorderHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.4)`,
-      glassShadow: 'rgba(0, 0, 0, 0.15)',
-      dropdownBg: rgbToHex(dropdownR, dropdownG, dropdownB), // SOLID - derived from background
-      inputBg: rgbToHex(inputR, inputG, inputB), // Input background
+      glassBg: `rgba(255, 255, 255, 0.7)`,
+      glassBorder: `rgba(0, 0, 0, 0.08)`,
+      glassBorderHover: `rgba(0, 0, 0, 0.15)`,
+      glassShadow: `0 4px 24px rgba(0, 0, 0, 0.08)`,
+      dropdownBg: `rgba(255, 255, 255, 0.95)`,
+      inputBg: `rgba(255, 255, 255, 0.9)`,
       // Secondary styling
-      secondaryBg: 'rgba(0, 0, 0, 0.03)',
-      secondaryBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.15)`,
-      secondaryHover: 'rgba(0, 0, 0, 0.08)',
-      scrollbarThumb: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.25)`,
-      scrollbarThumbHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.4)`,
+      secondaryBg: `rgba(0, 0, 0, 0.02)`,
+      secondaryBorder: `rgba(0, 0, 0, 0.06)`,
+      secondaryHover: `rgba(0, 0, 0, 0.05)`,
+      scrollbarThumb: `rgba(0, 0, 0, 0.2)`,
+      scrollbarThumbHover: `rgba(0, 0, 0, 0.35)`,
     };
   }
 }
@@ -161,11 +140,12 @@ function generateGlassColors(background, foreground, accent) {
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState('system');
   const [customColors, setCustomColorsState] = useState({
-    background: '#000000',
-    foreground: '#ffffff',
-    accent: '#00d4ff', // Neon blue
+    background: '#050507',
+    foreground: '#f0f0f5',
+    accent: '#a78bfa', // Soft violet (liquid glass)
     contrast: 'high',
   });
+  const [animationEnabled, setAnimationEnabledState] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   // Initialize from cookies and localStorage
@@ -185,15 +165,24 @@ export function ThemeProvider({ children }) {
       try {
         const parsed = JSON.parse(savedCustomColors);
         setCustomColorsState({
-          background: parsed.background || '#000000',
-          foreground: parsed.foreground || '#ffffff',
-          accent: parsed.accent || '#00d4ff',
+          background: parsed.background || '#0a0a0f',
+          foreground: parsed.foreground || '#f0f0f5',
+          accent: parsed.accent || '#a78bfa',
           contrast: parsed.contrast || 'high',
         });
       } catch (e) {
         console.error('Failed to parse custom theme', e);
+        // On parse error, clear the bad data
+        localStorage.removeItem('customTheme');
       }
     }
+
+    // Load animation preference
+    const savedAnimation = localStorage.getItem('animationEnabled');
+    if (savedAnimation !== null) {
+      setAnimationEnabledState(savedAnimation !== 'false');
+    }
+    
     setMounted(true);
   }, []);
 
@@ -208,6 +197,12 @@ export function ThemeProvider({ children }) {
     const updated = { ...customColors, ...newColors };
     setCustomColorsState(updated);
     localStorage.setItem('customTheme', JSON.stringify(updated));
+  };
+
+  // Save animation preference
+  const setAnimationEnabled = (enabled) => {
+    setAnimationEnabledState(enabled);
+    localStorage.setItem('animationEnabled', enabled.toString());
   };
 
   // Apply theme to document
@@ -290,8 +285,9 @@ export function ThemeProvider({ children }) {
   }, [theme, customColors, mounted]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, customColors, setCustomColors, mounted }}>
+    <ThemeContext.Provider value={{ theme, setTheme, customColors, setCustomColors, animationEnabled, setAnimationEnabled, mounted }}>
       {children}
     </ThemeContext.Provider>
   );
 }
+

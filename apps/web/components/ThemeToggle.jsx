@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Moon, Sun, Monitor, Palette, Check, Settings2, RotateCcw, Contrast } from 'lucide-react';
-import { useTheme as useCtxTheme } from '@/contexts/ThemeContext';
-import { useTheme as useProvTheme } from './providers/ThemeProvider';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Moon, Sun, Monitor, Palette, Check, Settings2, RotateCcw, Contrast, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useTheme } from './providers/ThemeProvider';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -15,14 +14,182 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 
+// ============ CONTRAST UTILITIES ============
+// Calculate relative luminance for WCAG contrast
+function getLuminance(hexColor) {
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16) / 255;
+  const g = parseInt(hex.substr(2, 2), 16) / 255;
+  const b = parseInt(hex.substr(4, 2), 16) / 255;
+  
+  const toLinear = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+// Calculate contrast ratio between two colors
+function getContrastRatio(color1, color2) {
+  const lum1 = getLuminance(color1);
+  const lum2 = getLuminance(color2);
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Check if contrast meets WCAG AA (4.5:1 for normal text)
+function meetsWCAGAA(color1, color2) {
+  return getContrastRatio(color1, color2) >= 4.5;
+}
+
+// Check if contrast meets WCAG AAA (7:1 for normal text)
+function meetsWCAGAAA(color1, color2) {
+  return getContrastRatio(color1, color2) >= 7;
+}
+
+// ============ AUTO-FIX CONTRAST ============
+// Lighten a color by a percentage
+function lightenColor(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.min(255, (num >> 16) + amt);
+  const G = Math.min(255, ((num >> 8) & 0x00FF) + amt);
+  const B = Math.min(255, (num & 0x0000FF) + amt);
+  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
+}
+
+// Darken a color by a percentage
+function darkenColor(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = Math.max(0, (num >> 16) - amt);
+  const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
+  const B = Math.max(0, (num & 0x0000FF) - amt);
+  return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
+}
+
+// Auto-fix foreground color to meet contrast against background
+function autoFixForeground(background, foreground, minContrast = 4.5) {
+  let currentContrast = getContrastRatio(background, foreground);
+  if (currentContrast >= minContrast) return foreground;
+  
+  const bgLuminance = getLuminance(background);
+  const isLightBg = bgLuminance > 0.5;
+  
+  // Determine if we should lighten or darken the foreground
+  let fixedColor = foreground;
+  let step = 5;
+  let iterations = 0;
+  const maxIterations = 50;
+  
+  while (currentContrast < minContrast && iterations < maxIterations) {
+    if (isLightBg) {
+      // Light background: darken the foreground
+      fixedColor = darkenColor(fixedColor, step);
+    } else {
+      // Dark background: lighten the foreground
+      fixedColor = lightenColor(fixedColor, step);
+    }
+    currentContrast = getContrastRatio(background, fixedColor);
+    iterations++;
+  }
+  
+  // If still not meeting contrast, go to extreme
+  if (currentContrast < minContrast) {
+    return isLightBg ? '#000000' : '#ffffff';
+  }
+  
+  return fixedColor;
+}
+
+// Auto-fix accent color (lower requirement - 3:1 for UI components)
+function autoFixAccent(background, accent, minContrast = 3) {
+  let currentContrast = getContrastRatio(background, accent);
+  if (currentContrast >= minContrast) return accent;
+  
+  const bgLuminance = getLuminance(background);
+  const isLightBg = bgLuminance > 0.5;
+  
+  let fixedColor = accent;
+  let step = 5;
+  let iterations = 0;
+  const maxIterations = 30;
+  
+  while (currentContrast < minContrast && iterations < maxIterations) {
+    if (isLightBg) {
+      fixedColor = darkenColor(fixedColor, step);
+    } else {
+      fixedColor = lightenColor(fixedColor, step);
+    }
+    currentContrast = getContrastRatio(background, fixedColor);
+    iterations++;
+  }
+  
+  return fixedColor;
+}
+
+// Full auto-fix that adjusts all colors
+function autoFixAllColors(background, foreground, accent) {
+  const fixedForeground = autoFixForeground(background, foreground, 4.5);
+  const fixedAccent = autoFixAccent(background, accent, 3);
+  
+  return {
+    background,
+    foreground: fixedForeground,
+    accent: fixedAccent,
+    wasFixed: fixedForeground !== foreground || fixedAccent !== accent,
+  };
+}
+
+// Generate tints (lighter) and shades (darker) of a color
+function generateTintsAndShades(hexColor) {
+  const hex = hexColor.replace('#', '');
+  let r = parseInt(hex.substr(0, 2), 16);
+  let g = parseInt(hex.substr(2, 2), 16);
+  let b = parseInt(hex.substr(4, 2), 16);
+  
+  const tints = [];
+  const shades = [];
+  
+  // Generate 4 tints (lighter versions)
+  for (let i = 1; i <= 4; i++) {
+    const factor = i * 0.2;
+    const newR = Math.round(r + (255 - r) * factor);
+    const newG = Math.round(g + (255 - g) * factor);
+    const newB = Math.round(b + (255 - b) * factor);
+    tints.push(`#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`);
+  }
+  
+  // Generate 4 shades (darker versions)
+  for (let i = 1; i <= 4; i++) {
+    const factor = 1 - (i * 0.2);
+    const newR = Math.round(r * factor);
+    const newG = Math.round(g * factor);
+    const newB = Math.round(b * factor);
+    shades.push(`#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`);
+  }
+  
+  return { base: hexColor, tints, shades };
+}
+
+// MS Word-style color grid
+const WORD_STYLE_COLORS = [
+  // Row 1: Theme colors
+  ['#000000', '#1a1a2e', '#16213e', '#0f3460', '#533483', '#7952b3', '#e94560', '#ff6b6b', '#feca57', '#1dd1a1'],
+  // Row 2: Standard colors
+  ['#c0392b', '#e74c3c', '#9b59b6', '#8e44ad', '#2980b9', '#3498db', '#1abc9c', '#16a085', '#27ae60', '#2ecc71'],
+  // Row 3: Neutral colors
+  ['#ffffff', '#f8f9fa', '#e9ecef', '#dee2e6', '#ced4da', '#adb5bd', '#6c757d', '#495057', '#343a40', '#212529'],
+];
+
 // Theme presets with full palette info
 const DARK_PRESETS = [
+  { name: 'Liquid Glass', background: '#050507', foreground: '#f0f0f5', accent: '#a78bfa', description: 'Frosted glass with violet glow' },
   { name: 'Neon', background: '#000000', foreground: '#ffffff', accent: '#00d4ff', description: 'Pure black with neon blue' },
-  { name: 'Midnight', background: '#0a0a0f', foreground: '#ffffff', accent: '#8b5cf6', description: 'Deep purple vibes' },
-  { name: 'Rose', background: '#0f0a0a', foreground: '#ffffff', accent: '#f43f5e', description: 'Dark with rose accents' },
-  { name: 'Ember', background: '#0f0a05', foreground: '#ffffff', accent: '#f97316', description: 'Warm orange glow' },
-  { name: 'Forest', background: '#050f0a', foreground: '#ffffff', accent: '#22c55e', description: 'Nature green theme' },
-  { name: 'Ocean', background: '#050a0f', foreground: '#ffffff', accent: '#0ea5e9', description: 'Deep sea blue' },
+  { name: 'Midnight', background: '#050508', foreground: '#e8e8f0', accent: '#8b5cf6', description: 'Deep purple vibes' },
+  { name: 'Rose', background: '#0f0a0a', foreground: '#fff0f0', accent: '#f43f5e', description: 'Dark with rose accents' },
+  { name: 'Ember', background: '#0f0a05', foreground: '#fff5e8', accent: '#f97316', description: 'Warm orange glow' },
+  { name: 'Forest', background: '#050f0a', foreground: '#e8fff0', accent: '#22c55e', description: 'Nature green theme' },
+  { name: 'Ocean', background: '#050a0f', foreground: '#e8f5ff', accent: '#0ea5e9', description: 'Deep sea blue' },
 ];
 
 const LIGHT_PRESETS = [
@@ -43,19 +210,205 @@ const COLOR_PRESETS = [
   { name: 'Slate', background: '#1e293b', foreground: '#f8fafc', accent: '#94a3b8', description: 'Modern slate gray' },
 ];
 
-// Default theme values
+// Default theme values (matches liquid glass dark mode)
 const DEFAULT_THEME = {
-  background: '#000000',
-  foreground: '#ffffff',
-  accent: '#00d4ff',
+  background: '#050507',
+  foreground: '#f0f0f5',
+  accent: '#a78bfa', // Soft violet
   contrast: 'high',
 };
 
+// Contrast Status Component with Auto-Fix
+function ContrastStatus({ background, foreground, accent, onAutoFix }) {
+  const textContrast = useMemo(() => getContrastRatio(background, foreground), [background, foreground]);
+  const accentContrast = useMemo(() => getContrastRatio(background, accent), [background, accent]);
+  
+  const textMeetsAA = textContrast >= 4.5;
+  const textMeetsAAA = textContrast >= 7;
+  const accentMeetsAA = accentContrast >= 3; // Accent can be lower for large text/UI
+  
+  const hasIssues = !textMeetsAA || !accentMeetsAA;
+  
+  const handleAutoFix = () => {
+    const fixed = autoFixAllColors(background, foreground, accent);
+    if (fixed.wasFixed && onAutoFix) {
+      onAutoFix(fixed);
+    }
+  };
+  
+  return (
+    <div className={`p-3 rounded-lg border ${hasIssues ? 'border-yellow-500/50 bg-yellow-500/10' : 'border-green-500/50 bg-green-500/10'}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {hasIssues ? (
+            <AlertTriangle className="h-4 w-4 text-yellow-400" aria-hidden="true" />
+          ) : (
+            <CheckCircle className="h-4 w-4 text-green-400" aria-hidden="true" />
+          )}
+          <span className={`text-sm font-medium ${hasIssues ? 'text-yellow-400' : 'text-green-400'}`}>
+            {hasIssues ? 'Contrast Issues' : 'Good Contrast'}
+          </span>
+        </div>
+        {hasIssues && onAutoFix && (
+          <button
+            onClick={handleAutoFix}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-md transition-colors"
+          >
+            <Contrast className="h-3 w-3" />
+            Auto-Fix
+          </button>
+        )}
+      </div>
+      
+      <div className="space-y-1 text-xs">
+        <div className="flex justify-between items-center">
+          <span className="text-[var(--muted-foreground)]">Text:</span>
+          <span className={`font-mono ${textMeetsAA ? 'text-green-400' : 'text-red-400'}`}>
+            {textContrast.toFixed(1)}:1 {textMeetsAAA ? '✓✓' : textMeetsAA ? '✓' : '✗'}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-[var(--muted-foreground)]">Accent:</span>
+          <span className={`font-mono ${accentMeetsAA ? 'text-green-400' : 'text-yellow-400'}`}>
+            {accentContrast.toFixed(1)}:1 {accentMeetsAA ? '✓' : '✗'}
+          </span>
+        </div>
+      </div>
+      
+      {hasIssues && (
+        <p className="text-[10px] text-yellow-400/70 mt-2">
+          Click "Auto-Fix" to automatically adjust colors for accessibility.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Word-style Color Picker Grid
+function ColorPickerGrid({ onSelectColor, selectedColor, label, filterLowContrast, contrastAgainst }) {
+  const [showMore, setShowMore] = useState(false);
+  const [customColor, setCustomColor] = useState('');
+  
+  // Generate tints and shades for the first row (theme colors)
+  const expandedColors = useMemo(() => {
+    if (!showMore) return WORD_STYLE_COLORS;
+    
+    // Add tints and shades rows
+    const baseColors = WORD_STYLE_COLORS[0];
+    const result = [...WORD_STYLE_COLORS];
+    
+    // Add lighter tints
+    const tints1 = baseColors.map(c => generateTintsAndShades(c).tints[0]);
+    const tints2 = baseColors.map(c => generateTintsAndShades(c).tints[2]);
+    result.splice(1, 0, tints1, tints2);
+    
+    // Add darker shades
+    const shades1 = baseColors.map(c => generateTintsAndShades(c).shades[0]);
+    const shades2 = baseColors.map(c => generateTintsAndShades(c).shades[2]);
+    result.push(shades1, shades2);
+    
+    return result;
+  }, [showMore]);
+  
+  // Check if a color should be disabled due to low contrast
+  const isLowContrast = useCallback((color) => {
+    if (!filterLowContrast || !contrastAgainst) return false;
+    return getContrastRatio(color, contrastAgainst) < 3;
+  }, [filterLowContrast, contrastAgainst]);
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs text-[var(--muted-foreground)]">{label}</Label>
+      
+      {/* Color Grid */}
+      <div className="space-y-1">
+        {expandedColors.map((row, rowIdx) => (
+          <div key={rowIdx} className="flex gap-1">
+            {row.map((color, colIdx) => {
+              const lowContrast = isLowContrast(color);
+              const isSelected = selectedColor?.toLowerCase() === color.toLowerCase();
+              
+              return (
+                <button
+                  key={`${rowIdx}-${colIdx}`}
+                  onClick={() => !lowContrast && onSelectColor(color)}
+                  disabled={lowContrast}
+                  className={`w-6 h-6 rounded border-2 transition-all ${
+                    isSelected 
+                      ? 'border-[var(--foreground)] ring-2 ring-[var(--accent)] scale-110' 
+                      : 'border-transparent hover:border-[var(--glass-border)] hover:scale-105'
+                  } ${lowContrast ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                  style={{ backgroundColor: color }}
+                  title={lowContrast ? `${color} - Low contrast (disabled)` : color}
+                  aria-label={`Select color ${color}${lowContrast ? ' (disabled - low contrast)' : ''}`}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      
+      {/* More Colors / Custom */}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={() => setShowMore(!showMore)}
+          className="text-xs text-[var(--accent)] hover:underline"
+        >
+          {showMore ? 'Show Less' : 'More Shades...'}
+        </button>
+        <div className="flex-1" />
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-[var(--muted-foreground)]">Custom:</span>
+          <input
+            type="color"
+            value={customColor || selectedColor || '#000000'}
+            onChange={(e) => {
+              setCustomColor(e.target.value);
+              onSelectColor(e.target.value);
+            }}
+            className="w-6 h-6 rounded border border-[var(--glass-border)] cursor-pointer"
+            aria-label="Choose custom color"
+          />
+          <Input
+            value={customColor || selectedColor || ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              setCustomColor(val);
+              if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                onSelectColor(val);
+              }
+            }}
+            placeholder="#000000"
+            className="w-20 h-6 text-xs font-mono px-1"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProviderThemeToggle({ prov }) {
-  const { theme, setTheme, customColors = {}, setCustomColors = () => {} } = prov;
+  const { theme, setTheme, customColors = {}, setCustomColors = () => {}, animationEnabled = true, setAnimationEnabled = () => {} } = prov;
     const [isOpen, setIsOpen] = useState(false);
     const [showCustomizer, setShowCustomizer] = useState(false);
     const dropdownRef = useRef(null);
+    
+    // Draft colors - only applied when user clicks "Apply Theme"
+    const [draftColors, setDraftColors] = useState(null);
+    const [hasChanges, setHasChanges] = useState(false);
+
+    // Initialize draft colors when customizer opens
+    useEffect(() => {
+      if (showCustomizer) {
+        setDraftColors({
+          background: customColors.background || DEFAULT_THEME.background,
+          foreground: customColors.foreground || DEFAULT_THEME.foreground,
+          accent: customColors.accent || DEFAULT_THEME.accent,
+          contrast: customColors.contrast || DEFAULT_THEME.contrast,
+        });
+        setHasChanges(false);
+      }
+    }, [showCustomizer]);
 
     useEffect(() => {
     function handleClickOutside(event) {
@@ -73,29 +426,57 @@ function ProviderThemeToggle({ prov }) {
         setIsOpen(false);
     };
 
+    // Update draft colors (not applied yet)
     const handleColorChange = (key, value) => {
-        setCustomColors({ [key]: value });
+        setDraftColors(prev => ({ ...prev, [key]: value }));
+        setHasChanges(true);
     };
 
   const toggleContrast = () => {
-    const newContrast = customColors.contrast === 'high' ? 'low' : 'high';
-    setCustomColors({ contrast: newContrast });
+    const newContrast = (draftColors?.contrast || customColors.contrast) === 'high' ? 'low' : 'high';
+    setDraftColors(prev => ({ ...prev, contrast: newContrast }));
+    setHasChanges(true);
   };
 
+  // Apply a preset to draft (not applied yet)
   const applyPreset = (preset) => {
-    setCustomColors({
+    setDraftColors({
       background: preset.background,
       foreground: preset.foreground,
       accent: preset.accent,
-      contrast: customColors.contrast || 'high',
+      contrast: draftColors?.contrast || customColors.contrast || 'high',
     });
-    setTheme('custom');
+    setHasChanges(true);
+  };
+
+  // Actually apply the theme
+  const applyTheme = () => {
+    if (draftColors) {
+      setCustomColors(draftColors);
+      setTheme('custom');
+      setHasChanges(false);
+    }
+    setShowCustomizer(false);
+  };
+
+  // Cancel without applying
+  const cancelCustomizer = () => {
+    setDraftColors(null);
+    setHasChanges(false);
+    setShowCustomizer(false);
   };
 
   const resetToDefault = () => {
+    // Clear custom colors from state AND localStorage
     setCustomColors(DEFAULT_THEME);
+    localStorage.removeItem('customTheme');
+    // Switch to dark mode (liquid glass)
     setTheme('dark');
+    setShowCustomizer(false);
   };
+  
+  // Use draft colors for preview, fall back to current custom colors
+  const previewColors = draftColors || customColors;
 
     const CurrentIcon = {
         dark: Moon,
@@ -104,7 +485,7 @@ function ProviderThemeToggle({ prov }) {
         custom: Palette,
     }[theme] || Moon;
 
-  const isHighContrast = customColors.contrast !== 'low';
+  const isHighContrast = (previewColors.contrast || 'high') !== 'low';
 
     return (
         <div className="relative z-50" ref={dropdownRef}>
@@ -146,6 +527,23 @@ function ProviderThemeToggle({ prov }) {
 
                         <div className="my-1 h-px bg-[var(--glass-border)]" />
 
+                        {/* Animation Toggle */}
+                        <button
+                            onClick={() => setAnimationEnabled(!animationEnabled)}
+                            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--secondary-bg)] transition-colors cursor-pointer"
+                        >
+                            <span>Background Animation</span>
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                              animationEnabled 
+                                ? 'bg-[var(--accent)] border-[var(--accent)]' 
+                                : 'border-[var(--glass-border)]'
+                            }`}>
+                              {animationEnabled && <Check className="h-3 w-3 text-white" />}
+                            </div>
+                        </button>
+
+                        <div className="my-1 h-px bg-[var(--glass-border)]" />
+
                         <button
                             onClick={() => {
                                 setTheme('custom');
@@ -161,7 +559,7 @@ function ProviderThemeToggle({ prov }) {
                 </div>
             )}
 
-            <Dialog open={showCustomizer} onOpenChange={setShowCustomizer}>
+            <Dialog open={showCustomizer} onOpenChange={(open) => { if (!open) cancelCustomizer(); }}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
             <DialogTitle className="text-[var(--foreground)]">Theme Customizer</DialogTitle>
@@ -317,37 +715,49 @@ function ProviderThemeToggle({ prov }) {
             {/* Column 3 - Custom Colors & Preview */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[var(--foreground)] mb-3 flex items-center gap-2">
-                <Settings2 className="h-4 w-4" /> Custom Colors
+                <Settings2 className="h-4 w-4" /> Custom Colors (Word-Style)
               </h3>
               
-              {[
-                { id: 'background', label: 'Background', default: '#000000' },
-                { id: 'foreground', label: 'Text', default: '#ffffff' },
-                { id: 'accent', label: 'Accent', default: '#00d4ff' },
-              ].map(({ id, label, default: defaultVal }) => (
-                <div key={id} className="flex items-center gap-3">
-                  <Label htmlFor={`${id}-color`} className="w-20 text-sm text-[var(--muted-foreground)]">
-                    {label}
-                            </Label>
-                  <div className="flex items-center gap-2 flex-1">
-                    <div className="h-9 w-9 rounded-lg border-2 border-[var(--glass-border)] overflow-hidden flex-shrink-0 shadow-sm">
-                                    <input
-                        id={`${id}-color`}
-                                        type="color"
-                        value={customColors[id] || defaultVal}
-                        onChange={(e) => handleColorChange(id, e.target.value)}
-                                        className="h-full w-full p-0 border-0 cursor-pointer scale-150"
-                                    />
-                                </div>
-                                <Input
-                      value={customColors[id] || ''}
-                      onChange={(e) => handleColorChange(id, e.target.value)}
-                      className="font-mono text-xs"
-                      placeholder={defaultVal}
-                                />
-                            </div>
-                        </div>
-              ))}
+              {/* MS Word-style Color Picker for Background */}
+              <ColorPickerGrid
+                label="Background Color"
+                selectedColor={previewColors.background || '#000000'}
+                onSelectColor={(color) => handleColorChange('background', color)}
+              />
+              
+              {/* MS Word-style Color Picker for Text */}
+              <ColorPickerGrid
+                label="Text Color"
+                selectedColor={previewColors.foreground || '#ffffff'}
+                onSelectColor={(color) => handleColorChange('foreground', color)}
+                filterLowContrast={true}
+                contrastAgainst={previewColors.background || '#000000'}
+              />
+              
+              {/* MS Word-style Color Picker for Accent */}
+              <ColorPickerGrid
+                label="Accent Color"
+                selectedColor={previewColors.accent || '#00d4ff'}
+                onSelectColor={(color) => handleColorChange('accent', color)}
+                filterLowContrast={true}
+                contrastAgainst={previewColors.background || '#000000'}
+              />
+              
+              {/* Contrast Status with Auto-Fix */}
+              <ContrastStatus
+                background={previewColors.background || '#000000'}
+                foreground={previewColors.foreground || '#ffffff'}
+                accent={previewColors.accent || '#00d4ff'}
+                onAutoFix={(fixed) => {
+                  setDraftColors({
+                    background: fixed.background,
+                    foreground: fixed.foreground,
+                    accent: fixed.accent,
+                    contrast: previewColors.contrast || 'high',
+                  });
+                  setHasChanges(true);
+                }}
+              />
 
               {/* Live Preview */}
               <div className="mt-4">
@@ -356,7 +766,7 @@ function ProviderThemeToggle({ prov }) {
                 <div
                   className="p-3 rounded-xl"
                   style={{
-                    background: customColors.background || '#000000',
+                    background: previewColors.background || '#000000',
                   }}
                 >
                   {/* Card (slightly elevated from background) */}
@@ -364,7 +774,7 @@ function ProviderThemeToggle({ prov }) {
                     className="p-3 rounded-lg border-2 shadow-lg"
                     style={{
                       background: (() => {
-                        const bg = customColors.background || '#000000';
+                        const bg = previewColors.background || '#000000';
                         const r = parseInt(bg.slice(1, 3), 16);
                         const g = parseInt(bg.slice(3, 5), 16);
                         const b = parseInt(bg.slice(5, 7), 16);
@@ -377,24 +787,24 @@ function ProviderThemeToggle({ prov }) {
                           return `rgb(${Math.max(r - 8, 240)}, ${Math.max(g - 8, 240)}, ${Math.max(b - 8, 240)})`;
                         }
                       })(),
-                      borderColor: customColors.accent || '#00d4ff',
+                      borderColor: previewColors.accent || '#00d4ff',
                     }}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <div
                         className="w-6 h-6 rounded-full"
-                        style={{ background: customColors.accent || '#00d4ff' }}
+                        style={{ background: previewColors.accent || '#00d4ff' }}
                       />
                       <div>
                         <p
                           className="text-xs font-semibold"
-                          style={{ color: customColors.foreground || '#ffffff' }}
+                          style={{ color: previewColors.foreground || '#ffffff' }}
                         >
                           Display Name
                         </p>
                         <p
                           className="text-[10px] opacity-60"
-                          style={{ color: customColors.foreground || '#ffffff' }}
+                          style={{ color: previewColors.foreground || '#ffffff' }}
                         >
                           @username
                         </p>
@@ -402,7 +812,7 @@ function ProviderThemeToggle({ prov }) {
                     </div>
                     <p
                       className="text-xs mb-2"
-                      style={{ color: customColors.foreground || '#ffffff' }}
+                      style={{ color: previewColors.foreground || '#ffffff' }}
                     >
                       Card content preview
                     </p>
@@ -410,8 +820,8 @@ function ProviderThemeToggle({ prov }) {
                       <button
                         className="px-2 py-1 rounded text-[10px] font-medium"
                         style={{
-                          background: customColors.foreground || '#ffffff',
-                          color: customColors.background || '#000000',
+                          background: previewColors.foreground || '#ffffff',
+                          color: previewColors.background || '#000000',
                         }}
                       >
                         Primary
@@ -420,15 +830,15 @@ function ProviderThemeToggle({ prov }) {
                         className="px-2 py-1 rounded text-[10px] font-medium border"
                         style={{
                           background: 'transparent',
-                          color: customColors.foreground || '#ffffff',
-                          borderColor: customColors.accent || '#00d4ff',
+                          color: previewColors.foreground || '#ffffff',
+                          borderColor: previewColors.accent || '#00d4ff',
                         }}
                       >
                         Secondary
                       </button>
                       <button
                         className="px-2 py-1 rounded text-[10px] font-medium text-white"
-                        style={{ background: customColors.accent || '#00d4ff' }}
+                        style={{ background: previewColors.accent || '#00d4ff' }}
                       >
                                 Accent
                       </button>
@@ -437,14 +847,39 @@ function ProviderThemeToggle({ prov }) {
                 </div>
               </div>
 
-              {/* Reset Button */}
-              <button
-                onClick={resetToDefault}
-                className="w-full flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[var(--glass-border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--glass-border-hover)] transition-all cursor-pointer"
-              >
-                <RotateCcw className="h-4 w-4" />
-                <span className="text-sm">Reset to Default</span>
-              </button>
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2 border-t border-[var(--glass-border)]">
+                {/* Apply Theme Button */}
+                <button
+                  onClick={applyTheme}
+                  disabled={!hasChanges}
+                  className={`w-full flex items-center justify-center gap-2 p-3 rounded-lg font-medium transition-all ${
+                    hasChanges
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg'
+                      : 'bg-[var(--secondary-bg)] text-[var(--muted-foreground)] cursor-not-allowed'
+                  }`}
+                >
+                  <Check className="h-4 w-4" />
+                  <span>{hasChanges ? 'Apply Theme' : 'No Changes'}</span>
+                </button>
+                
+                {/* Cancel / Reset Row */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelCustomizer}
+                    className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[var(--glass-border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--glass-border-hover)] transition-all cursor-pointer"
+                  >
+                    <span className="text-sm">Cancel</span>
+                  </button>
+                  <button
+                    onClick={resetToDefault}
+                    className="flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg border border-[var(--glass-border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--glass-border-hover)] transition-all cursor-pointer"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    <span className="text-sm">Reset</span>
+                  </button>
+                </div>
+              </div>
                         </div>
                     </div>
                 </DialogContent>
@@ -453,49 +888,7 @@ function ProviderThemeToggle({ prov }) {
     );
 }
 
-function LegacyThemeToggle({ ctx }) {
-  const { theme, toggleTheme, mounted } = ctx || {};
-
-  const handleClick = useCallback(() => {
-    if (!mounted) return;
-    toggleTheme?.();
-  }, [mounted, toggleTheme]);
-
-  if (!mounted) {
-    return (
-      <button className="group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/50" disabled>
-        <Monitor className="h-4 w-4 opacity-70" />
-      </button>
-    );
-  }
-
-  return (
-    <button onClick={handleClick} className="group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition text-muted-foreground hover:text-foreground hover:bg-accent/50 focus:outline-none" aria-label="Toggle theme">
-      {theme === 'light' && <Sun className="h-4 w-4 opacity-70 group-hover:opacity-100" />}
-      {theme === 'dark' && <Moon className="h-4 w-4 opacity-70 group-hover:opacity-100" />}
-      {theme === 'system' && <Monitor className="h-4 w-4 opacity-70 group-hover:opacity-100" />}
-    </button>
-  );
-}
-
 export default function ThemeToggle() {
-  let prov;
-  try {
-    prov = useProvTheme();
-  } catch (e) {
-    prov = undefined;
-  }
-
-  let ctx;
-  try {
-    ctx = useCtxTheme();
-  } catch (e) {
-    ctx = undefined;
-  }
-
-  if (prov && typeof prov.setTheme === 'function') {
-    return <ProviderThemeToggle prov={prov} />;
-  }
-
-  return <LegacyThemeToggle ctx={ctx} />;
+  const prov = useTheme();
+  return <ProviderThemeToggle prov={prov} />;
 }

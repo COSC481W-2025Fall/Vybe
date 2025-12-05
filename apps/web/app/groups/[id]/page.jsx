@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Users, Heart, Plus, Trash2, X, Sparkles, Loader2 } from 'lucide-react';
+import { Users, Heart, Plus, Trash2, X, Sparkles, Loader2, ExternalLink, Copy, Check } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import ExportPlaylistButton from '@/components/ExportPlaylistButton';
 import ExportToSpotifyButton from '@/components/ExportToSpotifyButton';
+import { useRealtimeGroup } from '@/lib/realtime/useRealtimeGroup';
+import { ConnectionDot } from '@/components/shared/ConnectionStatus';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
@@ -28,9 +30,108 @@ export default function GroupDetailPage({ params }) {
   const [hasSpotify, setHasSpotify] = useState(false);
   const [isSorting, setIsSorting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [sortProgress, setSortProgress] = useState(0);
+  const [sortEstimatedTime, setSortEstimatedTime] = useState(null);
+  const sortStartTimeRef = useRef(null);
+  const progressIntervalRef = useRef(null);
   const [showRemoveMemberModal, setShowRemoveMemberModal] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState(null);
   const [showDeleteGroupModal, setShowDeleteGroupModal] = useState(false);
+  const [joinCodeCopied, setJoinCodeCopied] = useState(false);
+
+  // Real-time update handlers (memoized to prevent re-subscriptions)
+  const handleGroupUpdate = useCallback((newData, oldData) => {
+    console.log('[Realtime] Group updated:', newData);
+    setGroup(prev => ({ ...prev, ...newData }));
+    
+    // Show toast if sort order changed (by another user)
+    if (newData.all_songs_sort_order && oldData.all_songs_sort_order !== newData.all_songs_sort_order) {
+      toast.info('Playlist order was updated by another member');
+    }
+  }, []);
+
+  const handlePlaylistChange = useCallback((eventType, newData, oldData) => {
+    console.log('[Realtime] Playlist change:', eventType, newData);
+    
+    if (eventType === 'INSERT') {
+      setPlaylists(prev => [...prev, newData]);
+      toast.info(`New playlist added: ${newData.name}`);
+    } else if (eventType === 'DELETE') {
+      setPlaylists(prev => prev.filter(p => p.id !== oldData.id));
+      toast.info('A playlist was removed');
+    } else if (eventType === 'UPDATE') {
+      setPlaylists(prev => prev.map(p => p.id === newData.id ? { ...p, ...newData } : p));
+    }
+  }, []);
+
+  const handleSongChange = useCallback((eventType, newData, oldData) => {
+    console.log('[Realtime] Song change:', eventType, newData);
+    
+    // Check if this song belongs to one of our playlists
+    const relevantPlaylistIds = playlists.map(p => p.id);
+    const playlistId = newData?.playlist_id || oldData?.playlist_id;
+    
+    if (!relevantPlaylistIds.includes(playlistId)) return;
+    
+    if (eventType === 'INSERT') {
+      setPlaylistSongs(prev => [...prev, newData]);
+      // Update track count
+      setActualTrackCounts(prev => ({
+        ...prev,
+        [playlistId]: (prev[playlistId] || 0) + 1
+      }));
+    } else if (eventType === 'DELETE') {
+      setPlaylistSongs(prev => prev.filter(s => s.id !== oldData.id));
+      setActualTrackCounts(prev => ({
+        ...prev,
+        [playlistId]: Math.max(0, (prev[playlistId] || 1) - 1)
+      }));
+    } else if (eventType === 'UPDATE') {
+      setPlaylistSongs(prev => prev.map(s => s.id === newData.id ? { ...s, ...newData } : s));
+    }
+  }, [playlists]);
+
+  const handleMemberChange = useCallback((eventType, newData, oldData) => {
+    console.log('[Realtime] Member change:', eventType, newData);
+    
+    if (eventType === 'INSERT') {
+      // Fetch the new member's user info
+      supabase
+        .from('users')
+        .select('id, username, profile_picture_url')
+        .eq('id', newData.user_id)
+        .single()
+        .then(({ data: userData }) => {
+          if (userData) {
+            setMembers(prev => [...prev, { ...newData, user: userData }]);
+            toast.info(`${userData.username || 'Someone'} joined the group`);
+          }
+        });
+    } else if (eventType === 'DELETE') {
+      setMembers(prev => prev.filter(m => m.user_id !== oldData.user_id));
+    }
+  }, [supabase]);
+
+  // Subscribe to real-time updates for this group
+  const { isConnected: realtimeConnected } = useRealtimeGroup(groupId, {
+    onGroupUpdate: handleGroupUpdate,
+    onPlaylistChange: handlePlaylistChange,
+    onSongChange: handleSongChange,
+    onMemberChange: handleMemberChange,
+  });
+
+  // Copy join code to clipboard
+  const handleCopyJoinCode = async () => {
+    if (!group?.join_code) return;
+    try {
+      await navigator.clipboard.writeText(group.join_code);
+      setJoinCodeCopied(true);
+      toast.success('Join code copied to clipboard!');
+      setTimeout(() => setJoinCodeCopied(false), 2000);
+    } catch (err) {
+      toast.error("Couldn't copy. Please try selecting and copying manually.");
+    }
+  };
 
   useEffect(() => {
     // Unwrap params Promise
@@ -87,29 +188,127 @@ export default function GroupDetailPage({ params }) {
     }
   }
 
-  async function handleSmartSort() {
+  // Get estimated time based on song count and historical data
+  // Now much faster with local heuristic sorting!
+  const getEstimatedSortTime = (songCount) => {
+    // Base: ~100ms per song for local heuristic + optional AI verification
+    // Minimum 3 seconds, maximum 15 seconds (AI verification adds ~5-10s if enabled)
+    const baseTimePerSong = 100; // 100ms per song (local heuristic is fast!)
+    const aiVerificationTime = 8000; // AI verification adds ~8 seconds
+    const baseTime = Math.min(15000, Math.max(3000, songCount * baseTimePerSong + aiVerificationTime));
+    
+    // Check localStorage for historical average
+    try {
+      const stats = JSON.parse(localStorage.getItem('smartSortStats') || '{}');
+      if (stats.avgTimePerSong && stats.sampleCount >= 2) {
+        // Use historical average if we have enough samples
+        return Math.max(3000, Math.min(20000, songCount * stats.avgTimePerSong));
+      }
+    } catch (e) {
+      console.warn('Could not read sort stats:', e);
+    }
+    
+    return baseTime;
+  };
+
+  // Save sort timing to improve future estimates
+  const saveSortTiming = (songCount, duration) => {
+    try {
+      const stats = JSON.parse(localStorage.getItem('smartSortStats') || '{}');
+      const timePerSong = duration / Math.max(1, songCount);
+      
+      if (stats.avgTimePerSong && stats.sampleCount) {
+        // Rolling average
+        stats.avgTimePerSong = (stats.avgTimePerSong * stats.sampleCount + timePerSong) / (stats.sampleCount + 1);
+        stats.sampleCount += 1;
+      } else {
+        stats.avgTimePerSong = timePerSong;
+        stats.sampleCount = 1;
+      }
+      
+      localStorage.setItem('smartSortStats', JSON.stringify(stats));
+    } catch (e) {
+      console.warn('Could not save sort stats:', e);
+    }
+  };
+
+  // Start progress animation
+  const startProgressAnimation = (estimatedMs) => {
+    sortStartTimeRef.current = Date.now();
+    setSortProgress(0);
+    setSortEstimatedTime(Math.ceil(estimatedMs / 1000));
+    
+    // Clear any existing interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    
+    // Update progress every 100ms
+    progressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - sortStartTimeRef.current;
+      // Use easing function for smoother progress - never quite reaches 100%
+      const rawProgress = elapsed / estimatedMs;
+      const easedProgress = Math.min(0.95, 1 - Math.exp(-3 * rawProgress)); // Asymptotic approach
+      setSortProgress(Math.round(easedProgress * 100));
+      
+      // Update remaining time
+      const remainingMs = Math.max(0, estimatedMs - elapsed);
+      setSortEstimatedTime(Math.ceil(remainingMs / 1000));
+    }, 100);
+  };
+
+  // Stop progress animation
+  const stopProgressAnimation = (success = true) => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    if (success) {
+      setSortProgress(100);
+      setTimeout(() => {
+        setSortProgress(0);
+        setSortEstimatedTime(null);
+      }, 1000);
+    } else {
+      setSortProgress(0);
+      setSortEstimatedTime(null);
+    }
+  };
+
+  async function handleSmartSort(useQuickSort = false) {
     if (!groupId || isSorting) return;
     
     setIsSorting(true);
     const mode = selectedPlaylist === 'all' ? 'all' : 'playlist';
-    const modeMessage = mode === 'all' 
-      ? 'Creating your vibe-sorted mix... This may take a minute.' 
-      : 'Sorting playlist... This may take a minute.';
+    const skipQueue = useQuickSort; // If quick sort, skip the AI queue for instant results
     
-    console.log(`[Groups] 🎵 Starting smart sort - Mode: ${mode}, Playlist: ${selectedPlaylist}`);
-    toast.info(modeMessage, { duration: 3000 });
+    // Count songs for estimation
+    const songCount = playlistSongs.length || 20; // Default to 20 if unknown
+    const estimatedTime = skipQueue ? 3000 : getEstimatedSortTime(songCount);
+    
+    console.log(`[Groups] 🎵 Starting smart sort - Mode: ${mode}, Songs: ${songCount}, Est: ${estimatedTime}ms, QuickSort: ${skipQueue}`);
+    
+    // Start progress animation
+    startProgressAnimation(estimatedTime);
     
     try {
       console.log(`[Groups] 📡 Calling API: /api/groups/${groupId}/smart-sort`);
-      console.log(`[Groups] 📤 Request body:`, { mode });
+      console.log(`[Groups] 📤 Request body:`, { mode, skipQueue });
       
       const response = await fetch(`/api/groups/${groupId}/smart-sort`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify({ mode, skipQueue }),
       });
       
       console.log(`[Groups] 📥 Response status:`, response.status, response.statusText);
+      
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('[Groups] ❌ Non-JSON response received');
+        throw new Error('Server error occurred. Please try again later.');
+      }
       
       const data = await response.json();
       console.log(`[Groups] 📥 Response data:`, {
@@ -122,7 +321,7 @@ export default function GroupDetailPage({ params }) {
       
       if (!response.ok) {
         // Extract more detailed error message
-        const errorMessage = data.error || data.message || 'Failed to sort playlists';
+        const errorMessage = data.error || "Couldn't sort your playlist. Please try again.";
         
         // Check for specific error types
         if (errorMessage.includes('quota') || errorMessage.includes('billing')) {
@@ -134,13 +333,19 @@ export default function GroupDetailPage({ params }) {
         }
       }
       
+      // Save timing for future estimates
+      const sortDuration = Date.now() - sortStartTimeRef.current;
+      saveSortTiming(data.songsProcessed || songCount, sortDuration);
+      
       const successMessage = mode === 'all'
         ? `Vibe mix created with ${data.songsProcessed || 0} songs!`
         : `Successfully sorted ${data.songsProcessed || 0} songs!`;
       
+      // Complete progress bar
+      stopProgressAnimation(true);
       toast.success(successMessage, { duration: 5000 });
       
-      console.log(`[Groups] ✅ API call successful, reloading data...`);
+      console.log(`[Groups] ✅ API call successful in ${sortDuration}ms, reloading data...`);
       
       // CRITICAL: Verify the database was updated before reloading
       // This helps catch if the API saved but we're not reading it
@@ -161,7 +366,7 @@ export default function GroupDetailPage({ params }) {
         if (!hasSortOrder && mode === 'all') {
           console.error(`[Groups] ❌ WARNING: API returned success but database has no sort order!`);
           console.error(`[Groups]    This suggests the API didn't save correctly. Check server logs.`);
-          toast.error('Sort completed but order was not saved. Please try again.', { duration: 7000 });
+          toast.error("Something went wrong while saving. Please try sorting again.", { duration: 7000 });
         } else if (hasSortOrder && mode === 'all') {
           console.log(`[Groups] ✅ Verified: Sort order saved successfully!`);
         }
@@ -184,11 +389,27 @@ export default function GroupDetailPage({ params }) {
       console.log(`[Groups] ✅ Sort complete!`);
     } catch (error) {
       console.error('[Groups] Error sorting:', error);
-      toast.error(error.message || 'Failed to sort playlists. Please try again.', { duration: 7000 });
+      stopProgressAnimation(false);
+      // Show user-friendly error message
+      const userMessage = error.message?.includes('rate') || error.message?.includes('limit')
+        ? "You've sorted a few times recently. Please wait a moment."
+        : error.message?.includes('queue') || error.message?.includes('busy')
+        ? "We're a bit busy right now. Please try the Quick sort option!"
+        : "Couldn't sort your playlist. Please try again.";
+      toast.error(userMessage, { duration: 7000 });
     } finally {
       setIsSorting(false);
     }
   }
+
+  // Cleanup progress interval on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
 
   async function loadGroupData() {
     setLoading(true);
@@ -544,10 +765,16 @@ export default function GroupDetailPage({ params }) {
         method: 'POST',
       });
       
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server error occurred. Please try again later.');
+      }
+      
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset sort order');
+        throw new Error(data.error || "Couldn't reset the sort order.");
       }
       
       toast.success('Sort order reset to default');
@@ -557,7 +784,7 @@ export default function GroupDetailPage({ params }) {
       await loadPlaylistSongs('all');
     } catch (error) {
       console.error('[Groups] Error resetting sort:', error);
-      toast.error(error.message || 'Failed to reset sort order', { duration: 5000 });
+      toast.error("Couldn't reset the sort order. Please try again.", { duration: 5000 });
     } finally {
       setIsResetting(false);
     }
@@ -650,8 +877,28 @@ export default function GroupDetailPage({ params }) {
         <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="page-title mb-1 text-xl sm:text-2xl">{group?.name}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="page-title mb-1 text-xl sm:text-2xl">{group?.name}</h1>
+                <ConnectionDot className="mt-0.5" />
+              </div>
               <p className="section-subtitle text-xs sm:text-sm">{group?.description || 'No description'}</p>
+              {/* Join Code - Click to copy */}
+              {group?.join_code && (
+                <button
+                  onClick={handleCopyJoinCode}
+                  className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] border border-[var(--glass-border)] transition-colors group"
+                  title="Click to copy join code"
+                  aria-label={`Join code: ${group.join_code}. Click to copy.`}
+                >
+                  <span className="text-xs text-[var(--muted-foreground)]">Join Code:</span>
+                  <span className="font-mono font-bold text-sm text-[var(--foreground)] tracking-wider">{group.join_code}</span>
+                  {joinCodeCopied ? (
+                    <Check className="h-4 w-4 text-green-400" aria-hidden="true" />
+                  ) : (
+                    <Copy className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-[var(--foreground)] transition-colors" aria-hidden="true" />
+                  )}
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               {group?.owner_id === user?.id && (
@@ -725,10 +972,22 @@ export default function GroupDetailPage({ params }) {
                           {isResetting ? 'Resetting...' : 'Reset Order'}
                         </button>
                       )}
+                      {/* Quick Sort - instant, local algorithm */}
                       <button
-                        onClick={handleSmartSort}
+                        onClick={() => handleSmartSort(true)}
                         disabled={isSorting || playlists.length === 0}
-                        title={selectedPlaylist === 'all' ? 'Sorts all songs by vibe: chill → energetic → wind down' : 'Sorts this playlist by AI recommendation'}
+                        title="Instant sort using local algorithm - no wait time"
+                        className="flex items-center gap-2 px-3 py-2 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] disabled:bg-gray-600 disabled:cursor-not-allowed text-[var(--foreground)] rounded-lg font-medium transition-colors border border-[var(--glass-border)]"
+                      >
+                        <Sparkles className="h-4 w-4 text-blue-400" />
+                        <span className="hidden sm:inline">Quick</span>
+                      </button>
+                      
+                      {/* AI Smart Sort - queued, AI-enhanced */}
+                      <button
+                        onClick={() => handleSmartSort(false)}
+                        disabled={isSorting || playlists.length === 0}
+                        title={selectedPlaylist === 'all' ? 'AI-enhanced sort with perfect transitions (may queue during high traffic)' : 'Sorts this playlist by AI recommendation'}
                         className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
                       >
                         {isSorting ? (
@@ -739,12 +998,48 @@ export default function GroupDetailPage({ params }) {
                         ) : (
                           <>
                             <Sparkles className="h-4 w-4" />
-                            <span>AI Smart Sort</span>
+                            <span>AI Sort</span>
                           </>
                         )}
                       </button>
                     </div>
                   </div>
+
+                  {/* Progress Bar for Smart Sorting */}
+                  {isSorting && (
+                    <div className="mb-4 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                          <span className="text-sm font-medium text-[var(--foreground)]">
+                            {sortProgress < 50 ? 'Analyzing songs...' : sortProgress < 90 ? 'Optimizing order...' : 'Finishing up...'}
+                          </span>
+                        </div>
+                        <span className="text-sm text-[var(--muted-foreground)]">
+                          {sortProgress}%
+                          {sortEstimatedTime !== null && sortEstimatedTime > 0 && (
+                            <span className="ml-2">
+                              (~{sortEstimatedTime}s)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-[var(--secondary-bg)] rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-200 ease-out"
+                          style={{ width: `${sortProgress}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          {playlistSongs.length} songs • No consecutive same artist/genre
+                        </p>
+                        <span className="text-xs text-purple-400">
+                          Fast local + AI verification
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-[var(--muted-foreground)] mb-2">
                       Select Playlist
@@ -775,9 +1070,28 @@ export default function GroupDetailPage({ params }) {
                   <div className="mb-6">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <h2 className="section-title mb-1">
-                          {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
-                        </h2>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h2 className="section-title">
+                            {selectedPlaylist === 'all' ? 'All Playlists' : playlists.find(p => p.id === selectedPlaylist)?.name}
+                          </h2>
+                          {/* Open Source Playlist Button - only when a specific playlist is selected */}
+                          {selectedPlaylist !== 'all' && (() => {
+                            const playlist = playlists.find(p => p.id === selectedPlaylist);
+                            const playlistUrl = playlist?.playlist_url;
+                            if (!playlistUrl) return null;
+                            const isSpotify = playlist?.platform === 'spotify';
+                            return (
+                              <button
+                                onClick={() => window.open(playlistUrl, '_blank', 'noopener,noreferrer')}
+                                className={`p-1.5 rounded-lg transition-colors ${isSpotify ? 'hover:bg-green-500/20 active:bg-green-500/30' : 'hover:bg-red-500/20 active:bg-red-500/30'}`}
+                                aria-label={`Open source playlist on ${isSpotify ? 'Spotify' : 'YouTube'}`}
+                                title={`Open on ${isSpotify ? 'Spotify' : 'YouTube'}`}
+                              >
+                                <ExternalLink className={`h-4 w-4 ${isSpotify ? 'text-green-400' : 'text-red-400'}`} />
+                              </button>
+                            );
+                          })()}
+                        </div>
                         <p className="section-subtitle">
                           {playlistSongs.length} tracks • {formatDuration(playlistSongs.reduce((acc, song) => acc + (song.duration || 0), 0))}
                         </p>
@@ -1031,6 +1345,43 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
     onPlay(song);
   };
 
+  // Build external URLs (with autoplay)
+  const getSpotifyUrl = () => {
+    if (song.spotify_url) {
+      // Add autoplay parameter
+      const url = song.spotify_url.includes('?') 
+        ? `${song.spotify_url}&autoplay=true` 
+        : `${song.spotify_url}?autoplay=true`;
+      return url;
+    }
+    if (song.platform === 'spotify' && song.external_id) {
+      return `https://open.spotify.com/track/${song.external_id}?autoplay=true`;
+    }
+    return null;
+  };
+
+  const getYouTubeUrl = () => {
+    if (song.youtube_url) {
+      // Add autoplay parameter
+      const url = song.youtube_url.includes('?') 
+        ? `${song.youtube_url}&autoplay=1` 
+        : `${song.youtube_url}?autoplay=1`;
+      return url;
+    }
+    if (song.platform === 'youtube' && song.external_id) {
+      return `https://www.youtube.com/watch?v=${song.external_id}&autoplay=1`;
+    }
+    return null;
+  };
+
+  const spotifyUrl = getSpotifyUrl();
+  const youtubeUrl = getYouTubeUrl();
+
+  const handleExternalLinkClick = (e, url) => {
+    e.stopPropagation();
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div
       onClick={handleSongClick}
@@ -1060,11 +1411,11 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
           {song.playlistName && (
             <>
               <span className="text-[var(--muted-foreground)] opacity-50 flex-shrink-0">•</span>
-              <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap border ${
+              <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap border font-medium ${
                 song.platform === 'youtube'
-                  ? 'bg-red-900/30 text-red-400 border-red-500/30'
+                  ? 'bg-red-600 text-white border-red-500'
                   : song.platform === 'spotify'
-                  ? 'bg-green-900/30 text-green-400 border-green-500/30'
+                  ? 'bg-green-600 text-white border-green-500'
                   : 'bg-white/5 [data-theme=\'light\']:bg-black/5 text-[var(--muted-foreground)] border-white/10 [data-theme=\'light\']:border-black/10'
               }`}>
                 {song.platform === 'youtube' ? 'YT' : song.platform === 'spotify' ? 'Spotify' : song.platform}
@@ -1072,6 +1423,30 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
             </>
           )}
         </div>
+      </div>
+
+      {/* External Links - Visible on all screen sizes */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {spotifyUrl && (
+          <button
+            onClick={(e) => handleExternalLinkClick(e, spotifyUrl)}
+            className="p-1.5 rounded-lg hover:bg-green-500/20 active:bg-green-500/30 transition-colors"
+            aria-label={`Open ${song.title} in Spotify (opens in new tab)`}
+            title="Open in Spotify"
+          >
+            <ExternalLink className="h-4 w-4 text-green-400" aria-hidden="true" />
+          </button>
+        )}
+        {youtubeUrl && (
+          <button
+            onClick={(e) => handleExternalLinkClick(e, youtubeUrl)}
+            className="p-1.5 rounded-lg hover:bg-red-500/20 active:bg-red-500/30 transition-colors"
+            aria-label={`Open ${song.title} in YouTube (opens in new tab)`}
+            title="Open in YouTube"
+          >
+            <ExternalLink className="h-4 w-4 text-red-400" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {/* Like Button - Hidden on mobile, visible on desktop */}
