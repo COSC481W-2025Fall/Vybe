@@ -22,8 +22,8 @@ export default function Dashboard() {
   };
 
   const handleNavigate = (screen, params) => {
-    if (screen === 'groups' && params?.groupId) {
-      router.push(`/groups/${params.groupId}`);
+    if (screen === 'groups' && params?.groupSlug) {
+      router.push(`/groups/${params.groupSlug}`);
     } else {
       router.push(`/${screen}`);
     }
