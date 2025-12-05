@@ -1,9 +1,55 @@
 'use client';
 
 import { useState } from 'react';
-import { Music } from 'lucide-react';
+import { Music, CheckCircle, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+
+/**
+ * Accessible Progress Bar component
+ */
+function ExportProgressBar({ isExporting, status, progress }) {
+  if (!isExporting) return null;
+  
+  const isIndeterminate = progress === null || progress === undefined;
+  const progressPercent = isIndeterminate ? 0 : Math.min(100, Math.max(0, progress));
+  
+  return (
+    <div className="mt-4 space-y-2" role="status" aria-live="polite">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-[var(--muted-foreground)]">{status || 'Preparing export...'}</span>
+        {!isIndeterminate && (
+          <span className="text-[var(--foreground)] font-medium">{progressPercent}%</span>
+        )}
+      </div>
+      <div 
+        className="h-2 bg-[var(--secondary-bg)] rounded-full overflow-hidden"
+        role="progressbar"
+        aria-label="Export progress"
+        aria-valuenow={isIndeterminate ? undefined : progressPercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-busy={isExporting}
+      >
+        {isIndeterminate ? (
+          <div className="h-full w-1/3 bg-green-500 rounded-full animate-[progress-indeterminate_1.5s_ease-in-out_infinite]" />
+        ) : (
+          <div 
+            className="h-full bg-green-500 rounded-full transition-all duration-300 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+        )}
+      </div>
+      <style jsx>{`
+        @keyframes progress-indeterminate {
+          0% { transform: translateX(-100%); }
+          50% { transform: translateX(200%); }
+          100% { transform: translateX(-100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 /**
  * ExportToSpotifyButton - Component for exporting playlists to Spotify
@@ -29,13 +75,19 @@ export default function ExportToSpotifyButton({
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [customPlaylistName, setCustomPlaylistName] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState('');
+  const [exportProgress, setExportProgress] = useState(null);
 
   async function handleExportConfirm() {
     if (isExporting) return;
     
     setIsExporting(true);
+    setExportStatus('Preparing export...');
+    setExportProgress(null);
     
     try {
+      setExportStatus('Creating Spotify playlist...');
+      
       const response = await fetch('/api/export-playlist', {
         method: 'POST',
         headers: {
@@ -53,6 +105,12 @@ export default function ExportToSpotifyButton({
         }),
       });
 
+      // Check for non-JSON response
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server error occurred. Please try again later.');
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -63,9 +121,17 @@ export default function ExportToSpotifyButton({
         throw new Error(data.error || data.message || 'Failed to export playlist to Spotify');
       }
 
+      setExportStatus('Export complete!');
+      setExportProgress(100);
+      
+      // Brief pause to show completion
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Close dialog on success
       setShowExportDialog(false);
       setCustomPlaylistName('');
+      setExportStatus('');
+      setExportProgress(null);
       
       let message = `Playlist exported successfully to Spotify!`;
       if (data.stats) {
@@ -77,7 +143,7 @@ export default function ExportToSpotifyButton({
       }
 
       toast.success(message, {
-        duration: 5000,
+        duration: 6000,
         action: data.playlist?.external_urls?.spotify ? {
           label: 'Open Playlist',
           onClick: () => window.open(data.playlist.external_urls.spotify, '_blank'),
@@ -85,7 +151,17 @@ export default function ExportToSpotifyButton({
       });
     } catch (error) {
       console.error('[Export Spotify] Error:', error);
-      toast.error(error.message || 'Failed to export playlist to Spotify. Please try again.');
+      setExportStatus('');
+      setExportProgress(null);
+      // Show user-friendly error
+      const userMessage = error.message?.includes('connect') || error.message?.includes('token')
+        ? "Please connect your Spotify account first in Settings."
+        : error.message?.includes('not found')
+        ? "Some songs couldn't be found on Spotify."
+        : "Couldn't export to Spotify. Please try again.";
+      toast.error(userMessage, {
+        duration: 7000,
+      });
     } finally {
       setIsExporting(false);
     }
@@ -131,40 +207,55 @@ export default function ExportToSpotifyButton({
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              htmlFor="spotify-playlist-name"
+              className="block text-sm font-medium text-[var(--foreground)] mb-2"
+            >
               Playlist Name
             </label>
             <input
+              id="spotify-playlist-name"
               type="text"
               value={customPlaylistName}
               onChange={(e) => setCustomPlaylistName(e.target.value)}
               placeholder={`Enter a name (Default: ${defaultName})`}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-2 bg-[var(--input-bg)] border-2 border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500"
               disabled={isExporting}
+              aria-describedby={isExporting ? "export-progress" : undefined}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !isExporting) {
                   handleExportConfirm();
                 }
               }}
             />
+            
+            {/* Progress Bar */}
+            <div id="export-progress">
+              <ExportProgressBar 
+                isExporting={isExporting} 
+                status={exportStatus} 
+                progress={exportProgress} 
+              />
+            </div>
           </div>
           <DialogFooter>
             <button
               onClick={handleCloseDialog}
               disabled={isExporting}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 active:bg-gray-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] border border-[var(--glass-border)] rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               onClick={handleExportConfirm}
               disabled={isExporting}
+              aria-busy={isExporting}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 active:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isExporting ? (
                 <>
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Exporting...
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                  <span>Exporting...</span>
                 </>
               ) : (
                 'Confirm Export'

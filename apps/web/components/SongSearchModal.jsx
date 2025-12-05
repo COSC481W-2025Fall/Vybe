@@ -239,53 +239,60 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="vybe-aurora glass-card rounded-xl sm:rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="song-search-title"
+    >
+      <div className="glass-card rounded-xl sm:rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 sm:p-6 pb-3 sm:pb-4 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
-              <Music className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
+              <Music className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" aria-hidden="true" />
             </div>
-            <h2 className="page-title text-lg sm:text-xl">Search for a Song</h2>
+            <h2 id="song-search-title" className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">Search for a Song</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-white/10 active:bg-white/10 rounded transition-colors"
-            aria-label="Close"
+            className="p-1.5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 rounded transition-colors"
+            aria-label="Close dialog"
           >
-            <X className="h-5 w-5 text-white/60" />
+            <X className="h-5 w-5 text-[var(--muted-foreground)]" aria-hidden="true" />
           </button>
         </div>
 
         <div className="px-4 sm:px-6 pb-3 sm:pb-4 flex-shrink-0">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" aria-hidden="true" />
             <input
-              type="text"
+              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white/10 border border-white/20 rounded-lg text-white text-base sm:text-sm placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50"
+              className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-[var(--input-bg)] border-2 border-[var(--glass-border)] rounded-lg text-[var(--foreground)] text-base sm:text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400"
               placeholder="Search by song name or artist..."
               autoFocus
+              aria-label="Search for songs"
             />
             {loading && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="h-4 w-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                <div className="h-4 w-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
+                <span className="sr-only">Searching...</span>
               </div>
             )}
           </div>
         </div>
 
         {error && (
-          <div className="mx-4 sm:mx-6 mb-3 sm:mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg flex-shrink-0">
+          <div className="mx-4 sm:mx-6 mb-3 sm:mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg flex-shrink-0" role="alert">
             <p className="text-sm text-red-400">{error}</p>
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 modal-scroll min-h-0">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 modal-scroll min-h-0" role="list" aria-label="Search results">
           {songs.length > 0 && (
             <div className="space-y-2">
-              <p className="text-sm text-white/60 mb-3 sm:mb-4">
+              <p className="text-sm text-[var(--muted-foreground)] mb-3 sm:mb-4" aria-live="polite">
                 Found {songs.length} result{songs.length !== 1 ? 's' : ''}
               </p>
               {songs.map((song, index) => {
@@ -296,59 +303,62 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
                 const duration = song.duration_ms || 0;
 
                 return (
-                  <div
+                  <button
                     key={`${song.id || song.id?.videoId || index}-${song._platform || song._source || 'unknown'}`}
                     onClick={() => handleSelectSong(song)}
-                    className="flex items-center gap-2.5 sm:gap-4 p-2.5 sm:p-3 bg-white/5 hover:bg-white/10 active:bg-white/10 rounded-lg border border-white/10 cursor-pointer transition-colors"
+                    className="w-full flex items-center gap-2.5 sm:gap-4 p-2.5 sm:p-3 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] rounded-lg border border-[var(--glass-border)] cursor-pointer transition-colors text-left"
+                    role="listitem"
+                    aria-label={`${songName} by ${artistName}${isYouTube ? ', from YouTube' : ', from Spotify'}`}
                   >
                     {imageUrl && (
                       <img
                         src={imageUrl}
-                        alt={songName}
+                        alt=""
                         className="w-10 h-10 sm:w-12 sm:h-12 rounded flex-shrink-0"
+                        aria-hidden="true"
                       />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                        <p className="text-white font-medium text-sm sm:text-base truncate">{songName}</p>
+                        <p className="text-[var(--foreground)] font-medium text-sm sm:text-base truncate">{songName}</p>
                         {isYouTube && (
-                          <span className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded bg-red-600/20 text-red-400 border border-red-500/30 flex-shrink-0">
+                          <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded font-medium bg-red-600 text-white border border-red-500 flex-shrink-0">
                             YT
                           </span>
                         )}
                         {song._platform === 'spotify' && (
-                          <span className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded bg-green-600/20 text-green-400 border border-green-500/30 flex-shrink-0">
+                          <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded font-medium bg-green-600 text-white border border-green-500 flex-shrink-0">
                             Spotify
                           </span>
                         )}
                       </div>
-                      <p className="text-xs sm:text-sm text-white/60 truncate">
+                      <p className="text-xs sm:text-sm text-[var(--muted-foreground)] truncate">
                         {artistName}
                       </p>
                     </div>
                     {duration > 0 && (
-                      <div className="hidden sm:flex items-center gap-2 text-white/60 text-sm flex-shrink-0">
-                        <Clock className="h-3 w-3" />
-                        {formatDuration(duration)}
+                      <div className="hidden sm:flex items-center gap-2 text-[var(--muted-foreground)] text-sm flex-shrink-0">
+                        <Clock className="h-3 w-3" aria-hidden="true" />
+                        <span aria-label={`Duration: ${formatDuration(duration)}`}>{formatDuration(duration)}</span>
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>
           )}
           {songs.length === 0 && searchQuery && !loading && (
             <div className="text-center py-8 sm:py-12">
-              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-white/60 mx-auto mb-4" />
-              <p className="text-white/60 text-sm sm:text-base">No songs found</p>
-              <p className="text-xs sm:text-sm text-white/40 mt-2">Try a different search term</p>
+              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" aria-hidden="true" />
+              <p className="text-[var(--muted-foreground)] text-sm sm:text-base">No songs found</p>
+              <p className="text-xs sm:text-sm text-[var(--muted-foreground)] opacity-70 mt-2">Try a different search term</p>
             </div>
           )}
           {songs.length === 0 && !searchQuery && !loading && (
             <div className="text-center py-8 sm:py-12">
-              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-white/60 mx-auto mb-4" />
-              <p className="text-white/60 text-sm sm:text-base">Search for your favorite song</p>
-              <p className="text-xs sm:text-sm text-white/40 mt-2">Enter a song name or artist above</p>
+              <Music className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" aria-hidden="true" />
+              <p className="text-[var(--muted-foreground)] text-sm sm:text-base">Search for your favorite song</p>
+              <p className="text-xs sm:text-sm text-[var(--muted-foreground)] opacity-70 mt-2">Enter a song name or artist above</p>
             </div>
           )}
         </div>

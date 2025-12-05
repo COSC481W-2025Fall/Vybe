@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { User, AlertCircle, Music } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { User, AlertCircle, Music, ArrowLeft } from 'lucide-react';
 
 export default function PublicProfilePage() {
   const pathname = usePathname();
+  const router = useRouter();
 
   // Normalize username from URL (lowercase)
   const username = (pathname?.split('/').pop() || '').toLowerCase();
@@ -16,6 +17,11 @@ export default function PublicProfilePage() {
     error: null,
     profile: null,
   });
+
+  // Go back to previous page
+  const handleBack = () => {
+    router.back();
+  };
 
   useEffect(() => {
     if (!username) return;
@@ -103,29 +109,39 @@ export default function PublicProfilePage() {
 
   // Public profile view
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="max-w-xl w-full glass-card rounded-2xl p-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="relative h-16 w-16 rounded-full overflow-hidden bg-[var(--secondary-bg)] border border-[var(--glass-border)] flex items-center justify-center">
-            {profile.profile_picture_url ? (
-              <Image
-                src={profile.profile_picture_url}
-                alt={profile.display_name || profile.username}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <User className="h-8 w-8 text-[var(--muted-foreground)]" />
-            )}
+    <div className="min-h-screen px-4 py-8">
+      <div className="max-w-xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-2 mb-4 px-3 py-2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary-bg)] rounded-lg transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm">Back</span>
+        </button>
+
+        <div className="glass-card rounded-2xl p-6">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="relative h-16 w-16 rounded-full overflow-hidden bg-[var(--secondary-bg)] border border-[var(--glass-border)] flex items-center justify-center">
+              {profile.profile_picture_url ? (
+                <Image
+                  src={profile.profile_picture_url}
+                  alt={profile.display_name || profile.username}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <User className="h-8 w-8 text-[var(--muted-foreground)]" />
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-[var(--foreground)]">
+                {profile.display_name || profile.username}
+              </h1>
+              <p className="text-sm text-[var(--muted-foreground)]">@{profile.username}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-[var(--foreground)]">
-              {profile.display_name || profile.username}
-            </h1>
-            <p className="text-sm text-[var(--muted-foreground)]">@{profile.username}</p>
-          </div>
-        </div>
 
         {/* Bio */}
         {profile.bio && (
@@ -137,11 +153,12 @@ export default function PublicProfilePage() {
           </div>
         )}
 
-        {/* Footer */}
-        <div className="border-t border-[var(--glass-border)] pt-4 mt-4">
-          <div className="flex items-center gap-2 text-[var(--muted-foreground)] text-sm">
-            <Music className="h-4 w-4" />
-            <span>This is a public Vybe profile.</span>
+          {/* Footer */}
+          <div className="border-t border-[var(--glass-border)] pt-4 mt-4">
+            <div className="flex items-center gap-2 text-[var(--muted-foreground)] text-sm">
+              <Music className="h-4 w-4" />
+              <span>This is a public Vybe profile.</span>
+            </div>
           </div>
         </div>
       </div>

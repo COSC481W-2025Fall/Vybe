@@ -10,17 +10,12 @@ import {
   CheckCircle2,
   XCircle,
   Music,
-  UserPlus,
   Users,
-  Trash2,
-  Mail as MailIcon,
 } from 'lucide-react';
 import SettingsPageWrapper, { useSettingsContext } from '@/components/SettingsPageWrapper';
 import { profileSchema } from '@/lib/schemas/profileSchema';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import { useProfile } from '@/hooks/useProfileUpdate';
-import AddFriendsModal from '@/components/AddFriendsModal';
-import FriendRequestsModal from '@/components/FriendRequestsModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGroups } from '@/hooks/useGroups';
 
@@ -61,13 +56,6 @@ function ProfileSettingsContent() {
   const displayName = watch('display_name');
   const bio = watch('bio');
 
-  // Friends management state
-  const [showAddFriendsModal, setShowAddFriendsModal] = useState(false);
-  const [showFriendRequestsModal, setShowFriendRequestsModal] = useState(false);
-  const [friends, setFriends] = useState([]);
-  const [friendsLoading, setFriendsLoading] = useState(true);
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
-
   // Track unsaved changes (drives yellow bar + Save button state)
   useEffect(() => {
     setHasUnsavedChanges(isDirty);
@@ -96,97 +84,6 @@ function ProfileSettingsContent() {
       setInitialized(true);
     }
   }, [profileData, reset, initialized, isDirty, justSaved, isSubmitting]);
-
-  // Load friends list
-  useEffect(() => {
-    loadFriends();
-    loadPendingRequestsCount();
-  }, []);
-
-  const loadFriends = async () => {
-    setFriendsLoading(true);
-    try {
-      const response = await fetch('/api/friends');
-      const data = await response.json();
-      if (data.success) {
-        setFriends(data.friends || []);
-      }
-    } catch (error) {
-      console.error('Error loading friends:', error);
-    } finally {
-      setFriendsLoading(false);
-    }
-  };
-
-  const loadPendingRequestsCount = async () => {
-    try {
-      const response = await fetch('/api/friends/requests');
-      const data = await response.json();
-      if (data.success) {
-        const receivedCount = data.received?.length || 0;
-        setPendingRequestsCount(receivedCount);
-      }
-    } catch (error) {
-      console.error('Error loading friend requests:', error);
-    }
-  };
-
-  const handleRemoveFriend = async (friendId) => {
-    if (!confirm('Are you sure you want to remove this friend?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/friends', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ friendId }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Remove from local state
-        setFriends(prev => prev.filter(f => f.id !== friendId));
-        
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('show-toast', {
-              detail: {
-                type: 'success',
-                message: 'Friend removed successfully',
-              },
-            })
-          );
-        }
-      } else {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('show-toast', {
-              detail: {
-                type: 'error',
-                message: data.error || 'Failed to remove friend',
-              },
-            })
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error removing friend:', error);
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('show-toast', {
-            detail: {
-              type: 'error',
-              message: 'Network error. Please try again.',
-            },
-          })
-        );
-      }
-    }
-  };
 
   // Submit handler: update Supabase users table directly
   const onSubmit = async (data) => {
@@ -422,7 +319,7 @@ function ProfileSettingsContent() {
             <div>
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
               <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-                Manage your display name, bio, profile picture, and friends here
+                Manage your display name, bio, and profile picture
               </p>
             </div>
           </div>
@@ -446,7 +343,7 @@ function ProfileSettingsContent() {
             <div>
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
               <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-              Manage your display name, bio, profile picture, and friends here
+              Manage your display name, bio, and profile picture
               </p>
             </div>
           </div>
@@ -471,7 +368,7 @@ function ProfileSettingsContent() {
           <div>
             <h2 className="text-xl font-semibold text-[var(--foreground)]">Profile</h2>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-            Manage your display name, bio, profile picture, and friends here
+            Manage your display name, bio, and profile picture
             </p>
           </div>
         </div>
@@ -639,125 +536,8 @@ function ProfileSettingsContent() {
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-white/10 [data-theme='light']:border-black/10"></div>
-
-          {/* Friends Management */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <h3 className="text-lg font-medium text-[var(--foreground)]">Friends</h3>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => setShowFriendRequestsModal(true)}
-                  className="relative flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2 px-3 py-2 sm:py-1.5 bg-[color-mix(in_srgb,var(--accent)_20%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] active:bg-[color-mix(in_srgb,var(--accent)_30%,transparent)] text-[var(--accent)] rounded-lg text-sm transition-colors border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
-                >
-                  <MailIcon className="h-4 w-4" />
-                  <span>Requests</span>
-                  {pendingRequestsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                      {pendingRequestsCount}
-                    </span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddFriendsModal(true)}
-                  className="flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-2 px-3 py-2 sm:py-1.5 bg-blue-500/20 hover:bg-blue-500/30 active:bg-blue-500/30 text-blue-400 rounded-lg text-sm transition-colors border border-blue-500/30"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span>Add Friends</span>
-                </button>
-              </div>
-            </div>
-
-            {friendsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--accent)]" />
-              </div>
-            ) : friends.length > 0 ? (
-              <div className="space-y-2">
-                {friends.map((friend) => (
-                  <div
-                    key={friend.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-[var(--glass-border)] bg-[var(--secondary-bg)]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-[var(--accent)] flex items-center justify-center text-white font-semibold overflow-hidden">
-                        {friend.profile_picture_url ? (
-                          <img
-                            src={friend.profile_picture_url}
-                            alt={friend.name || friend.username}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span>{friend.name?.charAt(0)?.toUpperCase() || friend.username?.charAt(0)?.toUpperCase() || '?'}</span>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-[var(--foreground)] font-medium">{friend.name || friend.username}</p>
-                        <p className="text-sm text-[var(--muted-foreground)]">@{friend.username}</p>
-                        {friend.bio && (
-                          <p className="text-xs text-[var(--muted-foreground)] mt-1 line-clamp-2 opacity-80">
-                            {friend.bio}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFriend(friend.id)}
-                      className="p-2 hover:bg-red-500/20 active:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30"
-                      title="Remove friend"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-400" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 rounded-lg border border-white/10 [data-theme='light']:border-black/20 bg-white/5 [data-theme='light']:bg-black/5">
-                <Users className="h-12 w-12 text-[var(--muted-foreground)] mx-auto mb-3" />
-                <p className="text-[var(--muted-foreground)] mb-2">No friends yet</p>
-                <button
-                  type="button"
-                  onClick={() => setShowAddFriendsModal(true)}
-                  className="text-sm text-[var(--accent)] hover:opacity-80"
-                >
-                  Add your first friend
-                </button>
-              </div>
-            )}
-          </div>
-
         </div>
       </form>
-
-      {/* Modals */}
-      {showAddFriendsModal && (
-        <AddFriendsModal
-          onClose={() => {
-            setShowAddFriendsModal(false);
-            loadFriends(); // Refresh friends list
-            loadPendingRequestsCount(); // Refresh request count
-          }}
-        />
-      )}
-
-      {showFriendRequestsModal && (
-        <FriendRequestsModal
-          onClose={() => {
-            setShowFriendRequestsModal(false);
-            loadFriends(); // Refresh friends list
-            loadPendingRequestsCount(); // Refresh request count
-          }}
-          onRefresh={() => {
-            // Refresh both pending count and friends when an action occurs in the modal
-            loadPendingRequestsCount();
-            loadFriends();
-          }}
-        />
-      )}
     </div>
   );
 }

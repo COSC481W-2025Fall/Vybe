@@ -2,7 +2,7 @@
 'use client';
 
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { Clock, ListMusic } from 'lucide-react';
+import { Clock, ListMusic, ExternalLink } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // ---------------- helpers ----------------
@@ -36,15 +36,64 @@ function TabButton({ isActive, children, onClick }) {
 }
 
 function Row({ item }) {
+  // Build external URL based on platform (with autoplay)
+  const getExternalUrl = () => {
+    // Check for explicit URLs first
+    if (item.spotifyUrl) return { url: item.spotifyUrl, platform: 'spotify' };
+    if (item.youtubeUrl) {
+      // Add autoplay to YouTube URLs
+      const url = new URL(item.youtubeUrl);
+      url.searchParams.set('autoplay', '1');
+      return { url: url.toString(), platform: 'youtube' };
+    }
+    
+    // Use trackId (the actual Spotify/YouTube ID) if available
+    if (item.trackId) {
+      if (item.platform === 'youtube') {
+        return { url: `https://www.youtube.com/watch?v=${item.trackId}&autoplay=1`, platform: 'youtube' };
+      }
+      // Spotify: use URI scheme to open app and autoplay, fallback to web player
+      return { url: `https://open.spotify.com/track/${item.trackId}?autoplay=true`, platform: 'spotify' };
+    }
+    
+    // For playlist songs with external_id and platform
+    if (item.external_id && item.platform) {
+      if (item.platform === 'youtube') {
+        return { url: `https://www.youtube.com/watch?v=${item.external_id}&autoplay=1`, platform: 'youtube' };
+      }
+      if (item.platform === 'spotify') {
+        return { url: `https://open.spotify.com/track/${item.external_id}?autoplay=true`, platform: 'spotify' };
+      }
+    }
+    
+    return null;
+  };
+
+  const externalLink = getExternalUrl();
+
+  const handleClick = () => {
+    if (externalLink?.url) {
+      window.open(externalLink.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
-    <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card">
+    <li 
+      onClick={handleClick}
+      className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
+      aria-label={`Open ${item.title} by ${item.artist} in ${externalLink?.platform || 'music service'} (opens in new tab)`}
+    >
       <div className="relative flex-shrink-0">
         <img
           src={item.cover}
           width={64}
           height={64}
           className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
-          alt={`${item.title} cover`}
+          alt=""
+          aria-hidden="true"
         />
         <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
@@ -52,15 +101,30 @@ function Row({ item }) {
         <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-[var(--foreground)] group-hover:text-[var(--foreground)] transition-colors duration-300">
           {item.title}
         </div>
-        <div className="truncate text-xs sm:text-sm md:text-base text-muted-foreground mt-0.5 sm:mt-1">
+        <div className="truncate text-xs sm:text-sm md:text-base text-[var(--muted-foreground)] mt-0.5 sm:mt-1">
           {item.artist}
         </div>
-        <div className="truncate text-xs sm:text-sm text-muted-foreground/80 mt-0.5 sm:mt-1">
+        <div className="truncate text-xs sm:text-sm text-[var(--muted-foreground)] opacity-80 mt-0.5 sm:mt-1">
           {item.album}
         </div>
       </div>
+      
+      {/* External Link Indicator */}
+      {externalLink && (
+        <div className="hidden sm:flex items-center gap-2 flex-shrink-0 mr-2">
+          <span className={`text-xs px-2 py-1 rounded-full font-medium border ${
+            externalLink.platform === 'youtube'
+              ? 'bg-red-600 text-white border-red-500'
+              : 'bg-green-600 text-white border-green-500'
+          }`}>
+            {externalLink.platform === 'youtube' ? 'YT' : 'Spotify'}
+          </span>
+          <ExternalLink className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-[var(--foreground)] transition-colors" aria-hidden="true" />
+        </div>
+      )}
+      
       <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-[var(--muted-foreground)] bg-white/10 [data-theme='light']:bg-black/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0 border border-white/10 [data-theme='light']:border-black/10">
-        <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+        <Clock className="h-3 w-3 sm:h-4 sm:w-4" aria-hidden="true" />
         <span className="font-medium whitespace-nowrap">{timeAgo(item.playedAt)}</span>
       </div>
     </li>
@@ -71,7 +135,27 @@ function PlaylistRow({ playlist }) {
   const [exporting, setExporting] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
 
-  async function handleExport() {
+  // Build external URL based on platform
+  const getExternalUrl = () => {
+    if (playlist.platform === 'spotify' && playlist.playlistId) {
+      return { url: `https://open.spotify.com/playlist/${playlist.playlistId}`, platform: 'spotify' };
+    }
+    if (playlist.platform === 'youtube' && playlist.playlistId) {
+      return { url: `https://www.youtube.com/playlist?list=${playlist.playlistId}`, platform: 'youtube' };
+    }
+    return null;
+  };
+
+  const externalLink = getExternalUrl();
+
+  const handleClick = () => {
+    if (externalLink?.url) {
+      window.open(externalLink.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  async function handleExport(e) {
+    e.stopPropagation(); // Prevent opening playlist when clicking export
     try {
       setExporting(true);
       // Ask the user for a custom playlist name to create on their Spotify account
@@ -110,7 +194,8 @@ function PlaylistRow({ playlist }) {
     }
   }
 
-  async function handleExportCSV() {
+  async function handleExportCSV(e) {
+    e.stopPropagation(); // Prevent opening playlist when clicking export
     try {
       setExportingCSV(true);
       const res = await fetch('/api/export-playlist', {
@@ -159,7 +244,14 @@ function PlaylistRow({ playlist }) {
     }
   }
   return (
-    <li className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card">
+    <li 
+      onClick={handleClick}
+      className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
+      aria-label={`Open ${playlist.name} playlist on ${externalLink?.platform || 'music service'} (opens in new tab)`}
+    >
       <div className="relative flex-shrink-0">
         {playlist.cover ? (
           <img
@@ -180,14 +272,29 @@ function PlaylistRow({ playlist }) {
         <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-[var(--foreground)] group-hover:text-[var(--foreground)] transition-colors duration-300">
           {playlist.name}
         </div>
-        <div className="truncate text-xs sm:text-sm md:text-base text-muted-foreground mt-0.5 sm:mt-1">
+        <div className="truncate text-xs sm:text-sm md:text-base text-[var(--muted-foreground)] mt-0.5 sm:mt-1">
           {playlist.description || 'No description'}
         </div>
-        <div className="truncate text-xs sm:text-sm text-muted-foreground/80 mt-0.5 sm:mt-1">
+        <div className="truncate text-xs sm:text-sm text-[var(--muted-foreground)]/80 mt-0.5 sm:mt-1">
           {playlist.tracks} tracks • by {playlist.owner}
         </div>
       </div>
-      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-white/10 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0">
+      
+      {/* Platform badge and external link indicator */}
+      {externalLink && (
+        <div className="hidden sm:flex items-center gap-2 flex-shrink-0 mr-2">
+          <span className={`text-xs px-2 py-1 rounded-full font-medium border ${
+            externalLink.platform === 'youtube'
+              ? 'bg-red-600 text-white border-red-500'
+              : 'bg-green-600 text-white border-green-500'
+          }`}>
+            {externalLink.platform === 'youtube' ? 'YouTube' : 'Spotify'}
+          </span>
+          <ExternalLink className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-[var(--foreground)] transition-colors" aria-hidden="true" />
+        </div>
+      )}
+      
+      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-[var(--muted-foreground)] bg-white/10 [data-theme='light']:bg-black/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0 border border-white/10 [data-theme='light']:border-black/10">
         <ListMusic className="h-3 w-3 sm:h-4 sm:w-4" />
         <span className="font-medium whitespace-nowrap">{playlist.public ? 'Public' : 'Private'}</span>
       </div>
@@ -365,7 +472,9 @@ export default function LibraryView() {
     console.log('[mapItem] Track data:', t);
 
     const mapped = {
-      id: `${t?.id || 'unknown'}-${sp.played_at}`, // unique per play
+      id: `${t?.id || 'unknown'}-${sp.played_at}`, // unique per play (for React key)
+      trackId: t?.id || null, // actual Spotify track ID for URLs
+      platform: 'spotify', // track platform for URL generation
       title: t?.name || 'Unknown',
       artist: t?.artists?.map(a => a.name).join(', ') || 'Unknown',
       album: t?.album?.name || 'Unknown',
@@ -383,6 +492,8 @@ export default function LibraryView() {
 
     const mapped = {
       id: playlist.id,
+      playlistId: playlist.id, // actual Spotify playlist ID for URLs
+      platform: 'spotify',
       name: playlist.name,
       description: playlist.description || '',
       cover: playlist.images?.[0]?.url || '',
@@ -401,6 +512,8 @@ export default function LibraryView() {
 
     const mapped = {
       id: playlist.id,
+      playlistId: playlist.id, // actual YouTube playlist ID for URLs
+      platform: 'youtube',
       name: playlist.snippet?.title || 'Untitled Playlist',
       description: playlist.snippet?.description || '',
       cover: playlist.snippet?.thumbnails?.high?.url || playlist.snippet?.thumbnails?.medium?.url || playlist.snippet?.thumbnails?.default?.url || '',

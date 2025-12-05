@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { Users, Music, Calendar } from 'lucide-react';
 
 export default function FullGroupCard({ group, isOwner, onClick }) {
   const [members, setMembers] = useState([]);
@@ -35,9 +36,8 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
   }, [group.id, group.owner_id]);
 
   const formattedDate = new Date(group.created_at).toLocaleDateString('en-US', {
-    month: 'numeric',
-    day: 'numeric',
-    year: 'numeric'
+    month: 'short',
+    day: 'numeric'
   });
 
   const displayMembers = members.slice(0, 3);
@@ -46,63 +46,75 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="glass-card rounded-xl p-4 hover:bg-white/5 [data-theme='light']:hover:bg-black/5 active:bg-white/5 [data-theme='light']:active:bg-black/5 transition-colors cursor-pointer"
+      className="glass-card rounded-xl p-4 hover:bg-[var(--secondary-hover)] transition-all cursor-pointer h-[200px] flex flex-col"
     >
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="text-lg font-semibold text-[var(--foreground)] truncate">{group.name}</h3>
+      {/* Header - fixed */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="text-sm sm:text-base font-semibold text-[var(--foreground)] truncate flex-1">
+          {group.name}
+        </h3>
         {isOwner ? (
-          <span className="px-3 py-1 bg-purple-600/20 text-purple-400 rounded-full text-xs font-medium border border-purple-500/30">
+          <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 rounded-full text-xs font-medium border border-purple-500/30 flex-shrink-0">
             Owner
           </span>
         ) : (
-          <span className="px-3 py-1 surface-elevated rounded-full text-xs font-medium text-[var(--muted-foreground)]">
+          <span className="px-2 py-0.5 bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded-full text-xs text-[var(--muted-foreground)] flex-shrink-0">
             Public
           </span>
         )}
       </div>
 
-      <p className="text-sm text-[var(--muted-foreground)] mb-4 line-clamp-2">
+      {/* Description - flexible */}
+      <p className="text-xs text-[var(--muted-foreground)] line-clamp-2 flex-1 min-h-[32px]">
         {group.description || 'No description'}
       </p>
 
-      <div className="flex items-center gap-6 mb-4 text-sm text-[var(--muted-foreground)]">
-        <span>{group.memberCount || 1} members</span>
-        <span>{group.songCount || 0} songs</span>
+      {/* Stats */}
+      <div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)] mb-3">
         <span className="flex items-center gap-1">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Created {formattedDate}
+          <Users className="w-3 h-3" />
+          {group.memberCount || 1}
+        </span>
+        <span className="flex items-center gap-1">
+          <Music className="w-3 h-3" />
+          {group.songCount || 0}
+        </span>
+        <span className="flex items-center gap-1">
+          <Calendar className="w-3 h-3" />
+          {formattedDate}
         </span>
       </div>
 
-      <div className="flex items-center justify-between">
+      {/* Footer - fixed */}
+      <div className="flex items-center justify-between pt-2 border-t border-[var(--glass-border)] mt-auto">
+        {/* Member Avatars */}
         <div className="flex -space-x-2">
           {displayMembers.map((member, index) => (
             <div
               key={member?.id || index}
-              className="w-8 h-8 rounded-full border-2 border-gray-900 overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500"
+              className="w-7 h-7 rounded-full border-2 border-[var(--background)] overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500"
               title={member?.username || 'Member'}
             >
               {member?.profile_picture_url ? (
                 <img src={member.profile_picture_url} alt={member.username || 'Member'} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-[var(--foreground)] text-xs font-semibold">
+                <div className="w-full h-full flex items-center justify-center text-white text-xs font-semibold">
                   {member?.username?.[0]?.toUpperCase() || 'M'}
                 </div>
               )}
             </div>
           ))}
           {remainingCount > 0 && (
-            <div className="w-8 h-8 rounded-full surface-elevated border-2 border-[var(--background)] flex items-center justify-center text-[var(--foreground)] text-xs">
+            <div className="w-7 h-7 rounded-full bg-[var(--secondary-bg)] border-2 border-[var(--background)] flex items-center justify-center text-[var(--muted-foreground)] text-xs">
               +{remainingCount}
             </div>
           )}
         </div>
 
-        <div className="px-3 py-1.5 surface-elevated rounded-md text-[var(--muted-foreground)] text-sm font-mono font-semibold">
-          {group.join_code || 'GENERATING...'}
-        </div>
+        {/* Join Code */}
+        <span className="px-2 py-0.5 bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded text-xs font-mono text-[var(--muted-foreground)]">
+          {group.join_code || '...'}
+        </span>
       </div>
     </div>
   );

@@ -3,17 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Plus, TrendingUp, ChevronRight, Music, AlertCircle, ExternalLink, Youtube } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { useGroups } from "../hooks/useGroups";
 import { useSocial } from "../hooks/useSocial";
 import { GroupCard } from "./shared/GroupCard";
 import { LoadingState } from "./shared/LoadingState";
 import { EmptyState } from "./shared/EmptyState";
-import { TextField, TextareaField, SwitchField } from "./shared/FormField";
 import { useDialog } from "../hooks/useDialog";
-import { SongDetailsDialog } from "./shared/SongDetailsDialog";
+import { FriendSongCard } from "./shared/FriendSongCard";
 import { CommunitiesDialog } from "./shared/CommunitiesDialog";
-import { ShareSongDialog } from "./shared/ShareSongDialog";
+import SongSearchModal from "./SongSearchModal";
 import { toast } from "sonner";
 import ExportPlaylistButton from "./ExportPlaylistButton";
 import ExportToSpotifyButton from "./ExportToSpotifyButton";
@@ -30,7 +29,7 @@ export function HomePage({ onNavigate } = {}) {
   const { friendsSongsOfTheDay, communities, loading: socialLoading, error: socialError } = useSocial();
   const createGroupDialog = useDialog();
   const communitiesDialog = useDialog();
-  const shareSongDialog = useDialog();
+  const [showSongSearchModal, setShowSongSearchModal] = useState(false);
   
   // Added dialogue hook and state (delete this comment later)
   const communityDetailDialog = useDialog();
@@ -38,7 +37,6 @@ export function HomePage({ onNavigate } = {}) {
 
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
   const [createError, setCreateError] = useState("");
   const [selectedSong, setSelectedSong] = useState(null);
   const [songDialogOpen, setSongDialogOpen] = useState(false);
@@ -120,13 +118,45 @@ export function HomePage({ onNavigate } = {}) {
     e.preventDefault();
     try {
       setCreateError("");
-      await createGroup(groupName, groupDescription, !isPublic);
+      await createGroup(groupName, groupDescription, false); // default to public
       createGroupDialog.close();
       setGroupName("");
       setGroupDescription("");
-      setIsPublic(true);
+      toast.success("Group created successfully!");
     } catch (error) {
       setCreateError(error.message || "Failed to create group");
+    }
+  };
+
+  // Handle setting song of the day (same as profile page)
+  const handleSetSongOfDay = async (song) => {
+    try {
+      const response = await fetch('/api/song-of-the-day', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          songName: song.name,
+          artist: song.artist,
+          album: song.album,
+          imageUrl: song.imageUrl,
+          previewUrl: song.previewUrl,
+          spotifyUrl: song.spotifyUrl,
+          youtubeUrl: song.youtubeUrl,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`"${song.name}" is now your song of the day!`);
+        setShowSongSearchModal(false);
+      } else {
+        toast.error(data.error || "Couldn't share your song. Please try again.");
+      }
+    } catch (error) {
+      console.error('Error setting song of the day:', error);
+      toast.error("Couldn't share your song. Please try again.");
     }
   };
 
@@ -142,69 +172,13 @@ export function HomePage({ onNavigate } = {}) {
             </h2>
             <p className="text-[var(--muted-foreground)] text-xs sm:text-sm">Your most active music groups</p>
           </div>
-          <Dialog open={createGroupDialog.isOpen} onOpenChange={createGroupDialog.setIsOpen}>
-            <DialogTrigger asChild>
-              <button className="flex items-center gap-2 px-3 sm:px-4 py-2 btn-primary rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start">
-                <Plus className="h-4 w-4" />
-                <span>Create Group</span>
-              </button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Group</DialogTitle>
-                <DialogDescription>
-                  Create a music group to share playlists and discover new songs with friends.
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateGroup} className="space-y-4">
-                {createError && (
-                  <div className="p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-400 text-sm">
-                    <AlertCircle className="h-4 w-4 inline mr-2" />
-                    {createError}
-                  </div>
-                )}
-                <TextField
-                  id="group-name"
-                  label="Group Name"
-                  value={groupName}
-                  onChange={setGroupName}
-                  placeholder="Enter group name"
-                  required
-                />
-                <TextareaField
-                  id="group-description"
-                  label="Description"
-                  description="Optional"
-                  value={groupDescription}
-                  onChange={setGroupDescription}
-                  placeholder="Describe your group"
-                />
-                <SwitchField
-                  id="group-privacy"
-                  label="Public Group"
-                  description="Anyone can discover and join this group"
-                  checked={isPublic}
-                  onCheckedChange={setIsPublic}
-                />
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={createGroupDialog.close}
-                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={groupsLoading}
-                    className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
-                  >
-                    {groupsLoading ? "Creating..." : "Create Group"}
-                  </button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <button 
+            onClick={createGroupDialog.open}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 btn-primary rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Create Group</span>
+          </button>
         </div>
 
         {groupsError && (
@@ -218,7 +192,7 @@ export function HomePage({ onNavigate } = {}) {
           {groupsLoading ? (
             <LoadingState count={3} />
           ) : groups.length > 0 ? (
-            groups.map((group) => (
+            groups.slice(0, 3).map((group) => (
               <GroupCard
                 key={group.id}
                 name={group.name}
@@ -246,6 +220,18 @@ export function HomePage({ onNavigate } = {}) {
             />
           )}
         </div>
+        
+        {/* View All Groups Link */}
+        {groups.length > 3 && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => navigate('groups')}
+              className="text-sm text-[var(--accent)] hover:underline"
+            >
+              View all {groups.length} groups →
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Friends' Song of the Day Section */}
@@ -256,7 +242,7 @@ export function HomePage({ onNavigate } = {}) {
             <p className="text-[var(--muted-foreground)] text-xs sm:text-sm">See what your friends are currently vibing to</p>
           </div>
           <button
-            onClick={shareSongDialog.open}
+            onClick={() => setShowSongSearchModal(true)}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 btn-primary rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"
           >
             <Plus className="h-4 w-4" />
@@ -273,24 +259,23 @@ export function HomePage({ onNavigate } = {}) {
 
         <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
           {socialLoading ? (
-            <div className="flex justify-center items-center py-6 sm:py-8">
-              <div className="animate-pulse grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 md:gap-6 w-full">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="flex flex-col items-center space-y-2 sm:space-y-3">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white/10 [data-theme='light']:bg-black/10 rounded-full"></div>
-                    <div className="h-2 sm:h-3 bg-white/10 [data-theme='light']:bg-black/10 rounded w-12 sm:w-16"></div>
-                    <div className="h-1.5 sm:h-2 bg-white/10 [data-theme='light']:bg-black/10 rounded w-8 sm:w-12"></div>
-                  </div>
-                ))}
-              </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="animate-pulse bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded-xl p-3 h-[140px] sm:h-[160px] flex flex-col items-center">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[var(--glass-border)] rounded-full mb-2"></div>
+                  <div className="h-3 bg-[var(--glass-border)] rounded w-16 mb-1"></div>
+                  <div className="h-2 bg-[var(--glass-border)] rounded w-20 mb-1"></div>
+                  <div className="h-2 bg-[var(--glass-border)] rounded w-14"></div>
+                </div>
+              ))}
             </div>
           ) : friendsSongsOfTheDay.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6 md:gap-8 w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
               {friendsSongsOfTheDay.map((friend) => (
                 <button
                   key={friend.id}
                   type="button"
-                  className="flex flex-col items-center space-y-3 cursor-pointer group bg-transparent border-none p-0 focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg"
+                  className="flex flex-col items-center p-3 cursor-pointer group bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] border border-[var(--glass-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 transition-all h-[140px] sm:h-[160px]"
                   onClick={() => {
                     setSelectedSong(friend);
                     setSongDialogOpen(true);
@@ -303,29 +288,35 @@ export function HomePage({ onNavigate } = {}) {
                     }
                   }}
                 >
-                  <div className="relative">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 group-hover:scale-105 transition-all shadow-lg">
+                  {/* Avatar */}
+                  <div className="relative mb-2">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 group-hover:scale-105 transition-transform shadow-lg">
                       {friend.shared_by_avatar ? (
                         <img src={friend.shared_by_avatar} alt={friend.shared_by} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[var(--foreground)] text-xs sm:text-sm md:text-lg font-bold">
+                        <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
                           {friend.shared_by?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                         </div>
                       )}
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-white [data-theme='light']:bg-white rounded-full border-2 border-gray-900 [data-theme='light']:border-gray-100 flex items-center justify-center shadow-md">
-                      <Music className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5 text-gray-900 [data-theme='light']:text-gray-900" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[var(--background)] rounded-full border-2 border-[var(--glass-border)] flex items-center justify-center">
+                      <Music className="h-2.5 w-2.5 text-[var(--accent)]" />
                     </div>
                   </div>
 
-                  <div className="text-center w-full">
-                    <p className="text-xs sm:text-sm font-semibold text-[var(--foreground)] mb-1 sm:mb-1.5 truncate">{friend.shared_by?.split(' ')[0] || 'Friend'}</p>
-                    <p className="text-xs font-medium text-[var(--foreground)] mb-0.5 leading-tight truncate">{friend.title || 'Untitled'}</p>
-                    <p className="text-xs text-[var(--muted-foreground)] mb-1 leading-tight truncate">{friend.artist || 'Unknown Artist'}</p>
-                    {friend.shared_at && (
-                      <p className="text-xs text-[var(--muted-foreground)] opacity-70">{new Date(friend.shared_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                    )}
+                  {/* Info */}
+                  <div className="text-center w-full flex-1 flex flex-col justify-center min-w-0">
+                    <p className="text-xs font-semibold text-[var(--foreground)] truncate">{friend.shared_by?.split(' ')[0] || 'Friend'}</p>
+                    <p className="text-xs text-[var(--foreground)] truncate mt-1">{friend.title || 'Untitled'}</p>
+                    <p className="text-xs text-[var(--muted-foreground)] truncate">{friend.artist || 'Unknown'}</p>
                   </div>
+
+                  {/* Time */}
+                  {friend.shared_at && (
+                    <p className="text-xs text-[var(--muted-foreground)] opacity-70 mt-auto pt-1">
+                      {new Date(friend.shared_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
                 </button>
               ))}
             </div>
@@ -360,12 +351,11 @@ export function HomePage({ onNavigate } = {}) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          {communities.map((community) => (
+          {communities.slice(0, 3).map((community) => (
             <button
               key={community.id}
               type="button"
-              className="glass-card rounded-xl p-4 sm:p-6 hover:bg-white/5 active:bg-white/5 transition-colors cursor-pointer text-left w-full focus:outline-none focus:ring-2 focus:ring-white/20"
-              //onClick={() => toast.success(`Joined ${community.name}`)}
+              className="glass-card rounded-xl p-4 hover:bg-[var(--secondary-hover)] transition-all cursor-pointer text-left w-full focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 h-[160px] flex flex-col"
               onClick={async () => {
                 setSelectedCommunity(community);
                 communityDetailDialog.open();
@@ -388,51 +378,56 @@ export function HomePage({ onNavigate } = {}) {
                 }
               }}
             >
-              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-[var(--foreground)] text-base sm:text-lg mb-1 truncate">{community.name}</h3>
-                  <p className="text-xs sm:text-sm text-[var(--muted-foreground)] mb-2 sm:mb-3 line-clamp-2">{community.description}</p>
-                </div>
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h3 className="font-semibold text-[var(--foreground)] text-sm sm:text-base truncate flex-1">
+                  {community.name}
+                </h3>
                 {community.member_count > 2000 && (
-                  <span className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-purple-900/40 text-purple-300 text-xs font-medium rounded-full border border-purple-800/50 ml-2 flex-shrink-0">
+                  <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs font-medium rounded-full border border-purple-800/50 flex-shrink-0">
                     <TrendingUp className="h-3 w-3" />
-                    <span className="hidden sm:inline">Trending</span>
                   </span>
                 )}
               </div>
-              {/* <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">{community.member_count.toLocaleString()} members</span>
-                <ChevronRight className="h-4 w-4 text-gray-400" />
-              </div> */}
 
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                  <Music className="h-4 w-4" />
-                  <span>
-                    {community.playlist_links?.length > 0 
-                      ? `${community.playlist_links.length} playlist${community.playlist_links.length !== 1 ? 's' : ''}`
-                      : 'No playlists'
-                    }
+              {/* Description - flexible */}
+              <p className="text-xs text-[var(--muted-foreground)] line-clamp-2 flex-1 min-h-[32px]">
+                {community.description || 'No description'}
+              </p>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--glass-border)] mt-auto">
+                <div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
+                  <span className="flex items-center gap-1">
+                    <Music className="h-3 w-3" />
+                    {community.playlist_links?.length || 0} playlists
                   </span>
+                  <span>{community.song_count || 0} songs</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--muted-foreground)]">
-                    {community.song_count || 0} curated song{(community.song_count || 0) !== 1 ? 's' : ''}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
-                </div>
+                <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)]" />
               </div>
-              
             </button>
           ))}
         </div>
+        
+        {/* View All Communities Link */}
+        {communities.length > 3 && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={communitiesDialog.open}
+              className="text-sm text-[var(--accent)] hover:underline"
+            >
+              View all {communities.length} communities →
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Bottom spacing */}
       <div className="h-16"></div>
 
       {/* Dialogs */}
-      <SongDetailsDialog
+      <FriendSongCard
         song={selectedSong}
         open={songDialogOpen}
         onOpenChange={setSongDialogOpen}
@@ -445,125 +440,160 @@ export function HomePage({ onNavigate } = {}) {
 
       {/* Community Detail Dialog */}
       <Dialog open={communityDetailDialog.isOpen} onOpenChange={communityDetailDialog.setIsOpen}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:max-w-4xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col p-4 sm:p-6">
-          <DialogHeader className="pb-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <DialogTitle className="text-xl sm:text-2xl">{selectedCommunity?.name || 'Community'}</DialogTitle>
-                <DialogDescription className="text-sm sm:text-base mt-2">
-                  {selectedCommunity?.description || 'Music community'}
-                </DialogDescription>
+        <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-3xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col p-4 sm:p-6">
+          <DialogHeader className="pb-3 sm:pb-4 pr-8">
+            {/* Title and description */}
+            <DialogTitle className="text-lg sm:text-xl md:text-2xl pr-4">{selectedCommunity?.name || 'Community'}</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm mt-1 line-clamp-2">
+              {selectedCommunity?.description || 'Music community'}
+            </DialogDescription>
+            
+            {/* Export Buttons - Below title on mobile, inline on desktop */}
+            {selectedCommunity && (hasSpotify || hasYouTube) && (
+              <div className="flex items-center gap-2 mt-3">
+                {hasSpotify && (
+                  <ExportToSpotifyButton
+                    sourceType="community"
+                    sourceId={selectedCommunity.id}
+                    defaultName={selectedCommunity.name}
+                  />
+                )}
+                {hasYouTube && (
+                  <ExportPlaylistButton
+                    sourceType="community"
+                    sourceId={selectedCommunity.id}
+                    defaultName={selectedCommunity.name}
+                  />
+                )}
               </div>
-              {/* Export Buttons */}
-              {selectedCommunity && (
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* Export to Spotify Button - Only shown for Spotify-connected users */}
-                  {hasSpotify && (
-                    <ExportToSpotifyButton
-                      sourceType="community"
-                      sourceId={selectedCommunity.id}
-                      defaultName={selectedCommunity.name}
-                    />
-                  )}
-                  {/* Export to YouTube Button - Only shown for YouTube-connected users */}
-                  {hasYouTube && (
-                    <ExportPlaylistButton
-                      sourceType="community"
-                      sourceId={selectedCommunity.id}
-                      defaultName={selectedCommunity.name}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
+            )}
           </DialogHeader>
           
-          <div className="space-y-4 sm:space-y-6 flex-1 overflow-y-auto modal-scroll pr-2">
-            {/* Playlist Links Section */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Playlist Links Section - Fixed height */}
             {selectedCommunity?.playlist_links && selectedCommunity.playlist_links.length > 0 && (
-              <div className="space-y-3 sm:space-y-4">
-                <h3 className="text-base sm:text-lg font-semibold text-[var(--foreground)] flex items-center gap-2">
-                  <Music className="h-5 w-5 sm:h-6 sm:w-6" />
+              <div className="space-y-2 sm:space-y-3 flex-shrink-0 mb-4">
+                <h3 className="text-sm sm:text-base font-semibold text-[var(--foreground)] flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" />
                   Playlist Links
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {selectedCommunity.playlist_links.map((link, idx) => (
                     <a
                       key={idx}
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-xl bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] border border-[var(--glass-border)] hover:border-[var(--glass-border-hover)] transition-colors h-[56px]"
                     >
-                      <ExternalLink className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm sm:text-base font-medium text-[var(--foreground)] truncate">
-                          {link.label || `${link.platform} playlist`}
-                        </p>
-                        <p className="text-xs sm:text-sm text-[var(--muted-foreground)] truncate mt-1">
-                          {link.url}
-                        </p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--muted-foreground)] flex-shrink-0" />
+                      <ExternalLink className="h-4 w-4 text-[var(--accent)] flex-shrink-0" />
+                      <p className="flex-1 min-w-0 text-sm font-medium text-[var(--foreground)] truncate">
+                        {link.label || `${link.platform} playlist`}
+                      </p>
+                      <ChevronRight className="h-4 w-4 text-[var(--muted-foreground)] flex-shrink-0" />
                     </a>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Curated Songs Section */}
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base sm:text-lg font-semibold text-[var(--foreground)] flex items-center gap-2">
-                  <Music className="h-5 w-5 sm:h-6 sm:w-6" />
+            {/* Curated Songs Section - Fills remaining space */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex items-center justify-between flex-shrink-0 mb-2">
+                <h3 className="text-sm sm:text-base font-semibold text-[var(--foreground)] flex items-center gap-2">
+                  <Music className="h-4 w-4 sm:h-5 sm:w-5" />
                   Curated Songs
                 </h3>
                 {selectedCommunity?.song_count !== undefined && (
-                  <span className="text-xs sm:text-sm text-[var(--muted-foreground)] bg-white/5 px-2 sm:px-3 py-1 rounded-full">
+                  <span className="text-xs text-[var(--muted-foreground)] bg-[var(--secondary-bg)] px-2 py-0.5 sm:py-1 rounded-full">
                     {selectedCommunity.song_count} approved
                   </span>
                 )}
               </div>
               
               {loadingSongs ? (
-                <div className="flex items-center justify-center py-12 sm:py-16">
-                  <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-purple-400"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 flex-1 overflow-y-auto modal-scroll pr-1">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="animate-pulse flex items-center gap-3 p-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] h-[72px]">
+                      <div className="w-12 h-12 rounded-lg bg-[var(--glass-border)] flex-shrink-0" />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="h-3 bg-[var(--glass-border)] rounded w-3/4" />
+                        <div className="h-2 bg-[var(--glass-border)] rounded w-1/2" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : communitySongs.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto pr-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 flex-1 overflow-y-auto modal-scroll pr-1 content-start">
                   {communitySongs
                     .filter(song => song.curation_status === 'approved')
-                    .map((song, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                      >
-                        {song.thumbnail && (
-                          <img
-                            src={song.thumbnail}
-                            alt={song.title}
-                            className="w-14 h-14 sm:w-16 sm:h-16 rounded object-cover flex-shrink-0"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm sm:text-base font-medium text-[var(--foreground)] truncate">
-                            {song.title}
-                          </p>
-                          <p className="text-xs sm:text-sm text-[var(--muted-foreground)] truncate mt-1">
-                            {song.artist || 'Unknown Artist'}
-                          </p>
-                          <span className="inline-block mt-1 text-xs text-purple-400 capitalize">
-                            {song.platform}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                    .map((song, idx) => {
+                      // Build external URL based on platform
+                      // API returns song.id as the actual track/video ID
+                      const getExternalUrl = () => {
+                        if (song.platform === 'spotify') {
+                          if (song.spotify_url) return song.spotify_url + (song.spotify_url.includes('?') ? '&autoplay=true' : '?autoplay=true');
+                          if (song.id) return `https://open.spotify.com/track/${song.id}?autoplay=true`;
+                        }
+                        if (song.platform === 'youtube') {
+                          if (song.youtube_url) return song.youtube_url + (song.youtube_url.includes('?') ? '&autoplay=1' : '?autoplay=1');
+                          if (song.id) return `https://www.youtube.com/watch?v=${song.id}&autoplay=1`;
+                        }
+                        return null;
+                      };
+                      const externalUrl = getExternalUrl();
+                      
+                      return (
+                        <button
+                          key={song.id || idx}
+                          onClick={() => {
+                            if (externalUrl) {
+                              window.open(externalUrl, '_blank', 'noopener,noreferrer');
+                            }
+                          }}
+                          className={`flex items-center gap-3 p-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] hover:bg-[var(--secondary-hover)] transition-colors h-[72px] w-full text-left ${externalUrl ? 'cursor-pointer hover:border-[var(--glass-border-hover)]' : 'cursor-default opacity-60'}`}
+                          disabled={!externalUrl}
+                          title={externalUrl ? `Open in ${song.platform === 'spotify' ? 'Spotify' : 'YouTube'}` : 'No link available'}
+                        >
+                          {/* Thumbnail - fixed size */}
+                          {song.thumbnail ? (
+                            <img
+                              src={song.thumbnail}
+                              alt={song.title}
+                              className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-[var(--glass-bg)] flex items-center justify-center flex-shrink-0">
+                              <Music className="h-5 w-5 text-[var(--muted-foreground)]" />
+                            </div>
+                          )}
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm font-medium text-[var(--foreground)] truncate">
+                              {song.title}
+                            </p>
+                            <p className="text-xs text-[var(--muted-foreground)] truncate">
+                              {song.artist || 'Unknown Artist'}
+                            </p>
+                            <span className={`inline-block text-xs capitalize ${song.platform === 'spotify' ? 'text-green-400' : song.platform === 'youtube' ? 'text-red-400' : 'text-[var(--accent)]'}`}>
+                              {song.platform}
+                            </span>
+                          </div>
+                          {/* External link indicator */}
+                          {externalUrl && (
+                            <div className={`flex-shrink-0 p-1.5 rounded-lg ${song.platform === 'spotify' ? 'hover:bg-green-500/20' : 'hover:bg-red-500/20'}`}>
+                              <ExternalLink className={`h-4 w-4 ${song.platform === 'spotify' ? 'text-green-400' : 'text-red-400'}`} />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                 </div>
               ) : (
-                <div className="text-center py-12 sm:py-16 text-[var(--muted-foreground)]">
-                  <Music className="h-16 w-16 sm:h-20 sm:w-20 mx-auto mb-4 opacity-50" />
-                  <p className="text-sm sm:text-base">No curated songs yet</p>
-                  <p className="text-xs sm:text-sm mt-2">Songs will appear here once they're approved</p>
+                <div className="text-center py-10 sm:py-12 text-[var(--muted-foreground)]">
+                  <Music className="h-12 w-12 sm:h-14 sm:w-14 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">No curated songs yet</p>
+                  <p className="text-xs mt-1 opacity-75">Songs will appear here once approved</p>
                 </div>
               )}
             </div>
@@ -571,10 +601,80 @@ export function HomePage({ onNavigate } = {}) {
         </DialogContent>
       </Dialog>
 
-      <ShareSongDialog
-        open={shareSongDialog.isOpen}
-        onOpenChange={shareSongDialog.setIsOpen}
-      />
+      {/* Song Search Modal for sharing song of the day */}
+      {showSongSearchModal && (
+        <SongSearchModal
+          onClose={() => setShowSongSearchModal(false)}
+          onSelectSong={handleSetSongOfDay}
+        />
+      )}
+
+      {/* Create Group Modal - matches groups page exactly */}
+      {createGroupDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/80 [data-theme='light']:bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-[var(--dropdown-bg)] [data-theme='light']:bg-white rounded-xl max-w-md w-full p-4 sm:p-6 shadow-2xl border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 text-[var(--foreground)]">Create Group</h2>
+
+            <form onSubmit={handleCreateGroup} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                  Group Name
+                </label>
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="My Music Group"
+                  className="w-full px-4 py-3 bg-[var(--background)] [data-theme='light']:bg-white border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] [data-theme='light']:focus:border-black text-sm sm:text-base"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                  Description (Optional)
+                </label>
+                <textarea
+                  value={groupDescription}
+                  onChange={(e) => setGroupDescription(e.target.value)}
+                  placeholder="What's this group about?"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-[var(--background)] [data-theme='light']:bg-white border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20 rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] [data-theme='light']:focus:border-black text-sm sm:text-base resize-none"
+                />
+              </div>
+
+              {createError && (
+                <div className="p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-400 text-sm">
+                  <AlertCircle className="h-4 w-4 inline mr-2" />
+                  {createError}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    createGroupDialog.close();
+                    setGroupName('');
+                    setGroupDescription('');
+                    setCreateError('');
+                  }}
+                  className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-secondary rounded-lg text-sm sm:text-base"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={groupsLoading || !groupName}
+                  className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 btn-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                >
+                  {groupsLoading ? 'Creating...' : 'Create Group'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Hidden admin access button - click 10 times quickly in bottom right corner */}
       <button

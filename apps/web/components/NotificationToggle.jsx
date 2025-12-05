@@ -107,7 +107,7 @@ export function NotificationToggle({
             {description && (
               <p 
                 id={`${id}-description`}
-                className="text-xs text-gray-400 leading-relaxed"
+                className="text-xs text-[var(--muted-foreground)] leading-relaxed"
               >
                 {description}
               </p>
@@ -129,7 +129,7 @@ export function NotificationToggle({
             ].join(' ')} aria-hidden="true" />
             <span className={[
               'text-sm transition-colors duration-200',
-              inAppEnabled ? 'text-gray-200' : 'text-gray-400',
+              inAppEnabled ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]',
             ].join(' ')}>In-App</span>
             <Info className="h-3 w-3 text-gray-500" aria-hidden="true" title="Notifications shown in the app" />
           </label>
@@ -169,7 +169,7 @@ export function NotificationToggle({
             ].join(' ')} aria-hidden="true" />
             <span className={[
               'text-sm transition-colors duration-200',
-              emailEnabled ? 'text-gray-200' : 'text-gray-400',
+              emailEnabled ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]',
             ].join(' ')}>Email</span>
             <Info className="h-3 w-3 text-gray-500" aria-hidden="true" title="Email notifications sent to your registered email" />
           </label>
@@ -208,10 +208,10 @@ export function NotificationToggle({
                 'h-4 w-4 transition-colors duration-200',
                 pushEnabled ? 'text-green-400' : 'text-gray-500',
               ].join(' ')} aria-hidden="true" />
-              <span className={[
-                'text-sm transition-colors duration-200',
-                pushEnabled ? 'text-gray-200' : 'text-gray-400',
-              ].join(' ')}>Push</span>
+            <span className={[
+              'text-sm transition-colors duration-200',
+              pushEnabled ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]',
+            ].join(' ')}>Push</span>
               <Info className="h-3 w-3 text-gray-500" aria-hidden="true" title="Push notifications on mobile devices" />
             </label>
             <button

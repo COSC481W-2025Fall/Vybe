@@ -7,6 +7,36 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 /**
+ * Accessible Progress Bar component for YouTube export
+ */
+function ExportProgressBar({ isExporting, status }) {
+  if (!isExporting) return null;
+  
+  return (
+    <div className="mt-4 space-y-2" role="status" aria-live="polite">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-[var(--muted-foreground)]">{status || 'Preparing export...'}</span>
+      </div>
+      <div 
+        className="h-2 bg-[var(--secondary-bg)] rounded-full overflow-hidden"
+        role="progressbar"
+        aria-label="Export progress"
+        aria-busy={isExporting}
+      >
+        <div className="h-full w-1/3 bg-red-500 rounded-full animate-[progress-indeterminate_1.5s_ease-in-out_infinite]" />
+      </div>
+      <style jsx>{`
+        @keyframes progress-indeterminate {
+          0% { transform: translateX(-100%); }
+          50% { transform: translateX(200%); }
+          100% { transform: translateX(-100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/**
  * ExportPlaylistButton - Reusable component for exporting playlists to YouTube
  * 
  * @param {Object} props
@@ -27,10 +57,13 @@ export default function ExportPlaylistButton({
 }) {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [customPlaylistName, setCustomPlaylistName] = useState('');
+  const [exportStatus, setExportStatus] = useState('');
 
   // Export to YouTube mutation
   const exportToYouTubeMutation = useMutation({
     mutationFn: async ({ sourceType, sourceId, playlistId, customName }) => {
+      setExportStatus('Creating YouTube playlist...');
+      
       const response = await fetch('/api/export/youtube', {
         method: 'POST',
         headers: {
@@ -44,9 +77,19 @@ export default function ExportPlaylistButton({
         }),
       });
 
+      // Check for non-JSON response (e.g., HTML error page)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server error occurred. Please try again later.');
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
+        // Provide more helpful error messages
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('YouTube access expired. Please go to Settings and reconnect your YouTube account.');
+        }
         throw new Error(data.error || 'Failed to export playlist to YouTube');
       }
 
@@ -55,9 +98,15 @@ export default function ExportPlaylistButton({
     onSuccess: (data) => {
       const { youtubePlaylistUrl, playlistTitle, songsAdded, songsFailed, totalSongs } = data;
       
-      // Close dialog on success
-      setShowExportDialog(false);
-      setCustomPlaylistName('');
+      setExportStatus('Export complete!');
+      
+      // Brief pause to show completion
+      setTimeout(() => {
+        // Close dialog on success
+        setShowExportDialog(false);
+        setCustomPlaylistName('');
+        setExportStatus('');
+      }, 500);
       
       let message = `Playlist exported successfully!`;
       if (songsAdded && totalSongs) {
@@ -68,7 +117,7 @@ export default function ExportPlaylistButton({
       }
 
       toast.success(message, {
-        duration: 5000,
+        duration: 6000,
         action: youtubePlaylistUrl ? {
           label: 'Open Playlist',
           onClick: () => window.open(youtubePlaylistUrl, '_blank'),
@@ -77,7 +126,16 @@ export default function ExportPlaylistButton({
     },
     onError: (error) => {
       console.error('[Export YouTube] Error:', error);
-      toast.error(error.message || 'Failed to export playlist to YouTube. Please try again.');
+      setExportStatus('');
+      // Show user-friendly error
+      const userMessage = error.message?.includes('connect') || error.message?.includes('token')
+        ? "Please connect your YouTube account first in Settings."
+        : error.message?.includes('not found')
+        ? "Some songs couldn't be found on YouTube."
+        : "Couldn't export to YouTube. Please try again.";
+      toast.error(userMessage, {
+        duration: 7000,
+      });
     },
   });
 
@@ -132,40 +190,54 @@ export default function ExportPlaylistButton({
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label 
+              htmlFor="youtube-playlist-name"
+              className="block text-sm font-medium text-[var(--foreground)] mb-2"
+            >
               Playlist Name
             </label>
             <input
+              id="youtube-playlist-name"
               type="text"
               value={customPlaylistName}
               onChange={(e) => setCustomPlaylistName(e.target.value)}
               placeholder={`Enter a name (Default: [Vybe Export] ${defaultName})`}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              className="w-full px-4 py-2 bg-[var(--input-bg)] border-2 border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
               disabled={exportToYouTubeMutation.isPending}
+              aria-describedby={exportToYouTubeMutation.isPending ? "youtube-export-progress" : undefined}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !exportToYouTubeMutation.isPending) {
                   handleExportConfirm();
                 }
               }}
             />
+            
+            {/* Progress Bar */}
+            <div id="youtube-export-progress">
+              <ExportProgressBar 
+                isExporting={exportToYouTubeMutation.isPending} 
+                status={exportStatus} 
+              />
+            </div>
           </div>
           <DialogFooter>
             <button
               onClick={handleCloseDialog}
               disabled={exportToYouTubeMutation.isPending}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 active:bg-gray-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] border border-[var(--glass-border)] rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               onClick={handleExportConfirm}
               disabled={exportToYouTubeMutation.isPending}
+              aria-busy={exportToYouTubeMutation.isPending}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {exportToYouTubeMutation.isPending ? (
                 <>
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Exporting...
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                  <span>Exporting...</span>
                 </>
               ) : (
                 'Confirm Export'
