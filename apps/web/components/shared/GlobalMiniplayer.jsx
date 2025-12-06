@@ -22,8 +22,19 @@ export default function GlobalMiniplayer() {
   useEffect(() => {
     if (!currentlyPlaying || currentlyPlaying.platform !== 'youtube') return;
     
+    const allowedHosts = [
+      'youtube.com',
+      'www.youtube.com',
+      'm.youtube.com'
+    ];
     const handleMessage = (event) => {
-      if (!event.origin.includes('youtube.com')) return;
+      let host;
+      try {
+        host = new URL(event.origin).host;
+      } catch {
+        return;
+      }
+      if (!allowedHosts.includes(host)) return;
       
       try {
         let data = event.data;
