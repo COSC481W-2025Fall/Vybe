@@ -1167,12 +1167,12 @@ export default function GroupDetailPage({ params }) {
                       {/* Export Buttons */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {/* Export to Spotify Button - Only shown for Spotify-connected users */}
-                        {hasSpotify && (
+                        {hasSpotify && group?.id && (
                           <ExportToSpotifyButton
                             sourceType="group"
-                            sourceId={groupId}
+                            sourceId={group.id}
                             playlistId={selectedPlaylist}
-                            groupId={selectedPlaylist === 'all' ? groupId : undefined}
+                            groupId={selectedPlaylist === 'all' ? group.id : undefined}
                             defaultName={
                               selectedPlaylist === 'all'
                                 ? group?.name || 'Group Playlist'
@@ -1181,10 +1181,10 @@ export default function GroupDetailPage({ params }) {
                           />
                         )}
                         {/* Export to YouTube Button - Only shown for YouTube-connected users */}
-                        {hasYouTube && (
+                        {hasYouTube && group?.id && (
                           <ExportPlaylistButton
                             sourceType="group"
-                            sourceId={groupId}
+                            sourceId={group.id}
                             playlistId={selectedPlaylist}
                             defaultName={
                               selectedPlaylist === 'all'
@@ -1555,11 +1555,11 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   }, []);
 
   useEffect(() => {
-    // Check user's existing playlist once group is loaded
-    if (group?.id) {
+    // Check user's existing playlist once we have the groupId
+    if (groupId) {
       checkUserExistingPlaylist();
     }
-  }, [group?.id]);
+  }, [groupId]);
 
   useEffect(() => {
     // Load playlists from all connected platforms
@@ -1570,14 +1570,14 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
   async function checkUserExistingPlaylist() {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !group?.id) return;
+    if (!session || !groupId) return;
 
     // Check if user already has a playlist in this group
-    // Use group.id (actual UUID) not groupId (could be slug from URL)
+    // groupId is now the actual UUID passed from the parent component
     const { data: existingPlaylist } = await supabase
       .from('group_playlists')
       .select('name, platform')
-      .eq('group_id', group.id)
+      .eq('group_id', groupId)
       .eq('added_by', session.user.id)
       .maybeSingle();
 
