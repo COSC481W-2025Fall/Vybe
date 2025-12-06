@@ -3,7 +3,7 @@
  * A shared knowledge base that grows as users interact with the app.
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { supabaseServer } from '@/lib/supabase/server';
 import { parseWithAI, batchParseWithAI } from './aiTitleParser';
 import { parseYouTubeTitle } from '@/lib/utils/youtubeParser';
 
@@ -38,7 +38,7 @@ export async function lookupSong({ title, artist, spotifyId, youtubeId }) {
   if (cached) return { ...cached, fromCache: true };
 
   try {
-    const supabase = await createClient();
+    const supabase = supabaseServer();
     
     if (spotifyId) {
       const { data, error } = await supabase.from('global_songs').select('*').eq('spotify_id', spotifyId).single();
@@ -82,7 +82,7 @@ export async function lookupSong({ title, artist, spotifyId, youtubeId }) {
 
 export async function registerSong({ originalTitle, originalArtist, spotifyId, youtubeId, channelName, genres = [], popularity = 0, audioFeatures = {}, album = null }) {
   try {
-    const supabase = await createClient();
+    const supabase = supabaseServer();
     const existing = await lookupSong({ title: originalTitle, artist: originalArtist, spotifyId, youtubeId });
     
     if (existing) {
@@ -158,7 +158,7 @@ export async function batchRegisterSongs(songs) {
   if (!songs?.length) return [];
   
   try {
-    const supabase = await createClient();
+    const supabase = supabaseServer();
     const results = [];
     const existing = await Promise.all(songs.map(s => lookupSong({ title: s.originalTitle, artist: s.originalArtist, spotifyId: s.spotifyId, youtubeId: s.youtubeId })));
     
@@ -222,7 +222,7 @@ export async function batchRegisterSongs(songs) {
 
 export async function updateSongMetadata(songId, updates) {
   try {
-    const supabase = await createClient();
+    const supabase = supabaseServer();
     await supabase.from('global_songs').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', songId);
     return true;
   } catch (e) { return false; }
@@ -230,7 +230,7 @@ export async function updateSongMetadata(songId, updates) {
 
 export async function addSongAlias(songId, title, artist, type = 'user_input') {
   try {
-    const supabase = await createClient();
+    const supabase = supabaseServer();
     await supabase.from('song_aliases').insert({ global_song_id: songId, alias_title: title, alias_artist: artist, alias_type: type });
     return true;
   } catch (e) { return false; }
@@ -238,7 +238,7 @@ export async function addSongAlias(songId, title, artist, type = 'user_input') {
 
 export async function getDatabaseStats() {
   try {
-    const supabase = await createClient();
+    const supabase = supabaseServer();
     const [totalRes, wGenresRes, wSpotifyRes, wYoutubeRes] = await Promise.all([
       supabase.from('global_songs').select('*', { count: 'exact', head: true }),
       supabase.from('global_songs').select('*', { count: 'exact', head: true }).not('genres', 'eq', '{}'),
