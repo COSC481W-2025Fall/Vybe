@@ -1704,7 +1704,11 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
     setError('');
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      setLoading(false);
+      setError('Please sign in to add a playlist');
+      return;
+    }
 
     try {
       if (!selectedPlaylistId || !selectedPlaylistPlatform) {
@@ -1748,6 +1752,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
         throw new Error(data.error || 'Failed to import playlist');
       }
 
+      setLoading(false);
       onSuccess();
     } catch (err) {
       console.error('Error importing playlist:', err);
