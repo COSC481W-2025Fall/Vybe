@@ -685,31 +685,37 @@ function ProviderThemeToggle({ prov }) {
               </div>
 
               {/* Contrast Toggle */}
-              <div className="p-4 rounded-lg border border-[var(--glass-border)] bg-[var(--secondary-bg)]">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Contrast className="h-4 w-4 text-[var(--foreground)]" />
-                    <span className="text-sm font-medium text-[var(--foreground)]">Contrast Mode</span>
+              <div className="p-3 sm:p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--secondary-bg)]">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Contrast className="h-4 w-4 text-[var(--foreground)] flex-shrink-0" />
+                    <span className="text-sm font-medium text-[var(--foreground)] truncate">Contrast</span>
                   </div>
+                  {/* Pill-shaped toggle switch */}
                   <button
                     onClick={toggleContrast}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                    className={`relative inline-flex items-center rounded-full transition-colors cursor-pointer flex-shrink-0 ${
                       isHighContrast ? 'bg-[var(--accent)]' : 'bg-[var(--glass-border)]'
                     }`}
+                    style={{ width: '44px', height: '24px' }}
+                    role="switch"
+                    aria-checked={isHighContrast}
+                    aria-label="Toggle contrast mode"
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        isHighContrast ? 'translate-x-6' : 'translate-x-1'
+                      className={`inline-block rounded-full bg-white shadow-sm transition-transform ${
+                        isHighContrast ? 'translate-x-[22px]' : 'translate-x-[2px]'
                       }`}
+                      style={{ width: '20px', height: '20px' }}
                     />
                   </button>
-                                </div>
+                </div>
                 <p className="text-xs text-[var(--muted-foreground)]">
                   {isHighContrast 
-                    ? 'High contrast: Maximum text visibility' 
-                    : 'Low contrast: Softer, muted appearance'}
+                    ? 'High: Maximum visibility' 
+                    : 'Low: Softer appearance'}
                 </p>
-                            </div>
+              </div>
                         </div>
 
             {/* Column 3 - Custom Colors & Preview */}
