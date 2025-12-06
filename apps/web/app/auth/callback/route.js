@@ -162,6 +162,23 @@ export async function GET(request) {
         }
       }
 
+      // Trigger background song sync to global database (non-blocking)
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+        fetch(`${baseUrl}/api/sync-songs`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cookie': cookieStore.toString(),
+          },
+          body: JSON.stringify({ source: 'signin' }),
+        }).catch(err => console.log('[callback] Background sync started (non-blocking):', err?.message || 'ok'));
+        console.log('[callback] Triggered background song sync');
+      } catch (syncError) {
+        // Don't block auth on sync failure
+        console.log('[callback] Background sync trigger skipped:', syncError.message);
+      }
+
       // Add provider to redirect URL so the library knows which service to use
       if (provider) {
         const nextUrl = new URL(next, request.url);

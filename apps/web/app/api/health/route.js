@@ -14,6 +14,8 @@ export async function GET(request) {
     database: { status: 'unknown', latency: null },
     sortEngine: { status: 'unknown', details: null },
     openai: { status: 'unknown' },
+    lastfm: { status: 'unknown' },
+    youtube: { status: 'unknown' },
   };
 
   // Check database connection
@@ -55,6 +57,20 @@ export async function GET(request) {
 
   // Check OpenAI availability
   checks.openai.status = process.env.OPENAI_API_KEY ? 'configured' : 'not_configured';
+  
+  // Check Last.fm API key (critical for YouTube metadata)
+  const hasLastFm = !!process.env.LASTFM_API_KEY;
+  checks.lastfm.status = hasLastFm ? 'configured' : 'not_configured';
+  if (!hasLastFm) {
+    checks.lastfm.warning = 'YouTube songs will have limited metadata for AI sorting';
+  }
+  
+  // Check YouTube API key
+  const hasYouTube = !!process.env.YOUTUBE_API_KEY;
+  checks.youtube.status = hasYouTube ? 'configured' : 'not_configured';
+  if (!hasYouTube) {
+    checks.youtube.warning = 'Public YouTube playlists may not be accessible';
+  }
 
   // Calculate overall health
   const isHealthy = 

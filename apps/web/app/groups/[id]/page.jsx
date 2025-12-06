@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Users, Heart, Plus, Trash2, X, Sparkles, Loader2, ExternalLink, Copy, Check } from 'lucide-react';
+import { Users, Heart, Plus, Trash2, X, Sparkles, Loader2, ExternalLink, Copy, Check, AlertCircle } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import ExportPlaylistButton from '@/components/ExportPlaylistButton';
@@ -32,6 +32,7 @@ export default function GroupDetailPage({ params }) {
   const [isResetting, setIsResetting] = useState(false);
   const [sortProgress, setSortProgress] = useState(0);
   const [sortEstimatedTime, setSortEstimatedTime] = useState(null);
+  const [metadataStats, setMetadataStats] = useState(null);
   const sortStartTimeRef = useRef(null);
   const progressIntervalRef = useRef(null);
   const [showRemoveMemberModal, setShowRemoveMemberModal] = useState(false);
@@ -576,7 +577,25 @@ export default function GroupDetailPage({ params }) {
     // Always start with "all" view to show merged playlists
     setSelectedPlaylist('all');
 
+    // Fetch metadata stats for sort quality indicator (non-blocking)
+    fetchMetadataStats(groupData.id);
+
     setLoading(false);
+  }
+
+  // Fetch metadata stats to show sort quality warning
+  async function fetchMetadataStats(actualGroupId) {
+    try {
+      const response = await fetch(`/api/groups/${actualGroupId}/smart-sort`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.metadataStats) {
+          setMetadataStats(data.metadataStats);
+        }
+      }
+    } catch (error) {
+      console.warn('[Groups] Failed to fetch metadata stats:', error);
+    }
   }
 
   async function loadPlaylistSongs(playlistId) {
@@ -1032,6 +1051,21 @@ export default function GroupDetailPage({ params }) {
                         )}
                       </button>
                     </div>
+                    
+                    {/* Metadata Quality Warning */}
+                    {metadataStats && metadataStats.total > 0 && metadataStats.percentage < 50 && (
+                      <div className="mt-3 p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-xs text-[var(--muted-foreground)]">
+                          <span className="text-yellow-400 font-medium">
+                            {metadataStats.percentage}% of songs have metadata
+                          </span>
+                          <span className="block mt-0.5">
+                            Sort quality improves as more songs get genre/popularity data. Re-sorting will fetch missing metadata.
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Progress Bar for Smart Sorting */}

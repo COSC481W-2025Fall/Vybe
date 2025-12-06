@@ -6,6 +6,7 @@ import { smartSort, getQueueStatus, heuristicOnlySort, getSystemHealth, isSystem
 import { analyzeAndSortPlaylists } from '@/lib/services/openaiSorting';
 import { updatePlaylistOrder, updateSongOrder } from '@/lib/db/smartSorting';
 import { rateLimitMiddleware } from '@/lib/api/rateLimiter';
+import { lookupSong, batchRegisterSongs, getDatabaseStats } from '@/lib/services/globalSongDatabase';
 
 // Helper to check if string is a UUID
 function isUUID(str) {
@@ -119,16 +120,32 @@ export async function POST(request, { params }) {
 
     // Check if user is owner or member
     const isOwner = group.owner_id === user.id;
+    console.log(`[Smart Sort API] User ${user.id} isOwner: ${isOwner}, group owner: ${group.owner_id}`);
+    
     if (!isOwner) {
-      const { data: membership } = await supabase
+      const { data: membership, error: membershipError } = await supabase
         .from('group_members')
-        .select('id')
+        .select('id, user_id')
         .eq('group_id', actualGroupId)
         .eq('user_id', user.id)
         .maybeSingle();
 
+      console.log(`[Smart Sort API] Membership check: found=${!!membership}, error=${membershipError?.message || 'none'}`);
+
+      // Also check if user has a playlist in this group (alternative membership proof)
       if (!membership) {
-        return NextResponse.json({ error: "You don't have access to this group." }, { status: 403 });
+        const { data: userPlaylist } = await supabase
+          .from('group_playlists')
+          .select('id')
+          .eq('group_id', actualGroupId)
+          .eq('added_by', user.id)
+          .maybeSingle();
+        
+        if (!userPlaylist) {
+          console.log(`[Smart Sort API] User ${user.id} has no membership or playlist in group ${actualGroupId}`);
+          return NextResponse.json({ error: "You don't have access to this group." }, { status: 403 });
+        }
+        console.log(`[Smart Sort API] User has a playlist in group, granting access`);
       }
     }
 
@@ -176,17 +193,81 @@ export async function POST(request, { params }) {
 
     console.log(`[Smart Sort API] Found ${allSongs.length} song(s) total`);
 
-    // Build metadata for all songs
-    const allSongsMetadata = allSongs.map(song => ({
-      songId: song.id,
-      playlistId: song.playlist_id,
-      title: song.title || 'Unknown',
-      artist: song.artist || 'Unknown Artist',
-      genres: song.genres || [],
-      popularity: song.popularity || 0,
-      audioFeatures: song.audio_features || {},
-      platform: song.platform || 'unknown',
-    }));
+    // Build metadata for all songs with global database enrichment
+    console.log('[Smart Sort API] Enriching song metadata from global database...');
+    
+    // First try to get metadata from global database for all songs
+    const enrichedSongs = await Promise.all(
+      allSongs.map(async (song) => {
+        // Try global database lookup first
+        const globalSong = await lookupSong({
+          title: song.title,
+          artist: song.artist,
+          spotifyId: song.spotify_id,
+          youtubeId: song.youtube_id,
+        });
+        
+        if (globalSong && globalSong.genres?.length > 0) {
+          return {
+            songId: song.id,
+            playlistId: song.playlist_id,
+            title: globalSong.canonical_title || song.title || 'Unknown',
+            artist: globalSong.canonical_artist || song.artist || 'Unknown Artist',
+            originalTitle: song.title,
+            originalArtist: song.artist,
+            genres: globalSong.genres || song.genres || [],
+            popularity: globalSong.popularity || song.popularity || 0,
+            audioFeatures: globalSong.audio_features || song.audio_features || {},
+            platform: song.platform || 'unknown',
+            globalSongId: globalSong.id,
+            fromGlobalDb: true,
+          };
+        }
+        
+        // Use local metadata
+        return {
+          songId: song.id,
+          playlistId: song.playlist_id,
+          title: song.title || 'Unknown',
+          artist: song.artist || 'Unknown Artist',
+          originalTitle: song.title,
+          originalArtist: song.artist,
+          genres: song.genres || [],
+          popularity: song.popularity || 0,
+          audioFeatures: song.audio_features || {},
+          platform: song.platform || 'unknown',
+          fromGlobalDb: false,
+        };
+      })
+    );
+    
+    // Register songs that don't exist in global database (async, don't block)
+    const songsToRegister = enrichedSongs
+      .filter(s => !s.fromGlobalDb)
+      .map(s => ({
+        originalTitle: s.originalTitle,
+        originalArtist: s.originalArtist,
+        spotifyId: allSongs.find(as => as.id === s.songId)?.spotify_id,
+        youtubeId: allSongs.find(as => as.id === s.songId)?.youtube_id,
+        channelName: allSongs.find(as => as.id === s.songId)?.channel_name,
+        genres: s.genres,
+        popularity: s.popularity,
+      }));
+    
+    if (songsToRegister.length > 0) {
+      // Register in background, don't wait
+      batchRegisterSongs(songsToRegister)
+        .then(results => {
+          const registered = results.filter(r => r && !r.alreadyExists).length;
+          console.log(`[Smart Sort API] Background: Registered ${registered} new songs to global database`);
+        })
+        .catch(err => console.warn('[Smart Sort API] Background registration failed:', err.message));
+    }
+    
+    const enrichedCount = enrichedSongs.filter(s => s.fromGlobalDb).length;
+    console.log(`[Smart Sort API] Metadata: ${enrichedCount}/${allSongs.length} from global DB`);
+    
+    const allSongsMetadata = enrichedSongs;
 
     let result;
 
@@ -278,51 +359,111 @@ export async function POST(request, { params }) {
 
   } catch (error) {
     console.error('[Smart Sort API] Error:', error);
+    console.error('[Smart Sort API] Error stack:', error.stack);
+    console.error('[Smart Sort API] Error message:', error.message);
     
-    // Even on error, try heuristic fallback
-    try {
-      console.log('[Smart Sort API] Attempting heuristic fallback...');
-      // We'd need the songs here - if we don't have them, return error
-    } catch (fallbackError) {
-      console.error('[Smart Sort API] Fallback also failed:', fallbackError);
-    }
+    // Return user-friendly error messages based on error type
+    const errorMessage = error.message || '';
     
-    // Return user-friendly error messages
-    if (error.message?.includes('quota') || error.message?.includes('billing')) {
+    if (errorMessage.includes('quota') || errorMessage.includes('billing')) {
       return NextResponse.json({ 
         error: "We're a bit busy right now. Your playlist was sorted using our quick algorithm instead!",
         fallbackUsed: true
       }, { status: 200 });
     }
     
-    if (error.message?.includes('rate limit') || error.message?.includes('too many')) {
+    if (errorMessage.includes('rate limit') || errorMessage.includes('too many')) {
       return NextResponse.json({ 
         error: "You've sorted a few times recently. Please wait a moment before trying again.",
       }, { status: 429 });
     }
 
-    if (error.message?.includes('Queue') || error.message?.includes('queue')) {
+    if (errorMessage.includes('Queue') || errorMessage.includes('queue')) {
       return NextResponse.json({ 
         error: "Lots of people are sorting right now! Your playlist was sorted using our quick algorithm.",
         fallbackUsed: true
       }, { status: 200 });
     }
 
+    if (errorMessage.includes('global_songs') || errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
+      // Global song database tables don't exist yet - fall back to basic sort
+      console.log('[Smart Sort API] Global songs table not found, using basic heuristic');
+      return NextResponse.json({ 
+        error: "Smart sorting is being set up. Using quick sort for now.",
+        fallbackUsed: true,
+        setupRequired: true,
+      }, { status: 200 });
+    }
+
+    if (errorMessage.includes('permission') || errorMessage.includes('RLS') || errorMessage.includes('policy')) {
+      return NextResponse.json({ 
+        error: "Permission issue encountered. Please try again or contact support.",
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      }, { status: 403 });
+    }
+
+    if (errorMessage.includes('timeout') || errorMessage.includes('TIMEOUT')) {
+      return NextResponse.json({ 
+        error: "The sorting took too long. Try with fewer songs or use quick sort.",
+      }, { status: 408 });
+    }
+
+    // Log full error details for debugging
+    console.error('[Smart Sort API] Full error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      cause: error.cause,
+    });
+
     return NextResponse.json({ 
       error: "Couldn't sort your playlist. Please try again.",
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
     }, { status: 500 });
   }
 }
 
 /**
  * GET /api/groups/[id]/smart-sort
- * Get current queue status and system health
+ * Get current queue status, system health, and metadata stats
  */
-export async function GET() {
+export async function GET(request, { params }) {
   const health = getSystemHealth();
+  
+  // Get metadata stats for the group if ID provided
+  let metadataStats = null;
+  try {
+    const resolvedParams = await Promise.resolve(params);
+    const groupIdOrSlug = resolvedParams?.id;
+    
+    if (groupIdOrSlug) {
+      const cookieStore = await cookies();
+      const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+      
+      // Find group
+      const { data: group } = await findGroup(supabase, groupIdOrSlug, 'id');
+      
+      if (group) {
+        // Get metadata stats
+        const { getGroupMetadataStats } = await import('@/lib/services/musicMetadata');
+        metadataStats = await getGroupMetadataStats(supabase, group.id);
+      }
+    }
+  } catch (error) {
+    console.warn('[Smart Sort API] Failed to get metadata stats:', error.message);
+  }
+  
+  // Check API key availability
+  const apiKeys = {
+    openai: !!process.env.OPENAI_API_KEY,
+    lastfm: !!process.env.LASTFM_API_KEY,
+    youtube: !!process.env.YOUTUBE_API_KEY,
+  };
   
   return NextResponse.json({
     ...health,
+    metadataStats,
+    apiKeys,
     timestamp: new Date().toISOString(),
   }, {
     headers: {

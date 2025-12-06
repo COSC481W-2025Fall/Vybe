@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { getValidAccessToken } from '@/lib/youtube';
+import { batchRegisterSongs } from '@/lib/services/globalSongDatabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,6 +114,22 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to import songs' }, { status: 500 });
     }
 
+    // Register songs in global database (non-blocking background task)
+    const songsToRegister = playlistData.tracks.map(track => ({
+      originalTitle: track.title,
+      originalArtist: track.artist,
+      spotifyId: platform === 'spotify' ? track.id : null,
+      youtubeId: platform === 'youtube' ? track.id : null,
+      channelName: track.channelName || null,
+    }));
+    
+    batchRegisterSongs(songsToRegister)
+      .then(results => {
+        const newSongs = results.filter(r => r && !r.alreadyExists).length;
+        console.log(`[import-playlist] Registered ${newSongs} new songs to global database`);
+      })
+      .catch(err => console.warn('[import-playlist] Global DB registration failed:', err.message));
+
     // Run smart sorting synchronously BEFORE returning response
     // This ensures the user sees the sorted order immediately
     if (process.env.OPENAI_API_KEY) {
@@ -157,7 +174,8 @@ export async function POST(request) {
 
               for (const song of songs) {
                 try {
-                  const metadata = await getTrackMetadata(song, playlist.platform, spotifyToken);
+                  // Pass supabase client for smart caching
+                  const metadata = await getTrackMetadata(song, playlist.platform, spotifyToken, supabase);
                   if (metadata) {
                     allSongsMetadata.push({ 
                       ...metadata, 

@@ -4,9 +4,21 @@
  * - Spotify API (for Spotify tracks)
  * - Last.fm API (for both Spotify and YouTube tracks)
  * - MusicBrainz API (for both Spotify and YouTube tracks)
+ * 
+ * Features smart caching:
+ * - Checks database for cached metadata before API calls
+ * - Parses YouTube titles for better artist/song matching
+ * - Saves metadata to database for future use
  */
 
+import { parseYouTubeTitle } from '@/lib/utils/youtubeParser';
+
 const LASTFM_API_BASE = 'https://ws.audioscrobbler.com/2.0/';
+
+// Metadata cache "freshness" check (30 days)
+// NOTE: This is for checking if we should RE-FETCH from APIs - the database stores data PERMANENTLY
+// Data older than 30 days will be re-fetched to get updated popularity/genres, but old data is never deleted
+const METADATA_CACHE_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const MUSICBRAINZ_API_BASE = 'https://musicbrainz.org/ws/2/';
 const MUSICBRAINZ_MIN_DELAY = 1000; // 1 second between requests
 const MUSICBRAINZ_MAX_RETRIES = 2; // Maximum retries per request
@@ -148,6 +160,114 @@ export async function fetchSpotifyTrackFeatures(trackId, accessToken) {
       console.warn(`[musicMetadata] Spotify API error for ${trackId}:`, error.message);
     }
     return null; // Always return null instead of throwing
+  }
+}
+
+/**
+ * Search Spotify for a track and get its metadata
+ * Useful for YouTube songs to get Spotify popularity data
+ * @param {string} artist - Artist name
+ * @param {string} title - Track title  
+ * @param {string} accessToken - Spotify access token
+ * @param {string} originalTitle - Original YouTube title (fallback search)
+ * @returns {Promise<Object|null>} Track metadata or null
+ */
+export async function searchSpotifyTrack(artist, title, accessToken, originalTitle = null) {
+  if (!accessToken) return null;
+
+  try {
+    // Try cleaned title first
+    let query = `track:${title}`;
+    if (artist && artist !== 'Unknown' && artist !== 'Unknown Artist') {
+      query += ` artist:${artist}`;
+    }
+
+    console.log(`[musicMetadata] 🔍 Spotify search: "${query}"`);
+
+    const searchResponse = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=5`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    if (isSpotify401Error(searchResponse)) {
+      return null;
+    }
+
+    if (!searchResponse.ok) {
+      console.warn(`[musicMetadata] Spotify search error: ${searchResponse.status}`);
+      return null;
+    }
+
+    const searchData = await searchResponse.json();
+    let tracks = searchData.tracks?.items || [];
+
+    // If no results with cleaned title and we have original, try that
+    if (tracks.length === 0 && originalTitle && originalTitle !== title) {
+      console.log(`[musicMetadata] 🔍 Spotify fallback search with original: "${originalTitle}"`);
+      
+      const fallbackResponse = await fetch(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(originalTitle)}&type=track&limit=5`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      if (fallbackResponse.ok) {
+        const fallbackData = await fallbackResponse.json();
+        tracks = fallbackData.tracks?.items || [];
+      }
+    }
+
+    if (tracks.length === 0) {
+      console.log(`[musicMetadata] ⚠️ No Spotify results for "${title}" by ${artist}`);
+      return null;
+    }
+
+    // Find best match - prefer exact artist match
+    let bestMatch = tracks[0];
+    for (const track of tracks) {
+      const trackArtists = track.artists?.map(a => a.name.toLowerCase()) || [];
+      if (artist && trackArtists.includes(artist.toLowerCase())) {
+        bestMatch = track;
+        break;
+      }
+    }
+
+    console.log(`[musicMetadata] ✅ Spotify match: "${bestMatch.name}" by ${bestMatch.artists?.[0]?.name} (popularity: ${bestMatch.popularity})`);
+
+    // Get artist genres
+    let genres = [];
+    if (bestMatch.artists?.[0]?.id) {
+      try {
+        const artistResponse = await fetch(
+          `https://api.spotify.com/v1/artists/${bestMatch.artists[0].id}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        if (artistResponse.ok) {
+          const artistData = await artistResponse.json();
+          genres = artistData.genres || [];
+        }
+      } catch (e) {
+        // Continue without genres
+      }
+    }
+
+    return {
+      spotifyId: bestMatch.id,
+      title: bestMatch.name,
+      artist: bestMatch.artists?.map(a => a.name).join(', ') || artist,
+      popularity: bestMatch.popularity || 0,
+      genres,
+      album: bestMatch.album?.name,
+      source: 'spotify_search',
+    };
+  } catch (error) {
+    console.warn(`[musicMetadata] Spotify search error:`, error.message);
+    return null;
   }
 }
 
@@ -462,19 +582,198 @@ export async function fetchMusicBrainzMetadata(artist, title) {
 }
 
 /**
+ * Check if cached metadata is still valid
+ */
+function isCacheValid(fetchedAt) {
+  if (!fetchedAt) return false;
+  const fetchedTime = new Date(fetchedAt).getTime();
+  return Date.now() - fetchedTime < METADATA_CACHE_DURATION_MS;
+}
+
+/**
+ * Get cached metadata from database
+ * @param {Object} supabase - Supabase client
+ * @param {string} songId - Song ID
+ * @returns {Promise<Object|null>} Cached metadata or null
+ */
+export async function getCachedMetadata(supabase, songId) {
+  if (!supabase || !songId) return null;
+  
+  try {
+    const { data, error } = await supabase
+      .from('playlist_songs')
+      .select('genres, popularity, audio_features, metadata_source, metadata_fetched_at, parsed_title, parsed_artist')
+      .eq('id', songId)
+      .single();
+    
+    if (error || !data) return null;
+    
+    // Check if cache is valid
+    if (!isCacheValid(data.metadata_fetched_at)) {
+      console.log(`[musicMetadata] 📦 Cache expired for song ${songId}`);
+      return null;
+    }
+    
+    // Check if we actually have useful metadata
+    if ((!data.genres || data.genres.length === 0) && data.popularity === 0) {
+      console.log(`[musicMetadata] 📦 Cache exists but empty for song ${songId}`);
+      return null;
+    }
+    
+    console.log(`[musicMetadata] 📦 Cache HIT for song ${songId}: genres=${data.genres?.length || 0}, popularity=${data.popularity || 0}`);
+    
+    return {
+      genres: data.genres || [],
+      popularity: data.popularity || 0,
+      audioFeatures: data.audio_features || {},
+      sources: data.metadata_source ? [data.metadata_source] : ['cache'],
+      parsedTitle: data.parsed_title,
+      parsedArtist: data.parsed_artist,
+      fromCache: true,
+    };
+  } catch (error) {
+    console.warn(`[musicMetadata] Cache check error for song ${songId}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Save metadata to database cache
+ * @param {Object} supabase - Supabase client
+ * @param {string} songId - Song ID
+ * @param {Object} metadata - Metadata to cache
+ * @param {string} parsedTitle - Cleaned title (for YouTube)
+ * @param {string} parsedArtist - Cleaned artist (for YouTube)
+ */
+export async function saveMetadataToCache(supabase, songId, metadata, parsedTitle = null, parsedArtist = null) {
+  if (!supabase || !songId) return;
+  
+  try {
+    const updateData = {
+      genres: metadata.genres || [],
+      popularity: metadata.popularity || 0,
+      audio_features: metadata.audioFeatures || {},
+      metadata_source: metadata.sources?.[0] || 'unknown',
+      metadata_fetched_at: new Date().toISOString(),
+    };
+    
+    // Only update parsed fields if provided
+    if (parsedTitle) updateData.parsed_title = parsedTitle;
+    if (parsedArtist) updateData.parsed_artist = parsedArtist;
+    
+    const { error } = await supabase
+      .from('playlist_songs')
+      .update(updateData)
+      .eq('id', songId);
+    
+    if (error) {
+      console.warn(`[musicMetadata] Failed to cache metadata for song ${songId}:`, error.message);
+    } else {
+      console.log(`[musicMetadata] 💾 Cached metadata for song ${songId}: genres=${metadata.genres?.length || 0}, popularity=${metadata.popularity || 0}`);
+    }
+  } catch (error) {
+    console.warn(`[musicMetadata] Cache save error for song ${songId}:`, error.message);
+  }
+}
+
+/**
+ * Get metadata stats for a group (for health check)
+ * @param {Object} supabase - Supabase client
+ * @param {string} groupId - Group ID
+ * @returns {Promise<Object>} Stats about metadata coverage
+ */
+export async function getGroupMetadataStats(supabase, groupId) {
+  if (!supabase || !groupId) return { total: 0, withMetadata: 0, percentage: 0 };
+  
+  try {
+    // Get all playlist IDs for the group
+    const { data: playlists } = await supabase
+      .from('group_playlists')
+      .select('id')
+      .eq('group_id', groupId);
+    
+    if (!playlists || playlists.length === 0) {
+      return { total: 0, withMetadata: 0, percentage: 0 };
+    }
+    
+    const playlistIds = playlists.map(p => p.id);
+    
+    // Count total songs
+    const { count: totalCount } = await supabase
+      .from('playlist_songs')
+      .select('id', { count: 'exact', head: true })
+      .in('playlist_id', playlistIds);
+    
+    // Count songs with metadata
+    const { count: withMetadataCount } = await supabase
+      .from('playlist_songs')
+      .select('id', { count: 'exact', head: true })
+      .in('playlist_id', playlistIds)
+      .not('metadata_fetched_at', 'is', null)
+      .or('genres.cs.{}', 'popularity.gt.0');
+    
+    const total = totalCount || 0;
+    const withMetadata = withMetadataCount || 0;
+    const percentage = total > 0 ? Math.round((withMetadata / total) * 100) : 0;
+    
+    return { total, withMetadata, percentage };
+  } catch (error) {
+    console.warn('[musicMetadata] Failed to get metadata stats:', error.message);
+    return { total: 0, withMetadata: 0, percentage: 0 };
+  }
+}
+
+/**
  * Get unified track metadata from all available sources
  * Tries Spotify first (if available), then Last.fm, then MusicBrainz
  * All sources are non-blocking - if one fails, others continue
+ * 
+ * NEW: Uses smart caching and YouTube title parsing
+ * 
  * @param {Object} song - Song object with title, artist, external_id, etc.
  * @param {string} platform - 'spotify' or 'youtube'
  * @param {string} spotifyToken - Spotify access token (optional)
+ * @param {Object} supabase - Supabase client for caching (optional)
  * @returns {Promise<Object>} Combined metadata with best available data
  */
-export async function getTrackMetadata(song, platform, spotifyToken = null) {
+export async function getTrackMetadata(song, platform, spotifyToken = null, supabase = null) {
   const trackStartTime = Date.now();
-  const { title, artist, external_id } = song;
+  let { title, artist, external_id } = song;
+  const songId = song.id;
   
   console.log(`[musicMetadata] 🎵 getTrackMetadata: Starting for "${title}" by ${artist || 'Unknown'} (platform: ${platform}, external_id: ${external_id || 'none'})`);
+
+  // STEP 0: Check cache first (if supabase client provided)
+  if (supabase && songId) {
+    const cached = await getCachedMetadata(supabase, songId);
+    if (cached) {
+      const totalTime = ((Date.now() - trackStartTime) / 1000).toFixed(3);
+      console.log(`[musicMetadata] ✅ Using cached metadata in ${totalTime}s`);
+      return {
+        ...cached,
+        artist: cached.parsedArtist || artist,
+        title: cached.parsedTitle || title,
+      };
+    }
+  }
+
+  // STEP 1: Parse YouTube titles for better matching
+  let parsedTitle = null;
+  let parsedArtist = null;
+  
+  if (platform === 'youtube') {
+    const parsed = parseYouTubeTitle(title, artist);
+    parsedTitle = parsed.title;
+    parsedArtist = parsed.artist;
+    
+    console.log(`[musicMetadata] 🎬 YouTube title parsed: "${title}" -> artist="${parsedArtist}", title="${parsedTitle}" (confidence: ${parsed.confidence})`);
+    
+    // Use parsed values for API lookups
+    if (parsed.confidence !== 'low') {
+      title = parsedTitle;
+      artist = parsedArtist;
+    }
+  }
 
   if (!title || !artist) {
     console.log(`[musicMetadata] ⚠️  getTrackMetadata: Missing title or artist, returning minimal metadata`);
@@ -516,14 +815,45 @@ export async function getTrackMetadata(song, platform, spotifyToken = null) {
     }
     // If Spotify fails (401, etc.), fetchSpotifyTrackFeatures returns null
     // and we continue with Last.fm - no error thrown
+  } else if (platform === 'youtube' && spotifyToken) {
+    // For YouTube songs, search Spotify to get popularity data
+    console.log(`[musicMetadata] 🔍 Searching Spotify for YouTube song: "${title}" by ${artist}`);
+    const spotifyStartTime = Date.now();
+    
+    // Search using cleaned title/artist, with original as fallback
+    const spotifySearchResult = await searchSpotifyTrack(
+      artist,
+      title,
+      spotifyToken,
+      song.title // Pass original title as fallback
+    );
+    
+    const spotifyTime = ((Date.now() - spotifyStartTime) / 1000).toFixed(3);
+    
+    if (spotifySearchResult) {
+      console.log(`[musicMetadata] ✅ Spotify search success in ${spotifyTime}s: popularity=${spotifySearchResult.popularity}, genres=${spotifySearchResult.genres?.length || 0}`);
+      metadata = {
+        ...metadata,
+        popularity: spotifySearchResult.popularity || 0,
+        genres: spotifySearchResult.genres || [],
+        spotifyId: spotifySearchResult.spotifyId, // Store for future lookups
+        sources: ['spotify_search'],
+      };
+    } else {
+      console.log(`[musicMetadata] ⚠️  Spotify search returned null in ${spotifyTime}s, continuing with other sources`);
+    }
   } else {
     console.log(`[musicMetadata] ⏭️  Skipping Spotify API: platform=${platform}, hasExternalId=${!!external_id}, hasToken=${!!spotifyToken}`);
   }
 
   // Try Last.fm API (works for both Spotify and YouTube)
-  console.log(`[musicMetadata] 🎤 Attempting Last.fm API for "${title}" by ${artist}`);
+  // For YouTube, use the parsed title/artist for better matching
+  const lookupArtist = platform === 'youtube' ? (parsedArtist || artist) : artist;
+  const lookupTitle = platform === 'youtube' ? (parsedTitle || title) : title;
+  
+  console.log(`[musicMetadata] 🎤 Attempting Last.fm API for "${lookupTitle}" by ${lookupArtist}`);
   const lastFmStartTime = Date.now();
-  const lastFmData = await fetchLastFmTrackInfo(artist, title);
+  const lastFmData = await fetchLastFmTrackInfo(lookupArtist, lookupTitle);
   const lastFmTime = ((Date.now() - lastFmStartTime) / 1000).toFixed(3);
   
   if (lastFmData) {
@@ -581,6 +911,14 @@ export async function getTrackMetadata(song, platform, spotifyToken = null) {
 
   const totalTime = ((Date.now() - trackStartTime) / 1000).toFixed(3);
   console.log(`[musicMetadata] ✅ getTrackMetadata complete in ${totalTime}s for "${title}": sources=[${metadata.sources.join(', ')}], genres=${metadata.genres.length}, popularity=${metadata.popularity}`);
+
+  // STEP FINAL: Save to cache for future use (if supabase client provided)
+  if (supabase && songId) {
+    // Don't await - save in background to not slow down response
+    saveMetadataToCache(supabase, songId, metadata, parsedTitle, parsedArtist).catch(err => {
+      console.warn(`[musicMetadata] Background cache save failed:`, err.message);
+    });
+  }
 
   return metadata;
 }
