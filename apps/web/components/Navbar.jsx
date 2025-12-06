@@ -118,9 +118,14 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-[var(--glass-border)] [data-theme='light']:border-black/15 bg-[var(--glass-bg)] backdrop-blur-md transition-colors duration-300">
       <div className="mx-auto flex h-12 max-w-6xl items-center px-4">
-        {/* left: brand (separate, no glass) */}
+        {/* left: brand - clickable logo goes to dashboard */}
         <div className="shrink-0">
-          <Link href="/dashboard" aria-label="Go to home" className="inline-block" onClick={() => setIsMobileMenuOpen(false)}>
+          <Link 
+            href="/dashboard" 
+            aria-label="Go to dashboard" 
+            className="inline-block cursor-pointer hover:opacity-80 transition-opacity" 
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
             <VybeLogo />
           </Link>
         </div>
