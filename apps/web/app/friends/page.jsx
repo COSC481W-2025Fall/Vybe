@@ -275,7 +275,7 @@ export default function FriendsPage() {
       {/* Remove Friend Confirmation Modal */}
       {showRemoveFriendModal && friendToRemove && (
         <div 
-          className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4"
+          className="fixed top-0 left-0 right-0 bottom-0 min-h-[100dvh] bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-[60] p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="remove-friend-title"
@@ -447,7 +447,7 @@ function AddFriendsModal({ onClose }) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50"
+      className="fixed top-0 left-0 right-0 bottom-0 min-h-[100dvh] bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-[60]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-friends-title"
@@ -701,7 +701,7 @@ function FriendRequestsModal({ onClose, onRequestsChanged }) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50"
+      className="fixed top-0 left-0 right-0 bottom-0 min-h-[100dvh] bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-[60]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="friend-requests-title"

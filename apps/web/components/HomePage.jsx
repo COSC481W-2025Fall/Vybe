@@ -668,7 +668,7 @@ export function HomePage({ onNavigate } = {}) {
 
       {/* Create Group Modal - matches groups page exactly */}
       {createGroupDialog.isOpen && (
-        <div className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div className="fixed top-0 left-0 right-0 bottom-0 min-h-[100dvh] bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-[60] p-4">
           <div className="bg-[var(--dropdown-bg)] [data-theme='light']:bg-white rounded-xl max-w-md w-full p-4 sm:p-6 shadow-2xl border-2 border-[var(--glass-border)] [data-theme='light']:border-black/20">
             <h2 className="text-xl sm:text-2xl font-bold mb-4 text-[var(--foreground)]">Create Group</h2>
 

@@ -1331,7 +1331,7 @@ export default function GroupDetailPage({ params }) {
       {/* Remove Member Confirmation Modal */}
       {showRemoveMemberModal && memberToRemove && (
         <div 
-          className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4"
+          className="fixed top-0 left-0 right-0 bottom-0 min-h-[100dvh] bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-[60] p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="remove-member-title"
@@ -1379,7 +1379,7 @@ export default function GroupDetailPage({ params }) {
       {/* Delete Group Confirmation Modal */}
       {showDeleteGroupModal && (
         <div 
-          className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4"
+          className="fixed top-0 left-0 right-0 bottom-0 min-h-[100dvh] bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-[60] p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="delete-group-title"
