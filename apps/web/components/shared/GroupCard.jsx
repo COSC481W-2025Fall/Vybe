@@ -14,8 +14,11 @@ export function GroupCard({
 }) {
   return (
     <div 
-      className="glass-card rounded-xl p-4 hover:bg-[var(--secondary-hover)] transition-all cursor-pointer h-[160px] flex flex-col"
+      className="glass-card rounded-xl p-3 sm:p-4 hover:bg-[var(--secondary-hover)] active:bg-[var(--secondary-hover)] active:scale-[0.98] transition-all cursor-pointer h-[140px] sm:h-[160px] flex flex-col touch-manipulation"
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
     >
       {/* Header - fixed height */}
       <div className="flex items-start justify-between gap-2 mb-2">

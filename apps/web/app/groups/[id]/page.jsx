@@ -893,13 +893,15 @@ export default function GroupDetailPage({ params }) {
       {/* Header */}
       <div className="border-b border-[var(--glass-border)]">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-          <div className="flex items-center justify-between">
-            <div>
+          {/* Desktop: Side by side | Mobile: Stacked */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Group Info */}
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="page-title mb-1 text-xl sm:text-2xl">{group?.name}</h1>
-                <ConnectionDot className="mt-0.5" />
+                <h1 className="page-title mb-1 text-xl sm:text-2xl truncate">{group?.name}</h1>
+                <ConnectionDot className="mt-0.5 flex-shrink-0" />
               </div>
-              <p className="section-subtitle text-xs sm:text-sm">{group?.description || 'No description'}</p>
+              <p className="section-subtitle text-xs sm:text-sm line-clamp-2">{group?.description || 'No description'}</p>
               {/* Join Code - Click to copy */}
               {group?.join_code && (
                 <button
@@ -908,7 +910,7 @@ export default function GroupDetailPage({ params }) {
                   title="Click to copy join code"
                   aria-label={`Join code: ${group.join_code}. Click to copy.`}
                 >
-                  <span className="text-xs text-[var(--muted-foreground)]">Join Code:</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">Join:</span>
                   <span className="font-mono font-bold text-sm text-[var(--foreground)] tracking-wider">{group.join_code}</span>
                   {joinCodeCopied ? (
                     <Check className="h-4 w-4 text-green-400" aria-hidden="true" />
@@ -918,22 +920,25 @@ export default function GroupDetailPage({ params }) {
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            
+            {/* Action Buttons - Full width on mobile */}
+            <div className="flex items-center gap-2 sm:gap-3 sm:flex-shrink-0">
               {group?.owner_id === user?.id && (
                 <button
                   onClick={() => setShowDeleteGroupModal(true)}
-                  className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-red-600/20 hover:bg-red-600/30 active:bg-red-600/30 text-red-400 rounded-lg font-medium transition-colors text-sm sm:text-base border border-red-600/30"
+                  className="flex items-center justify-center gap-2 p-2.5 sm:px-4 sm:py-2.5 bg-red-600/20 hover:bg-red-600/30 active:bg-red-600/30 text-red-400 rounded-xl font-medium transition-colors text-sm border border-red-600/30"
+                  title="Delete Group"
                 >
-                  <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="hidden sm:inline">Delete Group</span>
+                  <Trash2 className="h-5 w-5" />
+                  <span className="hidden sm:inline">Delete</span>
                 </button>
               )}
               <button
                 onClick={() => setShowAddPlaylistModal(true)}
-                className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white hover:bg-gray-200 active:bg-gray-200 text-black rounded-lg font-medium transition-colors text-sm sm:text-base"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-100 active:bg-gray-200 text-black rounded-xl font-medium transition-colors text-sm shadow-sm"
               >
                 <Plus className="h-5 w-5" />
-                Add Playlist
+                <span>Add Playlist</span>
               </button>
             </div>
           </div>
@@ -945,60 +950,66 @@ export default function GroupDetailPage({ params }) {
         <div className="w-full">
           {/* Playlist Songs */}
           <div className="w-full">
-            <div className="glass-card rounded-2xl p-6">
+            <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
               {/* Playlist Selector */}
               {playlists.length > 0 ? (
                 <>
-                  {/* Smart Sort Section */}
-                  <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    {/* Show "Vibe Mix Active" for "All" view when unified sort exists */}
+                  {/* Smart Sort Section - Mobile optimized */}
+                  <div className="mb-4 space-y-3">
+                    {/* Sort Status Badge */}
                     {selectedPlaylist === 'all' && group?.all_songs_sort_order && group.all_songs_sort_order.length > 0 && (
-                      <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2 flex-1">
-                        <Sparkles className="w-5 h-5 text-purple-400" />
-                        <span className="text-sm text-[var(--foreground)]">
-                          <span className="font-medium text-purple-400">Vibe Mix Active</span>
+                      <div className="p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-purple-500/20">
+                          <Sparkles className="w-4 h-4 text-purple-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-purple-400">Vibe Mix Active</p>
                           {group.all_songs_sorted_at && (
-                            <span className="text-[var(--muted-foreground)] ml-2">
-                              (Sorted {new Date(group.all_songs_sorted_at).toLocaleDateString()})
-                            </span>
+                            <p className="text-xs text-[var(--muted-foreground)]">
+                              Sorted {new Date(group.all_songs_sorted_at).toLocaleDateString()}
+                            </p>
                           )}
-                        </span>
+                        </div>
                       </div>
                     )}
-                    {/* Show "AI Smart Sort Active" for individual playlists */}
                     {selectedPlaylist !== 'all' && playlists.some(p => p.smart_sorted_order !== null) && (
-                      <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-2 flex-1">
-                        <Sparkles className="w-5 h-5 text-purple-400" />
-                        <span className="text-sm text-[var(--foreground)]">
-                          <span className="font-medium">AI Smart Sort Active</span>
+                      <div className="p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-purple-500/20">
+                          <Sparkles className="w-4 h-4 text-purple-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-purple-400">AI Smart Sort Active</p>
                           {playlists[0]?.last_sorted_at && (
-                            <span className="text-[var(--muted-foreground)] ml-2">
-                              (Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()})
-                            </span>
+                            <p className="text-xs text-[var(--muted-foreground)]">
+                              Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()}
+                            </p>
                           )}
-                        </span>
+                        </div>
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
+                    
+                    {/* Sort Action Buttons - Grid on mobile */}
+                    <div className="flex flex-wrap items-center gap-2">
                       {/* Reset Order button - only show for "All" view when unified sort exists */}
                       {selectedPlaylist === 'all' && group?.all_songs_sort_order && group.all_songs_sort_order.length > 0 && (
                         <button
                           onClick={handleResetSort}
                           disabled={isResetting}
-                          className="px-3 py-2 text-sm rounded-lg border border-[var(--muted-foreground)]/30 hover:bg-[var(--muted-foreground)]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[var(--foreground)]"
+                          className="px-3 py-2 text-sm rounded-xl border border-[var(--glass-border)] hover:bg-[var(--secondary-bg)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-[var(--muted-foreground)]"
                         >
-                          {isResetting ? 'Resetting...' : 'Reset Order'}
+                          {isResetting ? 'Resetting...' : 'Reset'}
                         </button>
                       )}
+                      
                       {/* Quick Sort - instant, local algorithm */}
                       <button
                         onClick={() => handleSmartSort(true)}
                         disabled={isSorting || playlists.length === 0}
                         title="Instant sort using local algorithm - no wait time"
-                        className="flex items-center gap-2 px-3 py-2 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] disabled:bg-gray-600 disabled:cursor-not-allowed text-[var(--foreground)] rounded-lg font-medium transition-colors border border-[var(--glass-border)]"
+                        className="flex items-center justify-center gap-2 px-3 py-2 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--foreground)] rounded-xl font-medium transition-colors border border-[var(--glass-border)]"
                       >
                         <Sparkles className="h-4 w-4 text-blue-400" />
-                        <span className="hidden sm:inline">Quick</span>
+                        <span className="text-sm">Quick</span>
                       </button>
                       
                       {/* AI Smart Sort - queued, AI-enhanced */}
@@ -1006,17 +1017,17 @@ export default function GroupDetailPage({ params }) {
                         onClick={() => handleSmartSort(false)}
                         disabled={isSorting || playlists.length === 0}
                         title={selectedPlaylist === 'all' ? 'AI-enhanced sort with perfect transitions (may queue during high traffic)' : 'Sorts this playlist by AI recommendation'}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all shadow-sm"
                       >
                         {isSorting ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Sorting...</span>
+                            <span className="text-sm">Sorting...</span>
                           </>
                         ) : (
                           <>
                             <Sparkles className="h-4 w-4" />
-                            <span>AI Sort</span>
+                            <span className="text-sm">AI Sort</span>
                           </>
                         )}
                       </button>
@@ -1207,8 +1218,8 @@ export default function GroupDetailPage({ params }) {
         </div>
 
         {/* Members Section */}
-        <div className="mt-6">
-          <div className="glass-card rounded-2xl p-6">
+        <div className="mt-4 sm:mt-6">
+          <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="section-title flex items-center gap-2">
                 <Users className="h-5 w-5" />

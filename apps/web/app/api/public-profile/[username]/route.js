@@ -38,6 +38,32 @@ export async function GET(req, { params }) {
       );
     }
 
+    // Also fetch the user's song of the day
+    let songOfTheDay = null;
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data: sotdData, error: sotdError } = await supabase
+      .from('song_of_the_day')
+      .select('*')
+      .eq('user_id', data.id)
+      .gte('shared_at', `${today}T00:00:00`)
+      .lte('shared_at', `${today}T23:59:59`)
+      .order('shared_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!sotdError && sotdData) {
+      songOfTheDay = {
+        title: sotdData.title,
+        artist: sotdData.artist,
+        album: sotdData.album,
+        image_url: sotdData.image_url,
+        spotify_url: sotdData.spotify_url,
+        youtube_url: sotdData.youtube_url,
+        shared_at: sotdData.shared_at,
+      };
+    }
+
     // All profiles are now publicly visible
     return NextResponse.json(
       {
@@ -46,6 +72,7 @@ export async function GET(req, { params }) {
           display_name: data.display_name,
           bio: data.bio,
           profile_picture_url: data.profile_picture_url,
+          song_of_the_day: songOfTheDay,
         },
       },
       { status: 200 }

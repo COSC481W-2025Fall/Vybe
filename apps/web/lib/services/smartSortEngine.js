@@ -17,26 +17,37 @@ import { alertSortSystemStress, alertOpenAIIssue } from '../monitoring/alerting'
 
 const CONFIG = {
   // AI Settings
-  AI_TIMEOUT_MS: 12000,          // 12 seconds max for AI call
-  AI_FALLBACK_TIMEOUT_MS: 8000,  // 8 seconds for fallback model
+  AI_TIMEOUT_MS: 10000,          // 10 seconds max for AI call (faster timeout)
+  AI_FALLBACK_TIMEOUT_MS: 6000,  // 6 seconds for fallback model
   PRIMARY_MODEL: 'gpt-4o-mini',
   FALLBACK_MODEL: 'gpt-3.5-turbo',
   
-  // Queue Settings - Optimized for 50+ concurrent users
-  MAX_CONCURRENT_AI_REQUESTS: 8, // Increased for demo load
-  QUEUE_TIMEOUT_MS: 45000,       // 45 seconds - give users time to wait
-  MAX_QUEUE_SIZE: 100,           // Support 100 queued requests for demos
-  ESTIMATED_TIME_PER_REQUEST: 5000, // 5 seconds average per request
+  // Queue Settings - Maximized for hardware limits
+  // Vercel serverless: ~10 concurrent connections recommended
+  // OpenAI API: Tier 1 = 60 RPM, Tier 2+ = 500+ RPM
+  // We batch requests, so actual concurrency can be higher
+  MAX_CONCURRENT_AI_REQUESTS: 16, // Maximized for high throughput
+  QUEUE_TIMEOUT_MS: 30000,       // 30 seconds - faster failure for better UX
+  MAX_QUEUE_SIZE: 200,           // Support 200 queued requests
+  ESTIMATED_TIME_PER_REQUEST: 3500, // 3.5 seconds average (optimized prompts)
+  
+  // Batch Processing - Process multiple sorts in parallel
+  BATCH_SIZE: 4,                 // Process 4 sorts simultaneously per batch
+  BATCH_DELAY_MS: 100,           // 100ms delay between batches
   
   // Sorting Settings
   TOP_POPULARITY_PERCENT: 0.20,  // Top 20% are "popular"
   MAX_CONSECUTIVE_SAME_ARTIST: 1,
   MAX_CONSECUTIVE_SAME_GENRE: 1,
   
-  // Stress handling - more lenient for demos
-  STRESS_THRESHOLD_MS: 10000,    // 10s avg before stress mode
-  HEALTH_CHECK_INTERVAL: 30000,  // Check system health every 30s
-  STRESS_RECOVERY_MS: 60000,     // 60s cooldown after stress
+  // Stress handling - optimized for production scale
+  STRESS_THRESHOLD_MS: 8000,     // 8s avg before stress mode
+  HEALTH_CHECK_INTERVAL: 15000,  // Check system health every 15s
+  STRESS_RECOVERY_MS: 30000,     // 30s cooldown after stress
+  
+  // Performance tuning
+  USE_STREAMING: false,          // Streaming not needed for small responses
+  CACHE_METADATA_MS: 300000,     // Cache song metadata for 5 minutes
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -145,9 +156,20 @@ class RequestQueue {
   }
 
   processNext() {
-    if (this.queue.length > 0 && this.running < this.maxConcurrent) {
-      const next = this.queue.shift();
-      next.execute();
+    // Process multiple items at once if capacity allows (batch processing)
+    const availableSlots = this.maxConcurrent - this.running;
+    const itemsToProcess = Math.min(availableSlots, this.queue.length, CONFIG.BATCH_SIZE || 4);
+    
+    for (let i = 0; i < itemsToProcess; i++) {
+      if (this.queue.length > 0 && this.running < this.maxConcurrent) {
+        const next = this.queue.shift();
+        // Stagger execution slightly to avoid thundering herd
+        if (i > 0 && CONFIG.BATCH_DELAY_MS) {
+          setTimeout(() => next.execute(), CONFIG.BATCH_DELAY_MS * i);
+        } else {
+          next.execute();
+        }
+      }
     }
   }
 

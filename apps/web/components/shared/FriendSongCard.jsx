@@ -1,17 +1,23 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent } from "../ui/dialog";
-import { X, Music, ExternalLink, Clock, Calendar } from "lucide-react";
+import { Music, ExternalLink, Clock, User } from "lucide-react";
 
 /**
  * FriendSongCard - Expanded card showing a friend's song of the day
  * Shows larger thumbnail, user info, song details, and external links
  */
 export function FriendSongCard({ song, open, onOpenChange }) {
+  const router = useRouter();
+  
   if (!song) return null;
 
-  const hasSpotify = Boolean(song.spotify_url);
-  const hasYouTube = Boolean(song.youtube_url);
+  const spotifyUrl = song.spotify_url || song.spotifyUrl;
+  const youtubeUrl = song.youtube_url || song.youtubeUrl;
+  const hasSpotify = Boolean(spotifyUrl);
+  const hasYouTube = Boolean(youtubeUrl);
+  const username = song.shared_by_username;
   
   // Format the shared time
   const formatSharedTime = (dateStr) => {
@@ -73,8 +79,22 @@ export function FriendSongCard({ song, open, onOpenChange }) {
 
           {/* Content */}
           <div className="p-5 space-y-5">
-            {/* User Info */}
-            <div className="flex items-center gap-4">
+            {/* User Info - Clickable to view profile */}
+            <button
+              onClick={() => {
+                if (username) {
+                  onOpenChange(false);
+                  router.push(`/u/${username}`);
+                }
+              }}
+              disabled={!username}
+              className={`flex items-center gap-4 w-full text-left rounded-xl p-2 -m-2 transition-colors ${
+                username 
+                  ? 'hover:bg-[var(--secondary-bg)] cursor-pointer' 
+                  : 'cursor-default'
+              }`}
+              title={username ? `View ${song.shared_by}'s profile` : undefined}
+            >
               <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 ring-2 ring-[var(--glass-border)]">
                 {song.shared_by_avatar ? (
                   <img
@@ -89,14 +109,15 @@ export function FriendSongCard({ song, open, onOpenChange }) {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[var(--foreground)] truncate">
+                <p className="font-semibold text-[var(--foreground)] truncate flex items-center gap-2">
                   {song.shared_by || 'Anonymous'}
+                  {username && <User className="h-3 w-3 text-[var(--muted-foreground)]" />}
                 </p>
                 <p className="text-sm text-[var(--muted-foreground)]">
-                  Shared this as their song of the day
+                  {username ? `@${username} • Song of the day` : 'Shared this as their song of the day'}
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Time posted */}
             {song.shared_at && (
@@ -111,7 +132,7 @@ export function FriendSongCard({ song, open, onOpenChange }) {
               <div className="flex gap-3">
                 {hasSpotify && (
                   <a
-                    href={`${song.spotify_url}${song.spotify_url?.includes('?') ? '&' : '?'}autoplay=true`}
+                    href={`${spotifyUrl}${spotifyUrl?.includes('?') ? '&' : '?'}autoplay=true`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium transition-colors"
@@ -123,7 +144,7 @@ export function FriendSongCard({ song, open, onOpenChange }) {
                 )}
                 {hasYouTube && (
                   <a
-                    href={`${song.youtube_url}${song.youtube_url?.includes('?') ? '&' : '?'}autoplay=1`}
+                    href={`${youtubeUrl}${youtubeUrl?.includes('?') ? '&' : '?'}autoplay=1`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"

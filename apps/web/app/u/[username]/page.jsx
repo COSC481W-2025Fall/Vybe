@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { User, AlertCircle, Music, ArrowLeft } from 'lucide-react';
+import { User, AlertCircle, Music, ArrowLeft, ExternalLink, Clock } from 'lucide-react';
 
 export default function PublicProfilePage() {
   const pathname = usePathname();
@@ -153,13 +153,81 @@ export default function PublicProfilePage() {
           </div>
         )}
 
-          {/* Footer */}
-          <div className="border-t border-[var(--glass-border)] pt-4 mt-4">
-            <div className="flex items-center gap-2 text-[var(--muted-foreground)] text-sm">
-              <Music className="h-4 w-4" />
-              <span>This is a public Vybe profile.</span>
+          {/* Song of the Day */}
+          {profile.song_of_the_day && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-[var(--muted-foreground)] mb-3 flex items-center gap-2">
+                <Music className="h-4 w-4" />
+                Song of the Day
+              </h2>
+              <div className="flex items-center gap-4 p-4 bg-[var(--secondary-bg)] rounded-xl border border-[var(--glass-border)]">
+                {/* Album Art */}
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0">
+                  {profile.song_of_the_day.image_url ? (
+                    <Image
+                      src={profile.song_of_the_day.image_url}
+                      alt={profile.song_of_the_day.title || 'Song artwork'}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Music className="h-6 w-6 text-white/70" />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Song Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-[var(--foreground)] truncate">
+                    {profile.song_of_the_day.title || 'Untitled'}
+                  </p>
+                  <p className="text-sm text-[var(--muted-foreground)] truncate">
+                    {profile.song_of_the_day.artist || 'Unknown Artist'}
+                  </p>
+                  {profile.song_of_the_day.album && (
+                    <p className="text-xs text-[var(--muted-foreground)] truncate opacity-70">
+                      {profile.song_of_the_day.album}
+                    </p>
+                  )}
+                </div>
+
+                {/* External Links */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {profile.song_of_the_day.spotify_url && (
+                    <a
+                      href={`${profile.song_of_the_day.spotify_url}${profile.song_of_the_day.spotify_url.includes('?') ? '&' : '?'}autoplay=true`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
+                      title="Play on Spotify"
+                      aria-label="Play on Spotify (opens in new tab)"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                  {profile.song_of_the_day.youtube_url && (
+                    <a
+                      href={`${profile.song_of_the_day.youtube_url}${profile.song_of_the_day.youtube_url.includes('?') ? '&' : '?'}autoplay=1`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
+                      title="Play on YouTube"
+                      aria-label="Play on YouTube (opens in new tab)"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+              </div>
+              {profile.song_of_the_day.shared_at && (
+                <p className="text-xs text-[var(--muted-foreground)] mt-2 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Shared {new Date(profile.song_of_the_day.shared_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} today
+                </p>
+              )}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

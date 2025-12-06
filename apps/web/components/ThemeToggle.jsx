@@ -171,8 +171,8 @@ function generateTintsAndShades(hexColor) {
   return { base: hexColor, tints, shades };
 }
 
-// MS Word-style color grid
-const WORD_STYLE_COLORS = [
+// Color grid palette
+const COLOR_GRID = [
   // Row 1: Theme colors
   ['#000000', '#1a1a2e', '#16213e', '#0f3460', '#533483', '#7952b3', '#e94560', '#ff6b6b', '#feca57', '#1dd1a1'],
   // Row 2: Standard colors
@@ -284,18 +284,18 @@ function ContrastStatus({ background, foreground, accent, onAutoFix }) {
   );
 }
 
-// Word-style Color Picker Grid
+// Color Picker Grid Component
 function ColorPickerGrid({ onSelectColor, selectedColor, label, filterLowContrast, contrastAgainst }) {
   const [showMore, setShowMore] = useState(false);
   const [customColor, setCustomColor] = useState('');
   
   // Generate tints and shades for the first row (theme colors)
   const expandedColors = useMemo(() => {
-    if (!showMore) return WORD_STYLE_COLORS;
+    if (!showMore) return COLOR_GRID;
     
     // Add tints and shades rows
-    const baseColors = WORD_STYLE_COLORS[0];
-    const result = [...WORD_STYLE_COLORS];
+    const baseColors = COLOR_GRID[0];
+    const result = [...COLOR_GRID];
     
     // Add lighter tints
     const tints1 = baseColors.map(c => generateTintsAndShades(c).tints[0]);
@@ -320,10 +320,10 @@ function ColorPickerGrid({ onSelectColor, selectedColor, label, filterLowContras
     <div className="space-y-2">
       <Label className="text-xs text-[var(--muted-foreground)]">{label}</Label>
       
-      {/* Color Grid */}
-      <div className="space-y-1">
+      {/* Color Grid - Responsive: wraps on mobile */}
+      <div className="space-y-1 overflow-x-auto">
         {expandedColors.map((row, rowIdx) => (
-          <div key={rowIdx} className="flex gap-1">
+          <div key={rowIdx} className="flex gap-0.5 sm:gap-1 min-w-0">
             {row.map((color, colIdx) => {
               const lowContrast = isLowContrast(color);
               const isSelected = selectedColor?.toLowerCase() === color.toLowerCase();
@@ -333,9 +333,9 @@ function ColorPickerGrid({ onSelectColor, selectedColor, label, filterLowContras
                   key={`${rowIdx}-${colIdx}`}
                   onClick={() => !lowContrast && onSelectColor(color)}
                   disabled={lowContrast}
-                  className={`w-6 h-6 rounded border-2 transition-all ${
+                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded border-2 transition-all flex-shrink-0 ${
                     isSelected 
-                      ? 'border-[var(--foreground)] ring-2 ring-[var(--accent)] scale-110' 
+                      ? 'border-[var(--foreground)] ring-1 sm:ring-2 ring-[var(--accent)] scale-110' 
                       : 'border-transparent hover:border-[var(--glass-border)] hover:scale-105'
                   } ${lowContrast ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
                   style={{ backgroundColor: color }}
@@ -349,16 +349,15 @@ function ColorPickerGrid({ onSelectColor, selectedColor, label, filterLowContras
       </div>
       
       {/* More Colors / Custom */}
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex items-center gap-1 sm:gap-2 pt-1">
         <button
           onClick={() => setShowMore(!showMore)}
-          className="text-xs text-[var(--accent)] hover:underline"
+          className="text-xs text-[var(--accent)] hover:underline whitespace-nowrap"
         >
-          {showMore ? 'Show Less' : 'More Shades...'}
+          {showMore ? 'Less' : 'More...'}
         </button>
         <div className="flex-1" />
         <div className="flex items-center gap-1">
-          <span className="text-xs text-[var(--muted-foreground)]">Custom:</span>
           <input
             type="color"
             value={customColor || selectedColor || '#000000'}
@@ -366,8 +365,9 @@ function ColorPickerGrid({ onSelectColor, selectedColor, label, filterLowContras
               setCustomColor(e.target.value);
               onSelectColor(e.target.value);
             }}
-            className="w-6 h-6 rounded border border-[var(--glass-border)] cursor-pointer"
+            className="w-5 h-5 rounded border border-[var(--glass-border)] cursor-pointer flex-shrink-0"
             aria-label="Choose custom color"
+            title="Pick custom color"
           />
           <Input
             value={customColor || selectedColor || ''}
@@ -378,8 +378,8 @@ function ColorPickerGrid({ onSelectColor, selectedColor, label, filterLowContras
                 onSelectColor(val);
               }
             }}
-            placeholder="#000000"
-            className="w-20 h-6 text-xs font-mono px-1"
+            placeholder="#hex"
+            className="w-14 sm:w-16 h-5 text-xs font-mono px-1"
           />
         </div>
       </div>
@@ -715,17 +715,17 @@ function ProviderThemeToggle({ prov }) {
             {/* Column 3 - Custom Colors & Preview */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[var(--foreground)] mb-3 flex items-center gap-2">
-                <Settings2 className="h-4 w-4" /> Custom Colors (Word-Style)
+                <Settings2 className="h-4 w-4" /> Custom Colors
               </h3>
               
-              {/* MS Word-style Color Picker for Background */}
+              {/* Background Color Picker */}
               <ColorPickerGrid
                 label="Background Color"
                 selectedColor={previewColors.background || '#000000'}
                 onSelectColor={(color) => handleColorChange('background', color)}
               />
               
-              {/* MS Word-style Color Picker for Text */}
+              {/* Text Color Picker */}
               <ColorPickerGrid
                 label="Text Color"
                 selectedColor={previewColors.foreground || '#ffffff'}
@@ -734,7 +734,7 @@ function ProviderThemeToggle({ prov }) {
                 contrastAgainst={previewColors.background || '#000000'}
               />
               
-              {/* MS Word-style Color Picker for Accent */}
+              {/* Accent Color Picker */}
               <ColorPickerGrid
                 label="Accent Color"
                 selectedColor={previewColors.accent || '#00d4ff'}

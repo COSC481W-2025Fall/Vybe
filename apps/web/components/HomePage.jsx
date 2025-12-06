@@ -272,25 +272,23 @@ export function HomePage({ onNavigate } = {}) {
           ) : friendsSongsOfTheDay.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
               {friendsSongsOfTheDay.map((friend) => (
-                <button
+                <div
                   key={friend.id}
-                  type="button"
-                  className="flex flex-col items-center p-3 cursor-pointer group bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] border border-[var(--glass-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 transition-all h-[140px] sm:h-[160px]"
-                  onClick={() => {
-                    setSelectedSong(friend);
-                    setSongDialogOpen(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedSong(friend);
-                      setSongDialogOpen(true);
-                    }
-                  }}
+                  className="flex flex-col items-center p-3 cursor-pointer group bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] border border-[var(--glass-border)] rounded-xl focus-within:ring-2 focus-within:ring-[var(--accent)]/20 transition-all h-[140px] sm:h-[160px]"
                 >
-                  {/* Avatar */}
-                  <div className="relative mb-2">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 group-hover:scale-105 transition-transform shadow-lg">
+                  {/* Avatar - Navigates to profile */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (friend.shared_by_username) {
+                        router.push(`/u/${friend.shared_by_username}`);
+                      }
+                    }}
+                    className="relative mb-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] rounded-full"
+                    title={friend.shared_by_username ? `View ${friend.shared_by}'s profile` : undefined}
+                  >
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 group-hover:scale-105 hover:scale-110 transition-transform shadow-lg">
                       {friend.shared_by_avatar ? (
                         <img src={friend.shared_by_avatar} alt={friend.shared_by} className="w-full h-full object-cover" />
                       ) : (
@@ -302,14 +300,21 @@ export function HomePage({ onNavigate } = {}) {
                     <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[var(--background)] rounded-full border-2 border-[var(--glass-border)] flex items-center justify-center">
                       <Music className="h-2.5 w-2.5 text-[var(--accent)]" />
                     </div>
-                  </div>
+                  </button>
 
-                  {/* Info */}
-                  <div className="text-center w-full flex-1 flex flex-col justify-center min-w-0">
+                  {/* Song Info - Opens song dialog */}
+                  <button
+                    type="button"
+                    className="text-center w-full flex-1 flex flex-col justify-center min-w-0 focus:outline-none"
+                    onClick={() => {
+                      setSelectedSong(friend);
+                      setSongDialogOpen(true);
+                    }}
+                  >
                     <p className="text-xs font-semibold text-[var(--foreground)] truncate">{friend.shared_by?.split(' ')[0] || 'Friend'}</p>
                     <p className="text-xs text-[var(--foreground)] truncate mt-1">{friend.title || 'Untitled'}</p>
                     <p className="text-xs text-[var(--muted-foreground)] truncate">{friend.artist || 'Unknown'}</p>
-                  </div>
+                  </button>
 
                   {/* Time */}
                   {friend.shared_at && (
@@ -317,7 +322,7 @@ export function HomePage({ onNavigate } = {}) {
                       {new Date(friend.shared_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           ) : (
