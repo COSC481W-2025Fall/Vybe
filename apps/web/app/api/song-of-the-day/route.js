@@ -61,9 +61,12 @@ export async function POST(request) {
     const body = await request.json();
     const { songId, songName, artist, album, imageUrl, previewUrl, spotifyUrl, youtubeUrl } = body;
 
-    if (!songId || !songName || !artist) {
-      return NextResponse.json({ error: 'Song information is required' }, { status: 400 });
+    if (!songName || !artist) {
+      return NextResponse.json({ error: 'Song name and artist are required' }, { status: 400 });
     }
+
+    // Generate a songId if not provided
+    const finalSongId = songId || `${songName}-${artist}`.replace(/\s+/g, '-').toLowerCase().slice(0, 100);
 
     // Get today's date at midnight (UTC)
     const today = new Date();
@@ -82,7 +85,7 @@ export async function POST(request) {
       const { data: updated, error: updateError } = await supabase
         .from('songs_of_the_day')
         .update({
-          song_id: songId,
+          song_id: finalSongId,
           song_name: songName,
           artist,
           album,
@@ -112,7 +115,7 @@ export async function POST(request) {
         .from('songs_of_the_day')
         .insert({
           user_id: user.id,
-          song_id: songId,
+          song_id: finalSongId,
           song_name: songName,
           artist,
           album,

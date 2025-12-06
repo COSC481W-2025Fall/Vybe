@@ -12,6 +12,36 @@ import { convertTracksToSpotifyUris } from '@/lib/services/spotifyExport';
 
 const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
 
+// Spotify rate limit handling
+// Spotify uses a rolling 30-second window and returns 429 with Retry-After header
+const MAX_TRACKS_PER_EXPORT = 500; // Limit to prevent rate limiting during export
+const BATCH_DELAY_MS = 100; // Delay between batches to avoid rate limits
+
+async function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await fetch(url, options);
+    
+    if (response.status === 429) {
+      // Rate limited - get retry-after header
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10);
+      console.log(`[export-playlist] Rate limited, waiting ${retryAfter} seconds...`);
+      
+      if (i < maxRetries - 1) {
+        await delay(retryAfter * 1000);
+        continue;
+      }
+    }
+    
+    return response;
+  }
+  
+  throw new Error('Max retries exceeded due to rate limiting');
+}
+
 
 
 /**
@@ -769,6 +799,17 @@ export async function POST(request) {
 
     }
 
+    // Check track count limit to prevent rate limiting
+    if (trackUris.length > MAX_TRACKS_PER_EXPORT) {
+      console.log(`[export-playlist] Track count ${trackUris.length} exceeds limit ${MAX_TRACKS_PER_EXPORT}, truncating...`);
+      trackUris = trackUris.slice(0, MAX_TRACKS_PER_EXPORT);
+      if (stats) {
+        stats.truncated = true;
+        stats.truncatedTo = MAX_TRACKS_PER_EXPORT;
+        stats.exportedTracks = MAX_TRACKS_PER_EXPORT;
+      }
+    }
+
     // Step 1: Create the playlist using /me/playlists endpoint
     // According to Spotify API: https://developer.spotify.com/documentation/web-api/reference/create-playlist
     // Using /me/playlists is simpler and doesn't require fetching user_id first
@@ -800,7 +841,7 @@ export async function POST(request) {
 
     });
 
-    const createPlaylistResponse = await fetch(
+    const createPlaylistResponse = await fetchWithRetry(
 
       `${SPOTIFY_API_BASE}/me/playlists`,
 
@@ -871,6 +912,20 @@ export async function POST(request) {
         );
       }
 
+      // Check for rate limit error
+      if (createPlaylistResponse.status === 429) {
+        const retryAfter = createPlaylistResponse.headers.get('Retry-After') || '30';
+        return NextResponse.json(
+          { 
+            error: 'Spotify rate limit exceeded',
+            message: `Too many requests to Spotify. Please wait ${retryAfter} seconds before trying again.`,
+            retryAfter: parseInt(retryAfter, 10),
+            isRateLimit: true
+          },
+          { status: 429 }
+        );
+      }
+
       return NextResponse.json(
 
         { 
@@ -907,32 +962,50 @@ export async function POST(request) {
     }
 
     // Add tracks in batches (position is optional - if not specified, tracks are added to the end)
+    let addedTracks = 0;
     for (let i = 0; i < trackBatches.length; i++) {
       const batch = trackBatches[i];
       
-      const addTracksResponse = await fetch(
-        `${SPOTIFY_API_BASE}/playlists/${spotifyPlaylistId}/tracks`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            uris: batch,
-            // Don't specify position - tracks will be added in order to the end of playlist
-          }),
-        }
-      );
+      // Add delay between batches to avoid rate limiting
+      if (i > 0) {
+        await delay(BATCH_DELAY_MS);
+      }
+      
+      try {
+        const addTracksResponse = await fetchWithRetry(
+          `${SPOTIFY_API_BASE}/playlists/${spotifyPlaylistId}/tracks`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              uris: batch,
+              // Don't specify position - tracks will be added in order to the end of playlist
+            }),
+          }
+        );
 
-      if (!addTracksResponse.ok) {
-        const errorText = await addTracksResponse.text();
-        console.error(`[export-playlist] Failed to add tracks batch ${i + 1}/${trackBatches.length}:`, errorText);
-        
-        // If a batch fails, we should still try to continue with remaining batches
-        // but log the error for debugging
-        const errorData = await addTracksResponse.json().catch(() => ({ error: errorText }));
-        console.error(`[export-playlist] Batch error details:`, errorData);
+        if (!addTracksResponse.ok) {
+          const errorText = await addTracksResponse.text();
+          console.error(`[export-playlist] Failed to add tracks batch ${i + 1}/${trackBatches.length}:`, errorText);
+          
+          // Check for rate limit in response
+          if (addTracksResponse.status === 429) {
+            console.error('[export-playlist] Rate limit exceeded while adding tracks');
+            // Continue to return partial success
+            break;
+          }
+        } else {
+          addedTracks += batch.length;
+        }
+      } catch (error) {
+        console.error(`[export-playlist] Error adding batch ${i + 1}:`, error.message);
+        // If we hit rate limit retries, stop adding more tracks
+        if (error.message.includes('rate limit')) {
+          break;
+        }
       }
     }
 

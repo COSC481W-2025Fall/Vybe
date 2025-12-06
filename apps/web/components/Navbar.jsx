@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Users, Library, User as UserIcon, LogOut, Settings, Menu, X, HelpCircle } from 'lucide-react';
+import { Home, Users, Library, User as UserIcon, LogOut, Settings, Menu, X, HelpCircle, UserCheck } from 'lucide-react';
 import { CONFIG } from '../config/constants.js';
 import VybeLogo from './common/VybeLogo';
 import ThemeToggle from './ThemeToggle';
@@ -13,6 +13,7 @@ const links = CONFIG.NAV_LINKS.map(link => {
     'Home': Home,
     'Groups': Users,
     'Library': Library,
+    'Friends': UserCheck,
     'Profile': UserIcon,
     'Settings': Settings
   };

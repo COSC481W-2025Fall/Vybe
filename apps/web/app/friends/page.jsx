@@ -10,9 +10,8 @@ import {
   Trash2, 
   Search, 
   Plus, 
-  X, 
-  ExternalLink,
-  Music
+  X,
+  Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,19 +21,19 @@ export default function FriendsPage() {
   
   const [user, setUser] = useState(null);
   const [friends, setFriends] = useState([]);
-  const [friendSongs, setFriendSongs] = useState({});
   const [loading, setLoading] = useState(true);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   
   // Modal states
   const [showAddFriendsModal, setShowAddFriendsModal] = useState(false);
   const [showFriendRequestsModal, setShowFriendRequestsModal] = useState(false);
+  const [showRemoveFriendModal, setShowRemoveFriendModal] = useState(false);
+  const [friendToRemove, setFriendToRemove] = useState(null);
 
   useEffect(() => {
     checkAuth();
     loadFriends();
     loadPendingRequestsCount();
-    loadFriendsSongs();
   }, []);
 
   async function checkAuth() {
@@ -74,30 +73,16 @@ export default function FriendsPage() {
     }
   }
 
-  async function loadFriendsSongs() {
-    try {
-      const response = await fetch('/api/friends/songs');
-      const data = await response.json();
-      if (data.success) {
-        const map = {};
-        (data.songs || []).forEach((song) => {
-          const key = song.shared_by_username?.toLowerCase() || song.shared_by?.toLowerCase();
-          if (key) {
-            map[key] = song;
-          }
-        });
-        setFriendSongs(map);
-      }
-    } catch (error) {
-      console.error('Error loading friends songs:', error);
-    }
+  async function handleRemoveFriend(friend) {
+    setFriendToRemove(friend);
+    setShowRemoveFriendModal(true);
   }
 
-  async function handleRemoveFriend(friendId) {
-    if (!confirm('Are you sure you want to remove this friend?')) return;
+  async function confirmRemoveFriend() {
+    if (!friendToRemove) return;
     
     try {
-      const response = await fetch(`/api/friends/${friendId}`, {
+      const response = await fetch(`/api/friends/${friendToRemove.id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -110,6 +95,9 @@ export default function FriendsPage() {
       }
     } catch (error) {
       toast.error("Couldn't connect to the server. Please check your internet.");
+    } finally {
+      setShowRemoveFriendModal(false);
+      setFriendToRemove(null);
     }
   }
 
@@ -196,129 +184,64 @@ export default function FriendsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {friends.map((friend) => {
-              const songKey = friend.username?.toLowerCase();
-              const friendSong = songKey ? friendSongs[songKey] : undefined;
-              const hasSpotify = Boolean(friendSong?.spotifyUrl);
-              const hasYouTube = Boolean(friendSong?.youtubeUrl);
-
-              return (
-                <article
-                  key={friend.id}
-                  className="glass-card rounded-xl p-4 sm:p-5 hover:border-[var(--glass-border-hover)] transition-colors"
-                  aria-label={`Friend: ${friend.name || friend.username}`}
-                >
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    {/* Clickable Profile Section */}
-                    <button
-                      onClick={() => router.push(`/u/${friend.username}`)}
-                      className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
-                    >
-                      {/* Avatar */}
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden">
-                        {friend.profile_picture_url ? (
-                          <img
-                            src={friend.profile_picture_url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <span aria-hidden="true">
-                            {friend.name?.charAt(0)?.toUpperCase() || friend.username?.charAt(0)?.toUpperCase() || '?'}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-[var(--foreground)] truncate">
-                          {friend.name || friend.username}
-                        </h3>
-                        <p className="text-sm text-[var(--muted-foreground)] truncate">
-                          @{friend.username}
-                        </p>
-                        {friend.bio && (
-                          <p className="text-xs text-[var(--muted-foreground)] mt-1 line-clamp-2 opacity-80">
-                            {friend.bio}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Remove Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveFriend(friend.id);
-                      }}
-                      className="p-2 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30 flex-shrink-0"
-                      aria-label={`Remove ${friend.name || friend.username} as friend`}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-400" aria-hidden="true" />
-                    </button>
-                  </div>
-
-                  {/* Friend's Song of the Day */}
-                  {friendSong && (
-                    <div className="mt-4 pt-4 border-t border-[var(--glass-border)]">
-                      <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)] mb-2">
-                        <Music className="h-3.5 w-3.5" aria-hidden="true" />
-                        <span>Song of the Day</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {friendSong.imageUrl && (
-                          <img
-                            src={friendSong.imageUrl}
-                            alt=""
-                            className="w-10 h-10 rounded object-cover flex-shrink-0"
-                            aria-hidden="true"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[var(--foreground)] truncate">
-                            {friendSong.title || 'Untitled'}
-                          </p>
-                          <p className="text-xs text-[var(--muted-foreground)] truncate">
-                            {friendSong.artist || 'Unknown Artist'}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* External Links (with autoplay) */}
-                      {(hasSpotify || hasYouTube) && (
-                        <div className="flex gap-2 mt-3">
-                          {hasSpotify && (
-                            <a
-                              href={`${friendSong.spotifyUrl}${friendSong.spotifyUrl?.includes('?') ? '&' : '?'}autoplay=true`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600/30 transition-colors"
-                              aria-label={`Play ${friendSong.title} in Spotify (opens in new tab)`}
-                            >
-                              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                              Spotify
-                            </a>
-                          )}
-                          {hasYouTube && (
-                            <a
-                              href={`${friendSong.youtubeUrl}${friendSong.youtubeUrl?.includes('?') ? '&' : '?'}autoplay=1`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30 transition-colors"
-                              aria-label={`Play ${friendSong.title} in YouTube (opens in new tab)`}
-                            >
-                              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                              YouTube
-                            </a>
-                          )}
-                        </div>
+            {friends.map((friend) => (
+              <article
+                key={friend.id}
+                className="glass-card rounded-xl p-4 sm:p-5 hover:border-[var(--glass-border-hover)] transition-colors"
+                aria-label={`Friend: ${friend.name || friend.username}`}
+              >
+                <div className="flex items-start gap-3 sm:gap-4">
+                  {/* Clickable Profile Section */}
+                  <button
+                    onClick={() => router.push(`/u/${friend.username}`)}
+                    className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                  >
+                    {/* Avatar */}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden">
+                      {friend.profile_picture_url ? (
+                        <img
+                          src={friend.profile_picture_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span aria-hidden="true">
+                          {friend.name?.charAt(0)?.toUpperCase() || friend.username?.charAt(0)?.toUpperCase() || '?'}
+                        </span>
                       )}
                     </div>
-                  )}
-                </article>
-              );
-            })}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-[var(--foreground)] truncate">
+                        {friend.name || friend.username}
+                      </h3>
+                      <p className="text-sm text-[var(--muted-foreground)] truncate">
+                        @{friend.username}
+                      </p>
+                      {friend.bio && (
+                        <p className="text-xs text-[var(--muted-foreground)] mt-1 line-clamp-2 opacity-80">
+                          {friend.bio}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Remove Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveFriend(friend);
+                    }}
+                    className="p-2 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30 flex-shrink-0"
+                    aria-label={`Remove ${friend.name || friend.username} as friend`}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-400" aria-hidden="true" />
+                  </button>
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </div>
@@ -348,12 +271,61 @@ export default function FriendsPage() {
           }}
         />
       )}
+
+      {/* Remove Friend Confirmation Modal */}
+      {showRemoveFriendModal && friendToRemove && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="remove-friend-title"
+          aria-describedby="remove-friend-description"
+        >
+          <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-sm w-full border border-[var(--glass-border)] shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-500/20 rounded-lg border border-red-500/30">
+                <Trash2 className="h-5 w-5 text-red-400" aria-hidden="true" />
+              </div>
+              <h3 id="remove-friend-title" className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">
+                Remove Friend?
+              </h3>
+            </div>
+            
+            <p id="remove-friend-description" className="text-sm sm:text-base text-[var(--muted-foreground)] mb-6">
+              Are you sure you want to remove{' '}
+              <span className="font-semibold text-[var(--foreground)]">
+                {friendToRemove.name || friendToRemove.username}
+              </span>{' '}
+              as a friend? You'll need to send a new friend request to reconnect.
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRemoveFriendModal(false);
+                  setFriendToRemove(null);
+                }}
+                className="flex-1 px-4 py-2.5 sm:py-3 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] rounded-xl font-medium transition-colors border border-[var(--glass-border)]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRemoveFriend}
+                className="flex-1 px-4 py-2.5 sm:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // Inline AddFriendsModal component with accessibility improvements
 function AddFriendsModal({ onClose }) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -413,7 +385,7 @@ function AddFriendsModal({ onClose }) {
 
       if (data.success) {
         setUsers(prev => prev.map(u =>
-          u.id === userId ? { ...u, friendship_status: 'pending' } : u
+          u.id === userId ? { ...u, friendship_status: 'pending', friendship_direction: 'outgoing' } : u
         ));
         toast.success(`Friend request sent to ${userName}`);
       } else {
@@ -424,6 +396,55 @@ function AddFriendsModal({ onClose }) {
     }
   };
 
+  const handleAcceptRequest = async (friendshipId, userId, userName) => {
+    try {
+      const response = await fetch('/api/friends/requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendshipId, action: 'accept' }),
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setUsers(prev => prev.map(u =>
+          u.id === userId ? { ...u, friendship_status: 'accepted', friendship_direction: null } : u
+        ));
+        toast.success(`You're now friends with ${userName}! 🎉`);
+      } else {
+        toast.error(data.error || "Couldn't accept the request. Please try again.");
+      }
+    } catch (error) {
+      toast.error("Couldn't connect to the server. Please check your internet.");
+    }
+  };
+
+  const handleRejectRequest = async (friendshipId, userId, userName) => {
+    try {
+      const response = await fetch('/api/friends/requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendshipId, action: 'reject' }),
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setUsers(prev => prev.map(u =>
+          u.id === userId ? { ...u, friendship_status: null, friendship_direction: null, friendship_id: null } : u
+        ));
+        toast.success(`Declined request from ${userName}`);
+      } else {
+        toast.error(data.error || "Couldn't decline the request. Please try again.");
+      }
+    } catch (error) {
+      toast.error("Couldn't connect to the server. Please check your internet.");
+    }
+  };
+
+  const handleViewProfile = (username) => {
+    onClose();
+    router.push(`/u/${username}`);
+  };
+
   return (
     <div 
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50"
@@ -431,7 +452,7 @@ function AddFriendsModal({ onClose }) {
       aria-modal="true"
       aria-labelledby="add-friends-title"
     >
-      <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] flex flex-col">
+      <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between mb-4 sm:mb-6 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2 bg-blue-400/20 rounded-lg border border-blue-400/30">
@@ -488,44 +509,89 @@ function AddFriendsModal({ onClose }) {
           </div>
         )}
 
-        <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-2 modal-scroll" role="list" aria-label="Search results">
+        <div className="overflow-y-auto flex-1 min-h-0 pr-2 modal-scroll" role="list" aria-label="Search results">
           {users.length > 0 && (
             <>
-              <p className="text-sm text-[var(--muted-foreground)] mb-2" aria-live="polite">
+              <p className="text-sm text-[var(--muted-foreground)] mb-3" aria-live="polite">
                 Found {users.length} result{users.length !== 1 ? 's' : ''}
               </p>
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-2.5 sm:p-3 bg-[var(--secondary-bg)] rounded-lg border border-[var(--glass-border)] gap-2"
-                  role="listitem"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[var(--foreground)] font-medium text-sm sm:text-base truncate">{user.name}</p>
-                    <p className="text-xs sm:text-sm text-[var(--muted-foreground)] truncate">@{user.username}</p>
-                  </div>
-                  {user.friendship_status === null && (
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                {users.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex flex-col p-3 bg-[var(--secondary-bg)] rounded-xl border border-[var(--glass-border)] hover:border-[var(--glass-border-hover)] transition-colors"
+                    role="listitem"
+                  >
+                    {/* User Info */}
+                    <div className="text-center mb-3">
+                      <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                        {user.name?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <p className="text-[var(--foreground)] font-medium text-sm truncate">{user.name}</p>
+                      <p className="text-xs text-[var(--muted-foreground)] truncate">@{user.username}</p>
+                    </div>
+                    
+                    {/* View Profile Button - Always same position */}
                     <button
-                      onClick={() => handleSendRequest(user.id, user.name)}
-                      className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs sm:text-sm transition-colors flex-shrink-0"
-                      aria-label={`Send friend request to ${user.name}`}
+                      onClick={() => handleViewProfile(user.username)}
+                      className="w-full mb-2 py-1.5 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 rounded-lg transition-colors border border-[var(--glass-border)] flex items-center justify-center gap-1.5"
+                      aria-label={`View ${user.name}'s profile`}
                     >
-                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-                      <span>Add</span>
+                      <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>View Profile</span>
                     </button>
-                  )}
-                  {user.friendship_status === 'pending' && (
-                    <span className="px-2.5 sm:px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs sm:text-sm flex-shrink-0">
-                      Pending
-                    </span>
-                  )}
-                  {user.friendship_status === 'accepted' && (
-                    <span className="px-2.5 sm:px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs sm:text-sm flex-shrink-0">
-                      Friends
-                    </span>
-                  )}
-                </div>
-              ))}
+
+                    {/* Action Button - Variable content but fixed position */}
+                    <div className="h-8 flex items-center justify-center">
+                      {/* No relationship - Add Friend */}
+                      {user.friendship_status === null && (
+                        <button
+                          onClick={() => handleSendRequest(user.id, user.name)}
+                          className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-colors"
+                          aria-label={`Send friend request to ${user.name}`}
+                        >
+                          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span>Add Friend</span>
+                        </button>
+                      )}
+                      
+                      {/* Outgoing pending - Pending (disabled) */}
+                      {user.friendship_status === 'pending' && user.friendship_direction === 'outgoing' && (
+                        <span className="w-full text-center py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs font-medium cursor-not-allowed">
+                          Pending
+                        </span>
+                      )}
+                      
+                      {/* Incoming pending - Accept + Reject */}
+                      {user.friendship_status === 'pending' && user.friendship_direction === 'incoming' && (
+                        <div className="w-full flex gap-1.5">
+                          <button
+                            onClick={() => handleAcceptRequest(user.friendship_id, user.id, user.name)}
+                            className="flex-1 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition-colors"
+                            aria-label={`Accept friend request from ${user.name}`}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleRejectRequest(user.friendship_id, user.id, user.name)}
+                            className="flex-1 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg text-xs font-medium transition-colors"
+                            aria-label={`Reject friend request from ${user.name}`}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Already friends - Added (disabled) */}
+                      {user.friendship_status === 'accepted' && (
+                        <span className="w-full text-center py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs font-medium cursor-not-allowed">
+                          ✓ Added
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </>
           )}
           {users.length === 0 && searchQuery && !searching && (

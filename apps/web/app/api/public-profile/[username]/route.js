@@ -40,28 +40,51 @@ export async function GET(req, { params }) {
 
     // Also fetch the user's song of the day
     let songOfTheDay = null;
-    const today = new Date().toISOString().split('T')[0];
     
-    const { data: sotdData, error: sotdError } = await supabase
-      .from('song_of_the_day')
+    // Get today's date at midnight (UTC)
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    
+    console.log('[public-profile] Looking for song of the day for user:', data.id, 'since:', today.toISOString());
+    
+    // First, DEBUG: check if there's ANY song for this user (without date filter)
+    const { data: anySong, error: anyError } = await supabase
+      .from('songs_of_the_day')
       .select('*')
       .eq('user_id', data.id)
-      .gte('shared_at', `${today}T00:00:00`)
-      .lte('shared_at', `${today}T23:59:59`)
-      .order('shared_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    console.log('[public-profile] Any song ever for this user:', { anySong, anyError });
+    
+    // Now query for today's song
+    const { data: sotdData, error: sotdError } = await supabase
+      .from('songs_of_the_day')
+      .select('*')
+      .eq('user_id', data.id)
+      .gte('created_at', today.toISOString())
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
+    console.log('[public-profile] songs_of_the_day TODAY query result:', { sotdData, sotdError });
+
     if (!sotdError && sotdData) {
       songOfTheDay = {
-        title: sotdData.title,
+        title: sotdData.song_name,
         artist: sotdData.artist,
         album: sotdData.album,
         image_url: sotdData.image_url,
         spotify_url: sotdData.spotify_url,
         youtube_url: sotdData.youtube_url,
-        shared_at: sotdData.shared_at,
+        shared_at: sotdData.created_at,
       };
+      console.log('[public-profile] Found song of the day:', songOfTheDay);
+    } else if (anySong) {
+      console.log('[public-profile] User has a song but from a previous day:', anySong.created_at);
+    } else {
+      console.log('[public-profile] No song of the day found for this user at all');
     }
 
     // All profiles are now publicly visible

@@ -10,10 +10,16 @@ import ExportPlaylistButton from '@/components/ExportPlaylistButton';
 import ExportToSpotifyButton from '@/components/ExportToSpotifyButton';
 import { useRealtimeGroup } from '@/lib/realtime/useRealtimeGroup';
 import { ConnectionDot } from '@/components/shared/ConnectionStatus';
+import { useProgressTasks, useMiniplayer } from '@/lib/context/GlobalStateContext';
 
 export default function GroupDetailPage({ params }) {
   const supabase = supabaseBrowser();
   const router = useRouter();
+  
+  // Global state hooks
+  const { activeTasks, startTask, updateTaskProgress, completeTask, TASK_TYPES } = useProgressTasks();
+  const { currentlyPlaying, playSong } = useMiniplayer();
+  
   const [groupId, setGroupId] = useState(null);
   const [user, setUser] = useState(null);
   const [group, setGroup] = useState(null);
@@ -25,13 +31,9 @@ export default function GroupDetailPage({ params }) {
   const [showAllSongs, setShowAllSongs] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAddPlaylistModal, setShowAddPlaylistModal] = useState(false);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [hasYouTube, setHasYouTube] = useState(false);
   const [hasSpotify, setHasSpotify] = useState(false);
-  const [isSorting, setIsSorting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [sortProgress, setSortProgress] = useState(0);
-  const [sortEstimatedTime, setSortEstimatedTime] = useState(null);
   const [metadataStats, setMetadataStats] = useState(null);
   const sortStartTimeRef = useRef(null);
   const progressIntervalRef = useRef(null);
@@ -39,6 +41,13 @@ export default function GroupDetailPage({ params }) {
   const [memberToRemove, setMemberToRemove] = useState(null);
   const [showDeleteGroupModal, setShowDeleteGroupModal] = useState(false);
   const [joinCodeCopied, setJoinCodeCopied] = useState(false);
+  
+  // Check if sorting is in progress (from global state)
+  const sortTaskId = group?.id ? `sort-${group.id}` : null;
+  const sortTask = activeTasks.find(t => t.id === sortTaskId);
+  const isSorting = sortTask?.status === 'running';
+  const sortProgress = sortTask?.progress || 0;
+  const sortEstimatedTime = sortTask?.estimatedTime;
 
   // Real-time update handlers (memoized to prevent re-subscriptions)
   const handleGroupUpdate = useCallback((newData, oldData) => {
@@ -234,11 +243,14 @@ export default function GroupDetailPage({ params }) {
     }
   };
 
-  // Start progress animation
-  const startProgressAnimation = (estimatedMs) => {
+  // Start progress animation using global state
+  const startProgressAnimation = (estimatedMs, taskId) => {
     sortStartTimeRef.current = Date.now();
-    setSortProgress(0);
-    setSortEstimatedTime(Math.ceil(estimatedMs / 1000));
+    const estimatedSec = Math.ceil(estimatedMs / 1000);
+    
+    // Start global task
+    startTask(taskId, TASK_TYPES.SORT, 'AI Sorting Playlist', group?.name);
+    updateTaskProgress(taskId, 0, 'Analyzing songs...', estimatedSec);
     
     // Clear any existing interval
     if (progressIntervalRef.current) {
@@ -251,36 +263,30 @@ export default function GroupDetailPage({ params }) {
       // Use easing function for smoother progress - never quite reaches 100%
       const rawProgress = elapsed / estimatedMs;
       const easedProgress = Math.min(0.95, 1 - Math.exp(-3 * rawProgress)); // Asymptotic approach
-      setSortProgress(Math.round(easedProgress * 100));
+      const progress = Math.round(easedProgress * 100);
       
       // Update remaining time
       const remainingMs = Math.max(0, estimatedMs - elapsed);
-      setSortEstimatedTime(Math.ceil(remainingMs / 1000));
+      const remainingSec = Math.ceil(remainingMs / 1000);
+      
+      const message = progress < 50 ? 'Analyzing songs...' : progress < 90 ? 'Optimizing order...' : 'Finishing up...';
+      updateTaskProgress(taskId, progress, message, remainingSec);
     }, 100);
   };
 
   // Stop progress animation
-  const stopProgressAnimation = (success = true) => {
+  const stopProgressAnimation = (taskId, success = true, message = null) => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-    if (success) {
-      setSortProgress(100);
-      setTimeout(() => {
-        setSortProgress(0);
-        setSortEstimatedTime(null);
-      }, 1000);
-    } else {
-      setSortProgress(0);
-      setSortEstimatedTime(null);
-    }
+    completeTask(taskId, success, message);
   };
 
   async function handleSmartSort(useQuickSort = false) {
     if (!groupId || !group?.id || isSorting) return;
     
-    setIsSorting(true);
+    const taskId = `sort-${group.id}`;
     const mode = selectedPlaylist === 'all' ? 'all' : 'playlist';
     const skipQueue = useQuickSort; // If quick sort, skip the AI queue for instant results
     
@@ -291,7 +297,7 @@ export default function GroupDetailPage({ params }) {
     console.log(`[Groups] 🎵 Starting smart sort - Mode: ${mode}, Songs: ${songCount}, Est: ${estimatedTime}ms, QuickSort: ${skipQueue}`);
     
     // Start progress animation
-    startProgressAnimation(estimatedTime);
+    startProgressAnimation(estimatedTime, taskId);
     
     try {
       console.log(`[Groups] 📡 Calling API: /api/groups/${groupId}/smart-sort`);
@@ -344,7 +350,7 @@ export default function GroupDetailPage({ params }) {
         : `Successfully sorted ${data.songsProcessed || 0} songs!`;
       
       // Complete progress bar
-      stopProgressAnimation(true);
+      stopProgressAnimation(taskId, true, successMessage);
       toast.success(successMessage, { duration: 5000 });
       
       console.log(`[Groups] ✅ API call successful in ${sortDuration}ms, reloading data...`);
@@ -396,16 +402,14 @@ export default function GroupDetailPage({ params }) {
       console.log(`[Groups] ✅ Sort complete!`);
     } catch (error) {
       console.error('[Groups] Error sorting:', error);
-      stopProgressAnimation(false);
       // Show user-friendly error message
       const userMessage = error.message?.includes('rate') || error.message?.includes('limit')
         ? "You've sorted a few times recently. Please wait a moment."
         : error.message?.includes('queue') || error.message?.includes('busy')
         ? "We're a bit busy right now. Please try the Quick sort option!"
         : "Couldn't sort your playlist. Please try again.";
+      stopProgressAnimation(taskId, false, userMessage);
       toast.error(userMessage, { duration: 7000 });
-    } finally {
-      setIsSorting(false);
     }
   }
 
@@ -982,14 +986,14 @@ export default function GroupDetailPage({ params }) {
                   <div className="mb-4 space-y-3">
                     {/* Sort Status Badge */}
                     {selectedPlaylist === 'all' && group?.all_songs_sort_order && group.all_songs_sort_order.length > 0 && (
-                      <div className="p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-purple-500/20">
-                          <Sparkles className="w-4 h-4 text-purple-400" />
+                      <div className="sort-badge p-3 rounded-xl border flex items-center gap-3">
+                        <div className="sort-badge-icon p-2 rounded-lg">
+                          <Sparkles className="w-4 h-4 text-purple-400 [data-theme='light']:text-purple-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-purple-400">Vibe Mix Active</p>
+                          <p className="text-sm font-medium text-purple-400 [data-theme='light']:text-purple-700">Vibe Mix Active</p>
                           {group.all_songs_sorted_at && (
-                            <p className="text-xs text-[var(--muted-foreground)]">
+                            <p className="text-xs text-[var(--muted-foreground)] [data-theme='light']:text-purple-600/70">
                               Sorted {new Date(group.all_songs_sorted_at).toLocaleDateString()}
                             </p>
                           )}
@@ -997,14 +1001,14 @@ export default function GroupDetailPage({ params }) {
                       </div>
                     )}
                     {selectedPlaylist !== 'all' && playlists.some(p => p.smart_sorted_order !== null) && (
-                      <div className="p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-purple-500/20">
-                          <Sparkles className="w-4 h-4 text-purple-400" />
+                      <div className="sort-badge p-3 rounded-xl border flex items-center gap-3">
+                        <div className="sort-badge-icon p-2 rounded-lg">
+                          <Sparkles className="w-4 h-4 text-purple-400 [data-theme='light']:text-purple-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-purple-400">AI Smart Sort Active</p>
+                          <p className="text-sm font-medium text-purple-400 [data-theme='light']:text-purple-700">AI Smart Sort Active</p>
                           {playlists[0]?.last_sorted_at && (
-                            <p className="text-xs text-[var(--muted-foreground)]">
+                            <p className="text-xs text-[var(--muted-foreground)] [data-theme='light']:text-purple-600/70">
                               Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()}
                             </p>
                           )}
@@ -1059,13 +1063,13 @@ export default function GroupDetailPage({ params }) {
                     
                     {/* Metadata Quality Warning */}
                     {metadataStats && metadataStats.total > 0 && metadataStats.percentage < 50 && (
-                      <div className="mt-3 p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 text-yellow-400 flex-shrink-0 mt-0.5" />
-                        <div className="text-xs text-[var(--muted-foreground)]">
-                          <span className="text-yellow-400 font-medium">
+                      <div className="metadata-warning mt-3 p-2.5 rounded-lg border flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-400 [data-theme='light']:text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="text-xs text-[var(--muted-foreground)] [data-theme='light']:text-amber-800">
+                          <span className="text-amber-400 [data-theme='light']:text-amber-700 font-medium">
                             {metadataStats.percentage}% of songs have metadata
                           </span>
-                          <span className="block mt-0.5">
+                          <span className="block mt-0.5 text-[var(--muted-foreground)] [data-theme='light']:text-amber-700/80">
                             Sort quality improves as more songs get genre/popularity data. Re-sorting will fetch missing metadata.
                           </span>
                         </div>
@@ -1207,7 +1211,7 @@ export default function GroupDetailPage({ params }) {
                           index={index}
                           onToggleLike={toggleLikeSong}
                           userId={user?.id}
-                          onPlay={setCurrentlyPlaying}
+                          onPlay={(song) => playSong(song, playlistSongs, index)}
                           isPlaying={currentlyPlaying?.id === song.id}
                         />
                       ))
@@ -1265,49 +1269,57 @@ export default function GroupDetailPage({ params }) {
                 Members ({members.length})
               </h2>
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
               {members.map((member) => (
                 <div
                   key={member.user_id}
-                  className="flex items-center justify-between p-3 bg-white/5 [data-theme='light']:bg-black/5 rounded-lg border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 transition-colors"
+                  className="relative flex flex-col items-center p-3 sm:p-4 bg-white/5 [data-theme='light']:bg-black/5 rounded-xl border border-white/10 [data-theme='light']:border-black/10 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
+                  {/* Remove button - absolute positioned */}
+                  {group?.owner_id === user?.id && !member.isOwner && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMemberToRemove(member);
+                        setShowRemoveMemberModal(true);
+                      }}
+                      className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                      title="Remove member"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                  
+                  {/* Clickable profile link */}
+                  <button
+                    onClick={() => member.users?.username && router.push(`/u/${member.users.username}`)}
+                    disabled={!member.users?.username}
+                    className="flex flex-col items-center w-full hover:opacity-80 transition-opacity disabled:cursor-default disabled:opacity-100"
+                  >
                     {member.users?.profile_picture_url ? (
                       <img
                         src={member.users.profile_picture_url}
                         alt={member.users?.display_name || member.users?.username || 'User'}
-                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover mb-2"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold mb-2">
                         {(member.users?.display_name || member.users?.username)?.charAt(0).toUpperCase() || 'U'}
                       </div>
                     )}
-                    <div>
-                      <p className="font-medium text-[var(--foreground)]">
-                        {member.users?.display_name || member.users?.username || 'Unknown User'}
-                        {member.isOwner && (
-                          <span className="ml-2 text-xs px-2 py-0.5 bg-[color-mix(in_srgb,var(--accent)_20%,transparent)] text-[var(--accent)] rounded border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]">
-                            Owner
-                          </span>
-                        )}
-                      </p>
-                      {member.users?.username && member.users?.display_name && (
-                        <p className="text-sm text-[var(--muted-foreground)]">@{member.users.username}</p>
-                      )}
-                    </div>
-                  </div>
-                  {group?.owner_id === user?.id && !member.isOwner && (
-                    <button
-                      onClick={() => {
-                        setMemberToRemove(member);
-                        setShowRemoveMemberModal(true);
-                      }}
-                      className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
-                      title="Remove member"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                    <p className="font-medium text-[var(--foreground)] text-sm text-center truncate w-full">
+                      {member.users?.display_name || member.users?.username || 'Unknown'}
+                    </p>
+                    {member.users?.username && (
+                      <p className="text-xs text-[var(--muted-foreground)] truncate w-full text-center">@{member.users.username}</p>
+                    )}
+                  </button>
+                  
+                  {/* Owner badge */}
+                  {member.isOwner && (
+                    <span className="mt-2 text-xs px-2 py-0.5 bg-[color-mix(in_srgb,var(--accent)_20%,transparent)] text-[var(--accent)] rounded border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]">
+                      Owner
+                    </span>
                   )}
                 </div>
               ))}
@@ -1318,29 +1330,44 @@ export default function GroupDetailPage({ params }) {
 
       {/* Remove Member Confirmation Modal */}
       {showRemoveMemberModal && memberToRemove && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="glass-card rounded-2xl p-6 max-w-md w-full border border-[var(--glass-border)] shadow-2xl">
-            <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
-              Remove Member?
-            </h3>
-            <p className="text-[var(--muted-foreground)] mb-6">
-              Are you sure you want to remove <span className="font-semibold text-[var(--foreground)]">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="remove-member-title"
+          aria-describedby="remove-member-description"
+        >
+          <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-sm w-full border border-[var(--glass-border)] shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-500/20 rounded-lg border border-red-500/30">
+                <X className="h-5 w-5 text-red-400" aria-hidden="true" />
+              </div>
+              <h3 id="remove-member-title" className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">
+                Remove Member?
+              </h3>
+            </div>
+            
+            <p id="remove-member-description" className="text-sm sm:text-base text-[var(--muted-foreground)] mb-6">
+              Are you sure you want to remove{' '}
+              <span className="font-semibold text-[var(--foreground)]">
                 {memberToRemove.users?.display_name || memberToRemove.users?.username || 'this member'}
-              </span> from the group?
+              </span>{' '}
+              from the group? They'll need to rejoin using the group code.
             </p>
+            
             <div className="flex gap-3">
               <button
                 onClick={() => {
                   setShowRemoveMemberModal(false);
                   setMemberToRemove(null);
                 }}
-                className="flex-1 px-4 py-2.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors border border-white/20 [data-theme='light']:border-black/20"
+                className="flex-1 px-4 py-2.5 sm:py-3 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] rounded-xl font-medium transition-colors border border-[var(--glass-border)]"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleRemoveMember(memberToRemove)}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                className="flex-1 px-4 py-2.5 sm:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors"
               >
                 Remove
               </button>
@@ -1351,26 +1378,41 @@ export default function GroupDetailPage({ params }) {
 
       {/* Delete Group Confirmation Modal */}
       {showDeleteGroupModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="glass-card rounded-2xl p-6 max-w-md w-full border border-[var(--glass-border)] shadow-2xl">
-            <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
-              Delete Group?
-            </h3>
-            <p className="text-[var(--muted-foreground)] mb-6">
-              Are you sure you want to delete <span className="font-semibold text-[var(--foreground)]">{group?.name}</span>? This action cannot be undone and will remove all playlists and members.
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-group-title"
+          aria-describedby="delete-group-description"
+        >
+          <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-sm w-full border border-[var(--glass-border)] shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-500/20 rounded-lg border border-red-500/30">
+                <Trash2 className="h-5 w-5 text-red-400" aria-hidden="true" />
+              </div>
+              <h3 id="delete-group-title" className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">
+                Delete Group?
+              </h3>
+            </div>
+            
+            <p id="delete-group-description" className="text-sm sm:text-base text-[var(--muted-foreground)] mb-6">
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-[var(--foreground)]">{group?.name}</span>?
+              This action cannot be undone and will remove all playlists and members.
             </p>
+            
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteGroupModal(false)}
-                className="flex-1 px-4 py-2.5 bg-white/10 [data-theme='light']:bg-black/5 hover:bg-white/20 [data-theme='light']:hover:bg-black/10 text-[var(--foreground)] rounded-lg font-medium transition-colors border border-white/20 [data-theme='light']:border-black/20"
+                className="flex-1 px-4 py-2.5 sm:py-3 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] rounded-xl font-medium transition-colors border border-[var(--glass-border)]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteGroup}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                className="flex-1 px-4 py-2.5 sm:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors"
               >
-                Delete Group
+                Delete
               </button>
             </div>
           </div>
@@ -1389,14 +1431,26 @@ export default function GroupDetailPage({ params }) {
         />
       )}
 
-      {/* Embedded Player */}
-      {currentlyPlaying && (
-        <EmbeddedPlayer
-          song={currentlyPlaying}
-          onClose={() => setCurrentlyPlaying(null)}
-        />
-      )}
+      {/* Embedded Player is now global - see GlobalMiniplayer component */}
     </div>
+  );
+}
+
+// Spotify Logo SVG Component
+function SpotifyIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+    </svg>
+  );
+}
+
+// YouTube Logo SVG Component
+function YouTubeIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+    </svg>
   );
 }
 
@@ -1413,10 +1467,14 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
     onPlay(song);
   };
 
+  // Use parsed/cleaned title and artist if available (especially for YouTube songs)
+  const displayTitle = song.parsed_title || song.title || 'Untitled';
+  const displayArtist = song.parsed_artist || song.artist || 'Unknown Artist';
+
   // Build external URLs (with autoplay)
   const getSpotifyUrl = () => {
+    // Direct Spotify URL if available
     if (song.spotify_url) {
-      // Add autoplay parameter
       const url = song.spotify_url.includes('?') 
         ? `${song.spotify_url}&autoplay=true` 
         : `${song.spotify_url}?autoplay=true`;
@@ -1425,12 +1483,17 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
     if (song.platform === 'spotify' && song.external_id) {
       return `https://open.spotify.com/track/${song.external_id}?autoplay=true`;
     }
+    // For YouTube songs, create a Spotify search URL using cleaned title/artist
+    if (song.platform === 'youtube') {
+      const searchQuery = encodeURIComponent(`${displayTitle} ${displayArtist}`);
+      return `https://open.spotify.com/search/${searchQuery}`;
+    }
     return null;
   };
 
   const getYouTubeUrl = () => {
+    // Direct YouTube URL if available
     if (song.youtube_url) {
-      // Add autoplay parameter
       const url = song.youtube_url.includes('?') 
         ? `${song.youtube_url}&autoplay=1` 
         : `${song.youtube_url}?autoplay=1`;
@@ -1439,11 +1502,20 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
     if (song.platform === 'youtube' && song.external_id) {
       return `https://www.youtube.com/watch?v=${song.external_id}&autoplay=1`;
     }
+    // For Spotify songs, create a YouTube search URL
+    if (song.platform === 'spotify') {
+      const searchQuery = encodeURIComponent(`${displayTitle} ${displayArtist}`);
+      return `https://www.youtube.com/results?search_query=${searchQuery}`;
+    }
     return null;
   };
 
   const spotifyUrl = getSpotifyUrl();
   const youtubeUrl = getYouTubeUrl();
+  
+  // Determine if URLs are direct links or search links
+  const isSpotifyDirect = song.spotify_url || song.platform === 'spotify';
+  const isYouTubeDirect = song.youtube_url || song.platform === 'youtube';
 
   const handleExternalLinkClick = (e, url) => {
     e.stopPropagation();
@@ -1463,56 +1535,48 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
       {/* Album Art */}
       <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded flex-shrink-0 overflow-hidden">
         {song.thumbnail_url ? (
-          <img src={song.thumbnail_url} alt={song.title} className="w-full h-full object-cover" />
+          <img src={song.thumbnail_url} alt={displayTitle} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-[var(--foreground)] text-xs">
-            {song.title?.charAt(0) || '?'}
+            {displayTitle?.charAt(0) || '?'}
           </div>
         )}
       </div>
 
       {/* Song Info - Takes priority and available space */}
       <div className="flex-1 min-w-0 pr-2 sm:pr-0">
-        <p className="font-semibold text-[var(--foreground)] truncate text-sm sm:text-base">{song.title || 'Untitled'}</p>
-        <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm text-[var(--muted-foreground)] truncate flex-1 min-w-0">{song.artist || 'Unknown Artist'}</p>
-          {song.playlistName && (
-            <>
-              <span className="text-[var(--muted-foreground)] opacity-50 flex-shrink-0">•</span>
-              <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 whitespace-nowrap border font-medium ${
-                song.platform === 'youtube'
-                  ? 'bg-red-600 text-white border-red-500'
-                  : song.platform === 'spotify'
-                  ? 'bg-green-600 text-white border-green-500'
-                  : 'bg-white/5 [data-theme=\'light\']:bg-black/5 text-[var(--muted-foreground)] border-white/10 [data-theme=\'light\']:border-black/10'
-              }`}>
-                {song.platform === 'youtube' ? 'YT' : song.platform === 'spotify' ? 'Spotify' : song.platform}
-              </span>
-            </>
-          )}
-        </div>
+        <p className="font-semibold text-[var(--foreground)] truncate text-sm sm:text-base">{displayTitle}</p>
+        <p className="text-sm text-[var(--muted-foreground)] truncate">{displayArtist}</p>
       </div>
 
-      {/* External Links - Visible on all screen sizes */}
+      {/* Platform Buttons - Both Spotify and YouTube */}
       <div className="flex items-center gap-1 flex-shrink-0">
         {spotifyUrl && (
           <button
             onClick={(e) => handleExternalLinkClick(e, spotifyUrl)}
-            className="p-1.5 rounded-lg hover:bg-green-500/20 active:bg-green-500/30 transition-colors"
-            aria-label={`Open ${song.title} in Spotify (opens in new tab)`}
-            title="Open in Spotify"
+            className={`p-1.5 rounded-lg transition-colors ${
+              isSpotifyDirect 
+                ? 'hover:bg-green-500/20 active:bg-green-500/30' 
+                : 'hover:bg-green-500/10 active:bg-green-500/20 opacity-60 hover:opacity-100'
+            }`}
+            aria-label={isSpotifyDirect ? `Open ${displayTitle} in Spotify` : `Search ${displayTitle} on Spotify`}
+            title={isSpotifyDirect ? 'Open in Spotify' : 'Search on Spotify'}
           >
-            <ExternalLink className="h-4 w-4 text-green-400" aria-hidden="true" />
+            <SpotifyIcon className="h-4 w-4 text-green-500" aria-hidden="true" />
           </button>
         )}
         {youtubeUrl && (
           <button
             onClick={(e) => handleExternalLinkClick(e, youtubeUrl)}
-            className="p-1.5 rounded-lg hover:bg-red-500/20 active:bg-red-500/30 transition-colors"
-            aria-label={`Open ${song.title} in YouTube (opens in new tab)`}
-            title="Open in YouTube"
+            className={`p-1.5 rounded-lg transition-colors ${
+              isYouTubeDirect 
+                ? 'hover:bg-red-500/20 active:bg-red-500/30' 
+                : 'hover:bg-red-500/10 active:bg-red-500/20 opacity-60 hover:opacity-100'
+            }`}
+            aria-label={isYouTubeDirect ? `Open ${displayTitle} in YouTube` : `Search ${displayTitle} on YouTube`}
+            title={isYouTubeDirect ? 'Open in YouTube' : 'Search on YouTube'}
           >
-            <ExternalLink className="h-4 w-4 text-red-400" aria-hidden="true" />
+            <YouTubeIcon className="h-4 w-4 text-red-500" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -1538,6 +1602,8 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
 
 function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   const supabase = supabaseBrowser();
+  const { startTask, updateTaskProgress, completeTask, TASK_TYPES } = useProgressTasks();
+  
   const [platform, setPlatform] = useState(null); // 'youtube', 'spotify', or null for 'all'
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('');
   const [selectedPlaylistPlatform, setSelectedPlaylistPlatform] = useState(null);
@@ -1700,12 +1766,10 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
   async function handleAddPlaylist(e) {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      setLoading(false);
       setError('Please sign in to add a playlist');
       return;
     }
@@ -1725,6 +1789,9 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
       const selectedPlaylist = selectedPlaylistData.playlist;
       const playlistPlatform = selectedPlaylistData.platform;
+      const playlistName = playlistPlatform === 'spotify' 
+        ? selectedPlaylist.name 
+        : selectedPlaylist.snippet?.title || 'Playlist';
 
       // Generate playlist URL based on platform
       let playlistUrl;
@@ -1733,6 +1800,16 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
       } else {
         playlistUrl = `https://www.youtube.com/playlist?list=${selectedPlaylist.id}`;
       }
+
+      // Start global progress tracking
+      const taskId = `import-${groupId}-${Date.now()}`;
+      const isReplacing = !!userExistingPlaylist;
+      startTask(taskId, TASK_TYPES.IMPORT, isReplacing ? 'Replacing Playlist' : 'Importing Playlist', playlistName);
+      updateTaskProgress(taskId, 10, 'Fetching playlist data...', null);
+      
+      // Close modal immediately - progress shows globally
+      setLoading(true);
+      onClose();
 
       // Call API to import playlist
       const response = await fetch('/api/import-playlist', {
@@ -1746,16 +1823,22 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
         }),
       });
 
+      updateTaskProgress(taskId, 50, 'Processing songs...', null);
+
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to import playlist');
       }
 
-      setLoading(false);
+      // Complete the task
+      completeTask(taskId, true, `Imported ${data.songCount || 'all'} songs`);
       onSuccess();
     } catch (err) {
       console.error('Error importing playlist:', err);
+      // If we started tracking, complete with error
+      const taskId = `import-${groupId}-${Date.now()}`;
+      completeTask(taskId, false, err.message || 'Failed to import');
       setError(err.message || 'Failed to import playlist');
       setLoading(false);
     }
@@ -1763,22 +1846,22 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
   if (!hasSpotify && !hasYoutube) {
     return (
-      <div className="fixed inset-0 bg-black/80 [data-theme='light']:bg-black/40 flex items-center justify-center z-50 p-4">
-        <div className="glass-card rounded-lg max-w-md w-full p-6 border border-white/20 [data-theme='light']:border-black/20">
-          <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">No Accounts Connected</h2>
-          <p className="text-[var(--muted-foreground)] mb-6">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="glass-card rounded-xl sm:rounded-2xl max-w-sm w-full p-4 sm:p-6 border border-[var(--glass-border)]">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4 text-[var(--foreground)]">No Accounts Connected</h2>
+          <p className="text-sm sm:text-base text-[var(--muted-foreground)] mb-6">
             Please connect your Spotify or YouTube account in Settings to add playlists to this group.
           </p>
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 active:bg-white/20 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-md transition-colors border border-white/20 [data-theme='light']:border-black/20"
+              className="flex-1 px-4 py-2.5 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] rounded-xl font-medium transition-colors border border-[var(--glass-border)]"
             >
               Close
             </button>
             <button
               onClick={() => window.location.href = '/settings'}
-              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors border border-purple-500/30"
+              className="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-medium transition-colors"
             >
               Go to Settings
             </button>
@@ -1789,16 +1872,16 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 [data-theme='light']:bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="glass-card rounded-lg max-w-md w-full p-6 border border-white/20 [data-theme='light']:border-black/20">
-        <h2 className="text-2xl font-bold mb-4 text-[var(--foreground)]">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="glass-card rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 border border-[var(--glass-border)]">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 text-[var(--foreground)]">
           {userExistingPlaylist ? 'Replace Your Playlist' : 'Add Playlist'}
         </h2>
 
         {userExistingPlaylist && (
-          <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded text-yellow-400 text-sm">
-            <p className="font-semibold mb-1">Warning: You already have a playlist in this group</p>
-            <p>
+          <div className="mb-4 p-3 bg-amber-100 [data-theme='dark']:bg-amber-900/30 border border-amber-400 [data-theme='dark']:border-amber-500/50 rounded-lg text-amber-800 [data-theme='dark']:text-amber-300 text-sm">
+            <p className="font-semibold mb-1">⚠️ You already have a playlist in this group</p>
+            <p className="opacity-90">
               Your current playlist "<strong>{userExistingPlaylist.name}</strong>" ({userExistingPlaylist.platform})
               will be removed and replaced with your new selection.
             </p>
@@ -1811,14 +1894,14 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
               <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Filter by Platform
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setPlatform(null)}
-                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                  className={`px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-colors border ${
                     platform === null
-                      ? 'bg-purple-600 text-white border-purple-500/30'
-                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'bg-[var(--secondary-bg)] text-[var(--foreground)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)]'
                   }`}
                 >
                   All
@@ -1826,10 +1909,10 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                 <button
                   type="button"
                   onClick={() => setPlatform('youtube')}
-                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                  className={`px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-colors border ${
                     platform === 'youtube'
-                      ? 'bg-red-600 text-white border-red-500/30'
-                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'bg-[var(--secondary-bg)] text-[var(--foreground)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)]'
                   }`}
                 >
                   YouTube
@@ -1837,10 +1920,10 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                 <button
                   type="button"
                   onClick={() => setPlatform('spotify')}
-                  className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                  className={`px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-colors border ${
                     platform === 'spotify'
-                      ? 'bg-green-600 text-white border-green-500/30'
-                      : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                      ? 'bg-green-600 text-white border-green-600'
+                      : 'bg-[var(--secondary-bg)] text-[var(--foreground)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)]'
                   }`}
                 >
                   Spotify
@@ -1853,15 +1936,15 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
               <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Platform
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 {hasYoutube && (
                   <button
                     type="button"
                     onClick={() => setPlatform('youtube')}
-                    className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                    className={`px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-colors border ${
                       platform === 'youtube'
-                        ? 'bg-red-600 text-white border-red-500/30'
-                        : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                        ? 'bg-red-600 text-white border-red-600'
+                        : 'bg-[var(--secondary-bg)] text-[var(--foreground)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)]'
                     }`}
                   >
                     YouTube
@@ -1871,10 +1954,10 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                   <button
                     type="button"
                     onClick={() => setPlatform('spotify')}
-                    className={`px-4 py-3 rounded-lg font-medium transition-colors border ${
+                    className={`px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-colors border ${
                       platform === 'spotify'
-                        ? 'bg-green-600 text-white border-green-500/30'
-                        : 'bg-white/10 [data-theme=\'light\']:bg-black/5 text-[var(--foreground)] hover:bg-white/20 [data-theme=\'light\']:hover:bg-black/10 active:bg-white/20 [data-theme=\'light\']:active:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20'
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'bg-[var(--secondary-bg)] text-[var(--foreground)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)]'
                     }`}
                   >
                     Spotify
@@ -1893,7 +1976,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                 Loading playlists...
               </div>
             ) : playlists.length > 0 ? (
-              <div className="max-h-64 overflow-y-auto bg-white/5 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 rounded-md modal-scroll">
+              <div className="max-h-64 overflow-y-auto bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded-xl modal-scroll">
                 {playlists
                   .filter(p => platform === null || p.platform === platform)
                   .map(({ playlist, platform: playlistPlatform }) => {
@@ -1916,8 +1999,8 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                           setSelectedPlaylistId(playlist.id);
                           setSelectedPlaylistPlatform(playlistPlatform);
                         }}
-                        className={`w-full flex items-center gap-3 p-3 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-colors border border-transparent hover:border-white/10 [data-theme='light']:hover:border-black/10 ${
-                          isSelected ? 'bg-white/10 [data-theme=\'light\']:bg-black/10 border-white/20 [data-theme=\'light\']:border-black/20' : ''
+                        className={`w-full flex items-center gap-3 p-3 hover:bg-[var(--secondary-hover)] transition-colors border-b border-[var(--glass-border)] last:border-b-0 ${
+                          isSelected ? 'bg-purple-500/10 border-l-2 border-l-purple-500' : ''
                         }`}
                       >
                         {playlistImage && (
@@ -1930,10 +2013,10 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                         <div className="flex-1 text-left">
                           <div className="flex items-center gap-2">
                             <p className="text-[var(--foreground)] font-medium truncate">{playlistName}</p>
-                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                               playlistPlatform === 'spotify' 
-                                ? 'bg-green-600/20 text-green-400 border border-green-500/30' 
-                                : 'bg-red-600/20 text-red-400 border border-red-500/30'
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-red-600 text-white'
                             }`}>
                               {playlistPlatform === 'spotify' ? 'Spotify' : 'YouTube'}
                             </span>
@@ -1961,7 +2044,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-400 text-sm">
+            <div className="mb-4 p-3 bg-red-100 [data-theme='dark']:bg-red-900/30 border border-red-300 [data-theme='dark']:border-red-500/50 rounded-lg text-red-700 [data-theme='dark']:text-red-400 text-sm">
               {error}
             </div>
           )}
@@ -1970,14 +2053,14 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 active:bg-white/20 [data-theme='light']:active:bg-black/10 text-[var(--foreground)] rounded-md transition-colors border border-white/20 [data-theme='light']:border-black/20"
+              className="flex-1 px-4 py-2.5 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] rounded-xl font-medium transition-colors border border-[var(--glass-border)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !selectedPlaylistId}
-              className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-white/5 [data-theme='light']:disabled:bg-black/5 disabled:cursor-not-allowed text-white rounded-md transition-colors border border-purple-500/30 disabled:border-white/10 [data-theme='light']:disabled:border-black/10"
+              className="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white disabled:text-gray-200 rounded-xl font-medium transition-colors"
             >
               {loading
                 ? (userExistingPlaylist ? 'Replacing...' : 'Adding...')

@@ -86,7 +86,7 @@ export function useGroups() {
     }
   };
 
-  const createGroup = async (name, description = '', isPrivate = false) => {
+  const createGroup = async (name, description = '') => {
     try {
       const supabase = supabaseBrowser();
       const { data: { session } } = await supabase.auth.getSession();
@@ -108,7 +108,6 @@ export function useGroups() {
           name,
           description,
           owner_id: session.user.id,
-          is_private: isPrivate,
           join_code: joinCode
         })
         .select()

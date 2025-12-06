@@ -2,8 +2,21 @@
 'use client';
 
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { Clock, ListMusic, ExternalLink } from 'lucide-react';
+import { Clock, ListMusic } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+// Platform Icons
+const SpotifyIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+  </svg>
+);
+
+const YouTubeIcon = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+);
 
 // ---------------- helpers ----------------
 function timeAgo(input) {
@@ -36,269 +49,201 @@ function TabButton({ isActive, children, onClick }) {
 }
 
 function Row({ item }) {
-  // Build external URL based on platform (with autoplay)
-  const getExternalUrl = () => {
-    // Check for explicit URLs first
-    if (item.spotifyUrl) return { url: item.spotifyUrl, platform: 'spotify' };
-    if (item.youtubeUrl) {
-      // Add autoplay to YouTube URLs
-      const url = new URL(item.youtubeUrl);
-      url.searchParams.set('autoplay', '1');
-      return { url: url.toString(), platform: 'youtube' };
+  // Build external URLs for both platforms
+  const getSpotifyUrl = () => {
+    if (item.spotifyUrl) return item.spotifyUrl;
+    if (item.trackId && item.platform === 'spotify') {
+      return `https://open.spotify.com/track/${item.trackId}?autoplay=true`;
     }
-    
-    // Use trackId (the actual Spotify/YouTube ID) if available
-    if (item.trackId) {
-      if (item.platform === 'youtube') {
-        return { url: `https://www.youtube.com/watch?v=${item.trackId}&autoplay=1`, platform: 'youtube' };
-      }
-      // Spotify: use URI scheme to open app and autoplay, fallback to web player
-      return { url: `https://open.spotify.com/track/${item.trackId}?autoplay=true`, platform: 'spotify' };
+    if (item.external_id && item.platform === 'spotify') {
+      return `https://open.spotify.com/track/${item.external_id}?autoplay=true`;
     }
-    
-    // For playlist songs with external_id and platform
-    if (item.external_id && item.platform) {
-      if (item.platform === 'youtube') {
-        return { url: `https://www.youtube.com/watch?v=${item.external_id}&autoplay=1`, platform: 'youtube' };
-      }
-      if (item.platform === 'spotify') {
-        return { url: `https://open.spotify.com/track/${item.external_id}?autoplay=true`, platform: 'spotify' };
-      }
+    // For YouTube items, generate a Spotify search URL
+    if (item.platform === 'youtube' || item.youtubeUrl) {
+      const searchQuery = encodeURIComponent(`${item.title} ${item.artist}`);
+      return `https://open.spotify.com/search/${searchQuery}`;
     }
-    
     return null;
   };
 
-  const externalLink = getExternalUrl();
-
-  const handleClick = () => {
-    if (externalLink?.url) {
-      window.open(externalLink.url, '_blank', 'noopener,noreferrer');
+  const getYouTubeUrl = () => {
+    if (item.youtubeUrl) {
+      const url = new URL(item.youtubeUrl);
+      url.searchParams.set('autoplay', '1');
+      return url.toString();
     }
+    if (item.trackId && item.platform === 'youtube') {
+      return `https://www.youtube.com/watch?v=${item.trackId}&autoplay=1`;
+    }
+    if (item.external_id && item.platform === 'youtube') {
+      return `https://www.youtube.com/watch?v=${item.external_id}&autoplay=1`;
+    }
+    // For Spotify items, generate a YouTube search URL
+    if (item.platform === 'spotify' || item.spotifyUrl) {
+      const searchQuery = encodeURIComponent(`${item.title} ${item.artist}`);
+      return `https://www.youtube.com/results?search_query=${searchQuery}`;
+    }
+    return null;
   };
 
+  const spotifyUrl = getSpotifyUrl();
+  const youtubeUrl = getYouTubeUrl();
+  const hasDirectSpotify = item.platform === 'spotify' || !!item.spotifyUrl;
+  const hasDirectYouTube = item.platform === 'youtube' || !!item.youtubeUrl;
+
   return (
-    <li 
-      onClick={handleClick}
-      className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card cursor-pointer"
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-      aria-label={`Open ${item.title} by ${item.artist} in ${externalLink?.platform || 'music service'} (opens in new tab)`}
-    >
-      <div className="relative flex-shrink-0">
-        <img
-          src={item.cover}
-          width={64}
-          height={64}
-          className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
-          alt=""
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    <div className="group glass-card rounded-xl p-3 sm:p-4 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 transition-all duration-300">
+      {/* Fixed column grid: cover | info | time | buttons */}
+      <div className="grid grid-cols-[48px_1fr_auto] sm:grid-cols-[56px_1fr_100px_auto] gap-3 sm:gap-4 items-center">
+        {/* Cover Art - fixed width */}
+        <div className="flex-shrink-0">
+          <img
+            src={item.cover}
+            width={64}
+            height={64}
+            className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg object-cover shadow-lg"
+            alt=""
+            aria-hidden="true"
+          />
+        </div>
+        
+        {/* Song Info - flexible width */}
+        <div className="min-w-0">
+          <div className="truncate text-sm sm:text-base font-semibold text-[var(--foreground)]">
+            {item.title}
+          </div>
+          <div className="truncate text-xs sm:text-sm text-[var(--muted-foreground)]">
+            {item.artist}
+          </div>
+          <div className="hidden sm:block truncate text-xs text-[var(--muted-foreground)] opacity-70">
+            {item.album}
+          </div>
+        </div>
+        
+        {/* Time Badge - fixed width column (hidden on mobile) */}
+        <div className="hidden sm:flex items-center justify-end">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] bg-[var(--secondary-bg)] px-2.5 py-1.5 rounded-lg">
+            <Clock className="h-3 w-3" aria-hidden="true" />
+            <span className="whitespace-nowrap">{timeAgo(item.playedAt)}</span>
+          </div>
+        </div>
+        
+        {/* Platform Buttons - fixed width */}
+        <div className="flex items-center gap-1.5">
+          {spotifyUrl && (
+            <a
+              href={spotifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className={`p-2 rounded-lg transition-all ${
+                hasDirectSpotify 
+                  ? 'bg-green-600 hover:bg-green-500 text-white' 
+                  : 'bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-green-500'
+              }`}
+              title={hasDirectSpotify ? 'Play on Spotify' : 'Search on Spotify'}
+            >
+              <SpotifyIcon className="h-4 w-4" />
+            </a>
+          )}
+          {youtubeUrl && (
+            <a
+              href={youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className={`p-2 rounded-lg transition-all ${
+                hasDirectYouTube 
+                  ? 'bg-red-600 hover:bg-red-500 text-white' 
+                  : 'bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-red-500'
+              }`}
+              title={hasDirectYouTube ? 'Play on YouTube' : 'Search on YouTube'}
+            >
+              <YouTubeIcon className="h-4 w-4" />
+            </a>
+          )}
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-[var(--foreground)] group-hover:text-[var(--foreground)] transition-colors duration-300">
-          {item.title}
-        </div>
-        <div className="truncate text-xs sm:text-sm md:text-base text-[var(--muted-foreground)] mt-0.5 sm:mt-1">
-          {item.artist}
-        </div>
-        <div className="truncate text-xs sm:text-sm text-[var(--muted-foreground)] opacity-80 mt-0.5 sm:mt-1">
-          {item.album}
-        </div>
-      </div>
-      
-      {/* External Link Indicator */}
-      {externalLink && (
-        <div className="hidden sm:flex items-center gap-2 flex-shrink-0 mr-2">
-          <span className={`text-xs px-2 py-1 rounded-full font-medium border ${
-            externalLink.platform === 'youtube'
-              ? 'bg-red-600 text-white border-red-500'
-              : 'bg-green-600 text-white border-green-500'
-          }`}>
-            {externalLink.platform === 'youtube' ? 'YT' : 'Spotify'}
-          </span>
-          <ExternalLink className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-[var(--foreground)] transition-colors" aria-hidden="true" />
-        </div>
-      )}
-      
-      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-[var(--muted-foreground)] bg-white/10 [data-theme='light']:bg-black/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0 border border-white/10 [data-theme='light']:border-black/10">
-        <Clock className="h-3 w-3 sm:h-4 sm:w-4" aria-hidden="true" />
-        <span className="font-medium whitespace-nowrap">{timeAgo(item.playedAt)}</span>
-      </div>
-    </li>
+    </div>
   );
 }
 
 function PlaylistRow({ playlist }) {
-  const [exporting, setExporting] = useState(false);
-  const [exportingCSV, setExportingCSV] = useState(false);
-
-  // Build external URL based on platform
-  const getExternalUrl = () => {
-    if (playlist.platform === 'spotify' && playlist.playlistId) {
-      return { url: `https://open.spotify.com/playlist/${playlist.playlistId}`, platform: 'spotify' };
-    }
-    if (playlist.platform === 'youtube' && playlist.playlistId) {
-      return { url: `https://www.youtube.com/playlist?list=${playlist.playlistId}`, platform: 'youtube' };
-    }
-    return null;
-  };
-
-  const externalLink = getExternalUrl();
+  // Only show the source platform button
+  const isSpotify = playlist.platform === 'spotify';
+  const isYouTube = playlist.platform === 'youtube';
+  
+  const externalUrl = isSpotify && playlist.playlistId
+    ? `https://open.spotify.com/playlist/${playlist.playlistId}`
+    : isYouTube && playlist.playlistId
+    ? `https://www.youtube.com/playlist?list=${playlist.playlistId}`
+    : null;
 
   const handleClick = () => {
-    if (externalLink?.url) {
-      window.open(externalLink.url, '_blank', 'noopener,noreferrer');
+    if (externalUrl) {
+      window.open(externalUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
-  async function handleExport(e) {
-    e.stopPropagation(); // Prevent opening playlist when clicking export
-    try {
-      setExporting(true);
-      // Ask the user for a custom playlist name to create on their Spotify account
-      const name = window.prompt('Enter a name for the new Spotify playlist:', playlist.name || 'Vybe playlist');
-      if (!name) {
-        setExporting(false);
-        return;
-      }
-
-      const res = await fetch('/api/spotify/create-playlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playlistId: playlist.id, newPlaylistName: name }),
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`Export failed: ${res.status} ${text}`);
-      }
-
-      const json = await res.json();
-      if (!json.success || !json.playlist) throw new Error(json.error || 'Invalid response');
-
-      // Open the created playlist in a new tab and inform the user
-      if (json.playlist.url) {
-        window.open(json.playlist.url, '_blank');
-        alert('Playlist created on Spotify: it should open in a new tab.');
-      } else {
-        alert('Playlist created on Spotify.');
-      }
-    } catch (err) {
-      console.error('Export error', err);
-      alert(String(err?.message || err));
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function handleExportCSV(e) {
-    e.stopPropagation(); // Prevent opening playlist when clicking export
-    try {
-      setExportingCSV(true);
-      const res = await fetch('/api/export-playlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playlistId: playlist.id }),
-      });
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`Export failed: ${res.status} ${text}`);
-      }
-
-      const json = await res.json();
-      if (!json.success || !json.playlist) throw new Error(json.error || 'Invalid response');
-
-      // Convert ordered tracks to CSV (preserve index order)
-      const tracks = json.playlist.tracks || [];
-      const headers = ['order', 'id', 'title', 'artist', 'duration_seconds', 'thumbnail'];
-      const rows = tracks.map((t, idx) => [
-        idx + 1,
-        t.id || '',
-        (t.title || '').replace(/"/g, '""'),
-        (t.artist || '').replace(/"/g, '""'),
-        t.duration_seconds ?? '',
-        t.thumbnail || '',
-      ]);
-
-      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
-
-      const filename = `${(json.playlist.name || 'playlist').replace(/[^a-z0-9\-_\. ]/gi, '_')}.csv`;
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export CSV error', err);
-      alert(String(err?.message || err));
-    } finally {
-      setExportingCSV(false);
-    }
-  }
   return (
-    <li 
+    <div 
       onClick={handleClick}
-      className="group relative flex items-center gap-3 sm:gap-5 rounded-xl px-3 sm:px-5 py-3 sm:py-5 hover:bg-white/10 [data-theme='light']:hover:bg-black/10 active:bg-white/10 [data-theme='light']:active:bg-black/10 transition-all duration-300 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 active:border-white/20 [data-theme='light']:active:border-black/20 backdrop-blur-sm glass-card cursor-pointer"
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
-      aria-label={`Open ${playlist.name} playlist on ${externalLink?.platform || 'music service'} (opens in new tab)`}
+      className="group glass-card rounded-xl p-3 sm:p-4 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 transition-all duration-300 cursor-pointer"
     >
-      <div className="relative flex-shrink-0">
-        {playlist.cover ? (
-          <img
-            src={playlist.cover}
-            width={64}
-            height={64}
-            className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl object-cover shadow-xl group-hover:shadow-2xl transition-all duration-300"
-            alt={`${playlist.name} cover`}
-          />
-        ) : (
-          <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl bg-white/10 [data-theme='light']:bg-black/5 border border-white/10 [data-theme='light']:border-black/10 flex items-center justify-center">
-            <ListMusic className="h-6 w-6 sm:h-8 sm:w-8 text-[var(--muted-foreground)]" />
+      <div className="grid grid-cols-[auto_1fr_auto] gap-3 sm:gap-4 items-center">
+        {/* Cover Art */}
+        <div className="relative flex-shrink-0">
+          {playlist.cover ? (
+            <img
+              src={playlist.cover}
+              width={64}
+              height={64}
+              className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg object-cover shadow-lg"
+              alt={`${playlist.name} cover`}
+            />
+          ) : (
+            <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg bg-[var(--secondary-bg)] border border-[var(--glass-border)] flex items-center justify-center">
+              <ListMusic className="h-5 w-5 sm:h-6 sm:w-6 text-[var(--muted-foreground)]" />
+            </div>
+          )}
+        </div>
+        
+        {/* Playlist Info */}
+        <div className="min-w-0">
+          <div className="truncate text-sm sm:text-base font-semibold text-[var(--foreground)]">
+            {playlist.name}
           </div>
-        )}
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="truncate text-xs sm:text-sm text-[var(--muted-foreground)]">
+            {playlist.tracks} tracks • by {playlist.owner}
+          </div>
+          <div className="hidden sm:block truncate text-xs text-[var(--muted-foreground)] opacity-70">
+            {playlist.description || 'No description'}
+          </div>
+        </div>
+        
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {/* Platform Button - only source platform */}
+          {externalUrl && (
+            <div
+              className={`p-2 rounded-lg transition-all ${
+                isSpotify 
+                  ? 'bg-green-600 group-hover:bg-green-500 text-white' 
+                  : 'bg-red-600 group-hover:bg-red-500 text-white'
+              }`}
+            >
+              {isSpotify ? <SpotifyIcon className="h-4 w-4" /> : <YouTubeIcon className="h-4 w-4" />}
+            </div>
+          )}
+          
+          {/* Privacy Badge */}
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] bg-[var(--secondary-bg)] px-2.5 py-1.5 rounded-lg">
+            <ListMusic className="h-3 w-3" />
+            <span className="whitespace-nowrap">{playlist.public ? 'Public' : 'Private'}</span>
+          </div>
+        </div>
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm sm:text-base md:text-lg font-semibold text-[var(--foreground)] group-hover:text-[var(--foreground)] transition-colors duration-300">
-          {playlist.name}
-        </div>
-        <div className="truncate text-xs sm:text-sm md:text-base text-[var(--muted-foreground)] mt-0.5 sm:mt-1">
-          {playlist.description || 'No description'}
-        </div>
-        <div className="truncate text-xs sm:text-sm text-[var(--muted-foreground)]/80 mt-0.5 sm:mt-1">
-          {playlist.tracks} tracks • by {playlist.owner}
-        </div>
-      </div>
-      
-      {/* Platform badge and external link indicator */}
-      {externalLink && (
-        <div className="hidden sm:flex items-center gap-2 flex-shrink-0 mr-2">
-          <span className={`text-xs px-2 py-1 rounded-full font-medium border ${
-            externalLink.platform === 'youtube'
-              ? 'bg-red-600 text-white border-red-500'
-              : 'bg-green-600 text-white border-green-500'
-          }`}>
-            {externalLink.platform === 'youtube' ? 'YouTube' : 'Spotify'}
-          </span>
-          <ExternalLink className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-[var(--foreground)] transition-colors" aria-hidden="true" />
-        </div>
-      )}
-      
-      <div className="hidden sm:flex items-center gap-2 text-xs sm:text-sm text-[var(--muted-foreground)] bg-white/10 [data-theme='light']:bg-black/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full backdrop-blur-sm flex-shrink-0 border border-white/10 [data-theme='light']:border-black/10">
-        <ListMusic className="h-3 w-3 sm:h-4 sm:w-4" />
-        <span className="font-medium whitespace-nowrap">{playlist.public ? 'Public' : 'Private'}</span>
-      </div>
-    </li>
+    </div>
   );
 }
 
@@ -765,9 +710,9 @@ export default function LibraryView() {
           )}
 
           {playlists.length > 0 && (
-            <ul className="space-y-2">
+            <div className="grid gap-3">
               {playlists.map((playlist) => <PlaylistRow key={playlist.id} playlist={playlist} />)}
-            </ul>
+            </div>
           )}
         </div>
       );
@@ -816,9 +761,9 @@ export default function LibraryView() {
 
         {recent.length > 0 && (
           <>
-            <ul className="space-y-2">
+            <div className="grid gap-3">
               {recent.map((it) => <Row key={it.id} item={it} />)}
-            </ul>
+            </div>
 
             {hasMore && (
               <div className="relative mt-6 sm:mt-8 flex justify-center">

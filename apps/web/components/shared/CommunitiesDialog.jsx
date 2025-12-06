@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Search, Users, TrendingUp, Music, ExternalLink, Eye } from "lucide-react";
-import { toast } from "sonner";
 
 export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,17 +15,18 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
       community.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleJoin = (communityName) => {
-    toast.success(`Joined ${communityName}`);
+  const handleView = (community) => {
+    // View functionality - open playlist detail
+    // The parent component handles this via onClick on cards
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-2xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col p-4 sm:p-6">
         <DialogHeader className="pb-2 sm:pb-4 pr-8">
-          <DialogTitle className="text-lg sm:text-xl">Browse Communities</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">Browse Our Favorites</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            Discover music communities and connect with like-minded listeners.
+            Explore our curated favorite playlists and discover great music.
           </DialogDescription>
         </DialogHeader>
 
@@ -43,8 +43,8 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
             />
           </div>
 
-          {/* Communities Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="list" aria-label="Communities">
+          {/* Favorites Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="list" aria-label="Favorite playlists">
             {filteredCommunities.map((community) => (
               <article 
                 key={community.id} 
@@ -92,7 +92,7 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
           {filteredCommunities.length === 0 && (
             <div className="text-center py-8 sm:py-12">
               <Music className="h-10 w-10 sm:h-12 sm:w-12 text-[var(--muted-foreground)] mx-auto mb-3 sm:mb-4" aria-hidden="true" />
-              <p className="text-sm sm:text-base text-[var(--muted-foreground)]">No communities found</p>
+              <p className="text-sm sm:text-base text-[var(--muted-foreground)]">No favorites found</p>
             </div>
           )}
         </div>

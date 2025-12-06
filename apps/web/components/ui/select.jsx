@@ -41,17 +41,21 @@ function SelectContent({ className = '', children, ...props }) {
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         className={[
-          'z-50 rounded-lg text-[var(--foreground)] overflow-hidden shadow-2xl',
+          'z-[100] rounded-lg text-[var(--foreground)] overflow-hidden shadow-2xl',
           'backdrop-blur-xl border-2 border-[var(--glass-border)]',
           'bg-[var(--dropdown-bg)]',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out',
+          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+          'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           className,
         ].join(' ')}
         position="popper"
         sideOffset={4}
         style={{ width: 'var(--radix-select-trigger-width)' }}
+        onCloseAutoFocus={(e) => e.preventDefault()}
         {...props}
       >
-        <SelectPrimitive.Viewport className="p-1 w-full">
+        <SelectPrimitive.Viewport className="p-1 w-full max-h-[300px] overflow-y-auto">
           {children}
         </SelectPrimitive.Viewport>
       </SelectPrimitive.Content>
