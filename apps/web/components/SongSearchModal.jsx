@@ -240,7 +240,7 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50"
+      className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50"
       role="dialog"
       aria-modal="true"
       aria-labelledby="song-search-title"

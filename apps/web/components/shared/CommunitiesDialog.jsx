@@ -6,7 +6,7 @@ import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Search, Users, TrendingUp, Music, ExternalLink, Eye } from "lucide-react";
 
-export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
+export function CommunitiesDialog({ open, onOpenChange, communities = [], onViewCommunity }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredCommunities = communities.filter(
@@ -16,15 +16,18 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
   );
 
   const handleView = (community) => {
-    // View functionality - open playlist detail
-    // The parent component handles this via onClick on cards
+    // Close this dialog and open the community detail
+    onOpenChange(false);
+    if (onViewCommunity) {
+      onViewCommunity(community);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:w-[90vw] md:max-w-2xl max-h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col p-4 sm:p-6">
         <DialogHeader className="pb-2 sm:pb-4 pr-8">
-          <DialogTitle className="text-lg sm:text-xl">Browse Our Favorites</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">Our Favorites</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
             Explore our curated favorite playlists and discover great music.
           </DialogDescription>
@@ -35,11 +38,11 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--muted-foreground)]" aria-hidden="true" />
             <Input
-              placeholder="Search communities..."
+              placeholder="Search favorites..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 text-sm sm:text-base py-2 sm:py-2.5"
-              aria-label="Search communities"
+              aria-label="Search favorites"
             />
           </div>
 
@@ -76,7 +79,7 @@ export function CommunitiesDialog({ open, onOpenChange, communities = [] }) {
                     <span>{community.playlist_links?.length || 0} playlists</span>
                   </div>
                   <button
-                    onClick={() => handleJoin(community.name)}
+                    onClick={() => handleView(community)}
                     className="flex items-center gap-1 px-2.5 py-1 btn-primary rounded-lg text-xs"
                     aria-label={`View ${community.name} community`}
                   >

@@ -1331,7 +1331,7 @@ export default function GroupDetailPage({ params }) {
       {/* Remove Member Confirmation Modal */}
       {showRemoveMemberModal && memberToRemove && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="remove-member-title"
@@ -1379,7 +1379,7 @@ export default function GroupDetailPage({ params }) {
       {/* Delete Group Confirmation Modal */}
       {showDeleteGroupModal && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="delete-group-title"
@@ -1846,7 +1846,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
 
   if (!hasSpotify && !hasYoutube) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4">
         <div className="glass-card rounded-xl sm:rounded-2xl max-w-sm w-full p-4 sm:p-6 border border-[var(--glass-border)]">
           <h2 className="text-xl sm:text-2xl font-bold mb-4 text-[var(--foreground)]">No Accounts Connected</h2>
           <p className="text-sm sm:text-base text-[var(--muted-foreground)] mb-6">
@@ -1872,7 +1872,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/70 [data-theme='light']:bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4">
       <div className="glass-card rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 border border-[var(--glass-border)]">
         <h2 className="text-xl sm:text-2xl font-bold mb-4 text-[var(--foreground)]">
           {userExistingPlaylist ? 'Replace Your Playlist' : 'Add Playlist'}
