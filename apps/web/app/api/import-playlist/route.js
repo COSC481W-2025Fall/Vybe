@@ -27,18 +27,39 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Verify user is a member of the group
-    const { data: group } = await supabase
+    // Helper to check if string is a UUID
+    const isUUID = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+    // Find group by slug first (preferred), then by UUID as fallback
+    let group = null;
+    
+    // Try slug first
+    const { data: bySlug } = await supabase
       .from('groups')
-      .select('owner_id')
-      .eq('id', groupId)
-      .single();
+      .select('id, owner_id')
+      .eq('slug', groupId)
+      .maybeSingle();
+    
+    if (bySlug) {
+      group = bySlug;
+    } else if (isUUID(groupId)) {
+      // Fallback to UUID lookup
+      const { data: byId } = await supabase
+        .from('groups')
+        .select('id, owner_id')
+        .eq('id', groupId)
+        .single();
+      group = byId;
+    }
 
     if (!group) {
       return NextResponse.json({ error: 'Group not found' }, { status: 404 });
     }
+    
+    // Use actual group ID for all subsequent queries
+    const actualGroupId = group.id;
 
-    const isMember = group.owner_id === user.id || await checkGroupMembership(supabase, groupId, user.id);
+    const isMember = group.owner_id === user.id || await checkGroupMembership(supabase, actualGroupId, user.id);
 
     if (!isMember) {
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
@@ -48,7 +69,7 @@ export async function POST(request) {
     const { data: existingPlaylist } = await supabase
       .from('group_playlists')
       .select('id')
-      .eq('group_id', groupId)
+      .eq('group_id', actualGroupId)
       .eq('added_by', user.id)
       .maybeSingle();
 
@@ -76,7 +97,7 @@ export async function POST(request) {
     const { data: groupPlaylist, error: playlistError } = await supabase
       .from('group_playlists')
       .insert({
-        group_id: groupId,
+        group_id: actualGroupId,
         name: playlistData.name,
         platform,
         playlist_url: playlistUrl,
@@ -143,7 +164,7 @@ export async function POST(request) {
         const { data: allPlaylists } = await supabase
           .from('group_playlists')
           .select('*')
-          .eq('group_id', groupId);
+          .eq('group_id', actualGroupId);
 
         if (allPlaylists && allPlaylists.length > 0) {
           const playlistIds = allPlaylists.map(p => p.id);
@@ -206,13 +227,13 @@ export async function POST(request) {
             
             // Analyze and sort using OpenAI with all metadata
             const { playlistOrder, songOrders } = await analyzeAndSortPlaylists(
-              groupId,
+              actualGroupId,
               allPlaylists,
               allSongsMetadata
             );
 
             // Update database with sorted order
-            await updatePlaylistOrder(supabase, groupId, playlistOrder);
+            await updatePlaylistOrder(supabase, actualGroupId, playlistOrder);
             await updateSongOrder(supabase, songOrders);
             
             console.log('[import-playlist] Smart sort completed successfully');

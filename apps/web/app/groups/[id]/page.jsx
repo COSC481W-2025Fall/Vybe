@@ -278,7 +278,7 @@ export default function GroupDetailPage({ params }) {
   };
 
   async function handleSmartSort(useQuickSort = false) {
-    if (!groupId || isSorting) return;
+    if (!groupId || !group?.id || isSorting) return;
     
     setIsSorting(true);
     const mode = selectedPlaylist === 'all' ? 'all' : 'playlist';
@@ -352,11 +352,15 @@ export default function GroupDetailPage({ params }) {
       // CRITICAL: Verify the database was updated before reloading
       // This helps catch if the API saved but we're not reading it
       // Use group.id (actual UUID) not groupId (could be slug from URL)
-      const { data: verifyGroup } = await supabase
+      const actualGroupId = group?.id;
+      if (!actualGroupId) {
+        console.warn('[Groups] ⚠️  Cannot verify - group not loaded yet');
+      }
+      const { data: verifyGroup } = actualGroupId ? await supabase
         .from('groups')
         .select('all_songs_sort_order, all_songs_sorted_at')
-        .eq('id', group.id)
-        .single();
+        .eq('id', actualGroupId)
+        .single() : { data: null };
       
       if (verifyGroup) {
         const hasSortOrder = verifyGroup.all_songs_sort_order && verifyGroup.all_songs_sort_order.length > 0;
@@ -618,11 +622,12 @@ export default function GroupDetailPage({ params }) {
       // React state might be stale after async operations
       // Use group.id (actual UUID) not groupId (could be slug from URL)
       let currentGroup = group;
-      const { data: freshGroupData } = await supabase
+      const groupUUID = group?.id;
+      const { data: freshGroupData } = groupUUID ? await supabase
         .from('groups')
         .select('all_songs_sort_order, all_songs_sorted_at')
-        .eq('id', group.id)
-        .single();
+        .eq('id', groupUUID)
+        .single() : { data: null };
       
       if (freshGroupData) {
         currentGroup = { ...currentGroup, ...freshGroupData };
@@ -1373,9 +1378,9 @@ export default function GroupDetailPage({ params }) {
       )}
 
       {/* Add Playlist Modal */}
-      {showAddPlaylistModal && groupId && (
+      {showAddPlaylistModal && group?.id && (
         <AddPlaylistModal
-          groupId={groupId}
+          groupId={group.id}
           onClose={() => setShowAddPlaylistModal(false)}
           onSuccess={() => {
             setShowAddPlaylistModal(false);

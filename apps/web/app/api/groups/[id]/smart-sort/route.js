@@ -120,33 +120,62 @@ export async function POST(request, { params }) {
 
     // Check if user is owner or member
     const isOwner = group.owner_id === user.id;
-    console.log(`[Smart Sort API] User ${user.id} isOwner: ${isOwner}, group owner: ${group.owner_id}`);
+    console.log(`[Smart Sort API] Permission check for user ${user.id}:`);
+    console.log(`[Smart Sort API]   - Group ID: ${actualGroupId}`);
+    console.log(`[Smart Sort API]   - Group owner: ${group.owner_id}`);
+    console.log(`[Smart Sort API]   - Is owner: ${isOwner}`);
     
     if (!isOwner) {
+      // Check group_members table
       const { data: membership, error: membershipError } = await supabase
         .from('group_members')
-        .select('id, user_id')
+        .select('id, user_id, role')
         .eq('group_id', actualGroupId)
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log(`[Smart Sort API] Membership check: found=${!!membership}, error=${membershipError?.message || 'none'}`);
+      console.log(`[Smart Sort API]   - Membership found: ${!!membership}`);
+      if (membershipError) {
+        console.log(`[Smart Sort API]   - Membership error: ${membershipError.message} (code: ${membershipError.code})`);
+      }
+      if (membership) {
+        console.log(`[Smart Sort API]   - Role: ${membership.role}`);
+      }
 
       // Also check if user has a playlist in this group (alternative membership proof)
       if (!membership) {
-        const { data: userPlaylist } = await supabase
+        const { data: userPlaylist, error: playlistError } = await supabase
           .from('group_playlists')
-          .select('id')
+          .select('id, name')
           .eq('group_id', actualGroupId)
           .eq('added_by', user.id)
           .maybeSingle();
         
-        if (!userPlaylist) {
-          console.log(`[Smart Sort API] User ${user.id} has no membership or playlist in group ${actualGroupId}`);
-          return NextResponse.json({ error: "You don't have access to this group." }, { status: 403 });
+        console.log(`[Smart Sort API]   - User playlist found: ${!!userPlaylist}`);
+        if (playlistError) {
+          console.log(`[Smart Sort API]   - Playlist check error: ${playlistError.message}`);
         }
-        console.log(`[Smart Sort API] User has a playlist in group, granting access`);
+        
+        if (!userPlaylist) {
+          // Last resort: check if user can see ANY members of this group (RLS test)
+          const { count: memberCount } = await supabase
+            .from('group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', actualGroupId);
+          
+          console.log(`[Smart Sort API]   - Total members visible to user: ${memberCount || 0}`);
+          console.log(`[Smart Sort API] ❌ ACCESS DENIED: User ${user.id} has no membership or playlist in group ${actualGroupId}`);
+          
+          return NextResponse.json({ 
+            error: "You don't have access to this group. Please make sure you've joined the group first.",
+          }, { status: 403 });
+        }
+        console.log(`[Smart Sort API]   ✅ Access granted via playlist: ${userPlaylist.name}`);
+      } else {
+        console.log(`[Smart Sort API]   ✅ Access granted via membership`);
       }
+    } else {
+      console.log(`[Smart Sort API]   ✅ Access granted as owner`);
     }
 
     // Fetch all playlists for the group
