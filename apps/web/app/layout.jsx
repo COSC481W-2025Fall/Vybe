@@ -8,6 +8,9 @@ import QueryProvider from '@/components/QueryProvider';
 import UrlTokenCleanup from '@/components/UrlTokenCleanup';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { RealtimeProvider } from '@/lib/realtime/RealtimeProvider';
+import { GlobalStateProvider } from '@/lib/context/GlobalStateContext';
+import GlobalProgressBar from '@/components/shared/GlobalProgressBar';
+import GlobalMiniplayer from '@/components/shared/GlobalMiniplayer';
 import AuroraBackground from '@/components/AuroraBackground';
 
 export const metadata = {
@@ -73,17 +76,21 @@ export default async function RootLayout({ children }) {
         <ThemeProvider>
           <QueryProvider>
             <RealtimeProvider>
-              <Suspense fallback={null}>
-                <UrlTokenCleanup />
-              </Suspense>
-              <AuroraBackground />
-              {user && <Navbar />}
-              <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
-                <div className="w-full max-w-6xl">
-                  {children}
-                </div>
-              </main>
-              <Toaster />
+              <GlobalStateProvider>
+                <Suspense fallback={null}>
+                  <UrlTokenCleanup />
+                </Suspense>
+                <AuroraBackground />
+                {user && <Navbar />}
+                <main className="flex justify-center w-full px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
+                  <div className="w-full max-w-6xl">
+                    {children}
+                  </div>
+                </main>
+                <Toaster />
+                <GlobalProgressBar />
+                <GlobalMiniplayer />
+              </GlobalStateProvider>
             </RealtimeProvider>
           </QueryProvider>
         </ThemeProvider>

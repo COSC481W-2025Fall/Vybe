@@ -19,6 +19,8 @@ export async function GET() {
       current_user_id: user.id
     });
 
+    console.log('[friends/songs] Raw RPC data:', JSON.stringify(data, null, 2));
+
     if (error) {
       return NextResponse.json({
         error: 'Failed to fetch friends songs',
@@ -34,8 +36,12 @@ export async function GET() {
       title: row.song_name,
       artist: row.artist,
       album: row.album,
+      imageUrl: row.image_url,
+      image_url: row.image_url,
       spotifyUrl: row.spotify_url,
       youtubeUrl: row.youtube_url,
+      spotify_url: row.spotify_url,
+      youtube_url: row.youtube_url,
       shared_at: row.created_at,
       shared_by: row.friend_display_name || row.friend_username || 'Friend',
       shared_by_username: row.friend_username || null,

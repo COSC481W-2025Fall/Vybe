@@ -1,8 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageCircle, Send, HelpCircle, Users, Music, Settings, ChevronDown, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { MessageCircle, Send, HelpCircle, Users, Music, Settings, ChevronDown, Loader2, CheckCircle, AlertCircle, Bug, Lightbulb, ThumbsUp, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
+
+const SUBJECT_OPTIONS = [
+  { value: 'bug', label: 'Bug Report', icon: Bug, color: 'red' },
+  { value: 'feature', label: 'Feature Request', icon: Lightbulb, color: 'yellow' },
+  { value: 'question', label: 'Question', icon: HelpCircle, color: 'blue' },
+  { value: 'feedback', label: 'Feedback', icon: ThumbsUp, color: 'green' },
+  { value: 'other', label: 'Other', icon: MoreHorizontal, color: 'purple' },
+];
 
 const FAQ_ITEMS = [
   {
@@ -35,6 +43,20 @@ const FAQ_ITEMS = [
   },
 ];
 
+function getSubjectButtonClasses(optionColor, isSelected) {
+  if (!isSelected) {
+    return 'bg-[var(--secondary-bg)] text-[var(--muted-foreground)] border-2 border-transparent hover:border-[var(--glass-border)] hover:text-[var(--foreground)]';
+  }
+  
+  switch (optionColor) {
+    case 'red': return 'bg-red-500/20 text-red-400 border-2 border-red-500/50';
+    case 'yellow': return 'bg-yellow-500/20 text-yellow-400 border-2 border-yellow-500/50';
+    case 'blue': return 'bg-blue-500/20 text-blue-400 border-2 border-blue-500/50';
+    case 'green': return 'bg-green-500/20 text-green-400 border-2 border-green-500/50';
+    default: return 'bg-purple-500/20 text-purple-400 border-2 border-purple-500/50';
+  }
+}
+
 export default function HelpPage() {
   const [openFAQ, setOpenFAQ] = useState(null);
   const [formData, setFormData] = useState({
@@ -44,7 +66,7 @@ export default function HelpPage() {
     message: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState(null); // 'success' | 'error' | null
+  const [submitStatus, setSubmitStatus] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -215,24 +237,29 @@ export default function HelpPage() {
               </div>
             </div>
 
+            {/* Subject - Tag Buttons */}
             <div>
-              <label htmlFor="subject" className="block text-sm font-medium text-[var(--foreground)] mb-2">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                 Subject
               </label>
-              <select
-                id="subject"
-                required
-                value={formData.subject}
-                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
-              >
-                <option value="">Select a topic...</option>
-                <option value="bug">Bug Report</option>
-                <option value="feature">Feature Request</option>
-                <option value="question">General Question</option>
-                <option value="feedback">Feedback</option>
-                <option value="other">Other</option>
-              </select>
+              <div className="flex flex-wrap gap-2">
+                {SUBJECT_OPTIONS.map(({ value, label, icon: Icon, color }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, subject: value })}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      getSubjectButtonClasses(color, formData.subject === value)
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {!formData.subject && (
+                <p className="text-xs text-[var(--muted-foreground)] mt-2">Select a topic above</p>
+              )}
             </div>
 
             <div>
@@ -266,7 +293,7 @@ export default function HelpPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !formData.subject}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
@@ -292,4 +319,3 @@ export default function HelpPage() {
     </div>
   );
 }
-

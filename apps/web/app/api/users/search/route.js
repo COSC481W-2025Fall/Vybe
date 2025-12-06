@@ -58,10 +58,16 @@ export async function GET(request) {
       });
 
       // Get existing friendships
-      const { data: existingFriends } = await supabase
+      const { data: existingFriends, error: friendsError } = await supabase
         .from('friendships')
-        .select('user_id, friend_id, status')
+        .select('id, user_id, friend_id, status')
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+      console.log('[users/search browse] Current user:', user.id);
+      console.log('[users/search browse] Friendships query result:', { count: existingFriends?.length, friendsError });
+      if (existingFriends?.length > 0) {
+        console.log('[users/search browse] Sample friendships:', existingFriends.slice(0, 3));
+      }
 
       const users = searchableUsers.map(u => {
         const friendship = existingFriends?.find(f =>
@@ -69,12 +75,20 @@ export async function GET(request) {
           (f.user_id === u.id && f.friend_id === user.id)
         );
 
+        // Determine friendship direction for pending requests
+        let friendshipDirection = null;
+        if (friendship && friendship.status === 'pending') {
+          friendshipDirection = friendship.user_id === user.id ? 'outgoing' : 'incoming';
+        }
+
         return {
           id: u.id,
           email: '', // Email not included in query for privacy
           name: u.display_name || u.username || 'User',
           username: u.username || '',
-          friendship_status: friendship?.status || null
+          friendship_status: friendship?.status || null,
+          friendship_direction: friendshipDirection,
+          friendship_id: friendship?.id || null
         };
       });
 
@@ -130,10 +144,13 @@ export async function GET(request) {
     });
 
     // Get existing friendships for these users to show status
-    const { data: existingFriends } = await supabase
+    const { data: existingFriends, error: friendsError } = await supabase
       .from('friendships')
-      .select('user_id, friend_id, status')
+      .select('id, user_id, friend_id, status')
       .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+    console.log('[users/search] Current user:', user.id);
+    console.log('[users/search] Friendships query result:', { existingFriends, friendsError });
 
     const users = searchableUsers.map(u => {
       const friendship = existingFriends?.find(f =>
@@ -141,12 +158,20 @@ export async function GET(request) {
         (f.user_id === u.id && f.friend_id === user.id)
       );
 
+      // Determine friendship direction for pending requests
+      let friendshipDirection = null;
+      if (friendship && friendship.status === 'pending') {
+        friendshipDirection = friendship.user_id === user.id ? 'outgoing' : 'incoming';
+      }
+
       return {
         id: u.id,
         email: '', // Email not included in query for privacy
         name: u.display_name || u.username || 'User',
         username: u.username || '',
-        friendship_status: friendship?.status || null
+        friendship_status: friendship?.status || null,
+        friendship_direction: friendshipDirection,
+        friendship_id: friendship?.id || null
       };
     });
 

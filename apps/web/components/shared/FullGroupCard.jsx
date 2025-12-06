@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
-import { Users, Music, Calendar } from 'lucide-react';
+import { Users, Music, Calendar, Copy, Check } from 'lucide-react';
 
 export default function FullGroupCard({ group, isOwner, onClick }) {
   const [members, setMembers] = useState([]);
+  const [copied, setCopied] = useState(false);
   const supabase = supabaseBrowser();
+
+  const handleCopyCode = (e) => {
+    e.stopPropagation(); // Prevent card click
+    if (group.join_code) {
+      navigator.clipboard.writeText(group.join_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   useEffect(() => {
     async function loadMembers() {
@@ -111,10 +121,23 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
           )}
         </div>
 
-        {/* Join Code */}
-        <span className="px-2 py-0.5 bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded text-xs font-mono text-[var(--muted-foreground)]">
-          {group.join_code || '...'}
-        </span>
+        {/* Join Code - Copyable */}
+        <button
+          onClick={handleCopyCode}
+          title={copied ? 'Copied!' : 'Click to copy join code'}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono transition-all min-h-[28px] ${
+            copied 
+              ? 'bg-green-500/20 border border-green-500/50 text-green-400' 
+              : 'bg-[var(--secondary-bg)] border border-[var(--glass-border)] text-[var(--muted-foreground)] hover:bg-[var(--secondary-hover)] hover:border-[var(--accent)]/30 active:bg-[var(--secondary-hover)]'
+          }`}
+        >
+          {copied ? (
+            <Check className="w-3.5 h-3.5 flex-shrink-0" />
+          ) : (
+            <Copy className="w-3.5 h-3.5 flex-shrink-0" />
+          )}
+          <span className="truncate">{group.join_code || '...'}</span>
+        </button>
       </div>
     </div>
   );
