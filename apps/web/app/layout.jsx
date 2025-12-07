@@ -3,6 +3,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { Suspense } from 'react'
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import Navbar from '@/components/Navbar';
 import { Toaster } from '@/components/ui/sonner';
 import QueryProvider from '@/components/QueryProvider';
@@ -96,6 +97,7 @@ export default async function RootLayout({ children }) {
           </QueryProvider>
         </ThemeProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
