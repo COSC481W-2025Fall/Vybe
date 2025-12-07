@@ -260,18 +260,18 @@ export function HomePage({ onNavigate } = {}) {
 
         <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
           {socialLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
+            <div className="flex flex-wrap justify-center gap-3 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 sm:gap-4 w-full">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="animate-pulse bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded-xl p-3 h-[140px] sm:h-[160px] flex flex-col items-center">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[var(--glass-border)] rounded-full mb-2"></div>
-                  <div className="h-3 bg-[var(--glass-border)] rounded w-16 mb-1"></div>
-                  <div className="h-2 bg-[var(--glass-border)] rounded w-20 mb-1"></div>
+                <div key={i} className="animate-pulse bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded-xl p-2.5 sm:p-3 flex flex-col items-center w-[100px] sm:w-auto">
+                  <div className="w-11 h-11 sm:w-14 sm:h-14 bg-[var(--glass-border)] rounded-full mb-1.5 sm:mb-2"></div>
+                  <div className="h-2.5 sm:h-3 bg-[var(--glass-border)] rounded w-14 sm:w-16 mb-1"></div>
+                  <div className="h-2 bg-[var(--glass-border)] rounded w-16 sm:w-20 mb-0.5"></div>
                   <div className="h-2 bg-[var(--glass-border)] rounded w-14"></div>
                 </div>
               ))}
             </div>
           ) : friendsSongsOfTheDay.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 w-full">
+            <div className="flex flex-wrap justify-center gap-3 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 sm:gap-4 w-full">
               {friendsSongsOfTheDay.map((friend) => (
                 <button
                   key={friend.id}
@@ -280,34 +280,34 @@ export function HomePage({ onNavigate } = {}) {
                     setSelectedSong(friend);
                     setSongDialogOpen(true);
                   }}
-                  className="flex flex-col items-center p-3 cursor-pointer group bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] border border-[var(--glass-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all h-[140px] sm:h-[160px] text-left"
+                  className="flex flex-col items-center p-2.5 sm:p-3 cursor-pointer group bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] border border-[var(--glass-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 transition-all w-[100px] sm:w-auto"
                 >
                   {/* Avatar with music badge */}
-                  <div className="relative mb-2">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 group-hover:scale-105 transition-transform shadow-lg">
+                  <div className="relative mb-1.5 sm:mb-2 flex-shrink-0">
+                    <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 group-hover:scale-105 transition-transform shadow-lg">
                       {friend.shared_by_avatar ? (
                         <img src={friend.shared_by_avatar} alt={friend.shared_by} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                        <div className="w-full h-full flex items-center justify-center text-white text-xs sm:text-sm font-bold">
                           {friend.shared_by?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                         </div>
                       )}
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-[var(--background)] rounded-full border-2 border-[var(--glass-border)] flex items-center justify-center">
-                      <Music className="h-2.5 w-2.5 text-[var(--accent)]" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 sm:w-5 sm:h-5 bg-[var(--background)] rounded-full border-2 border-[var(--glass-border)] flex items-center justify-center">
+                      <Music className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-[var(--accent)]" />
                     </div>
                   </div>
 
                   {/* Song Info */}
-                  <div className="text-center w-full flex-1 flex flex-col justify-center min-w-0">
-                    <p className="text-xs font-semibold text-[var(--foreground)] truncate">{friend.shared_by?.split(' ')[0] || 'Friend'}</p>
-                    <p className="text-xs text-[var(--foreground)] truncate mt-1">{friend.parsed_title || friend.title || 'Untitled'}</p>
-                    <p className="text-xs text-[var(--muted-foreground)] truncate">{friend.parsed_artist || friend.artist || 'Unknown'}</p>
+                  <div className="text-center w-full flex flex-col min-w-0">
+                    <p className="text-[10px] sm:text-xs font-semibold text-[var(--foreground)] truncate">{friend.shared_by?.split(' ')[0] || 'Friend'}</p>
+                    <p className="text-[10px] sm:text-xs text-[var(--foreground)] truncate mt-0.5 sm:mt-1 leading-tight">{friend.parsed_title || friend.title || 'Untitled'}</p>
+                    <p className="text-[10px] sm:text-xs text-[var(--muted-foreground)] truncate leading-tight">{friend.parsed_artist || friend.artist || 'Unknown'}</p>
                   </div>
 
-                  {/* Time */}
+                  {/* Time - hidden on mobile */}
                   {friend.shared_at && (
-                    <p className="text-xs text-[var(--muted-foreground)] opacity-70 mt-auto pt-1">
+                    <p className="hidden sm:block text-xs text-[var(--muted-foreground)] opacity-70 mt-auto pt-1 flex-shrink-0">
                       {new Date(friend.shared_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
