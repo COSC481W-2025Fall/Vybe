@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent } from "../ui/dialog";
-import { Music, Clock, User } from "lucide-react";
+import { Music, Clock, User, ExternalLink } from "lucide-react";
 
 // Spotify Logo SVG Component
 function SpotifyIcon({ className }) {
@@ -78,44 +78,65 @@ export function FriendSongCard({ song, open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden border-0 bg-transparent [&>button]:top-2 [&>button]:right-2 [&>button]:bg-black/50 [&>button]:backdrop-blur-sm [&>button]:rounded-full [&>button]:text-white [&>button]:hover:bg-black/70 [&>button]:z-10">
-        <div className="glass-card rounded-2xl overflow-hidden">
-          {/* Song Artwork - Large */}
-          <div className="relative aspect-square max-h-80 overflow-hidden bg-gradient-to-br from-purple-600/20 to-pink-600/20">
-            {song.image_url ? (
-              <img
-                src={song.image_url}
-                alt={song.title || 'Song artwork'}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Music className="h-24 w-24 text-[var(--muted-foreground)] opacity-50" />
+      <DialogContent className="max-w-md w-[calc(100%-2rem)] sm:w-full p-0 overflow-hidden border-0 bg-transparent [&>button]:hidden">
+        <div className="glass-card rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[85vh] overflow-y-auto">
+          {/* Header Section - Centered Album Art */}
+          <div className="relative pt-5 sm:pt-8 pb-4 sm:pb-6 px-4 sm:px-6 bg-gradient-to-b from-[var(--accent)]/10 via-[var(--accent)]/5 to-transparent">
+            {/* Close button */}
+            <button
+              onClick={() => onOpenChange(false)}
+              className="absolute top-3 sm:top-4 right-3 sm:right-4 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm hover:bg-black/50 transition-colors flex items-center justify-center text-white/80 hover:text-white z-10"
+              aria-label="Close"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Centered Album Art */}
+            <div className="flex justify-center">
+              <div className="relative">
+                <div className="w-32 h-32 sm:w-48 sm:h-48 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-2 sm:ring-4 ring-white/10 bg-gradient-to-br from-purple-600/30 to-pink-600/30">
+                  {song.image_url ? (
+                    <img
+                      src={song.image_url}
+                      alt={song.title || 'Song artwork'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Music className="h-12 sm:h-16 w-12 sm:w-16 text-[var(--muted-foreground)] opacity-50" />
+                    </div>
+                  )}
+                </div>
+                
+                {/* Decorative glow - hidden on mobile for performance */}
+                <div className="hidden sm:block absolute -inset-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl -z-10" />
               </div>
-            )}
-            
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-            
-            {/* Song info overlay - leave space for close button */}
-            <div className="absolute bottom-0 left-0 right-0 p-5 pr-12">
-              <h2 className="text-2xl font-bold text-white mb-1 drop-shadow-lg">
-                {displayTitle}
-              </h2>
-              <p className="text-lg text-white/80 drop-shadow">
-                {displayArtist}
-              </p>
-              {song.album && (
-                <p className="text-sm text-white/60 mt-1 drop-shadow">
-                  {song.album}
-                </p>
-              )}
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-5 space-y-5">
-            {/* User Info - Clickable to view profile */}
+          {/* Song Info - Centered */}
+          <div className="px-4 sm:px-6 pb-3 sm:pb-4 text-center">
+            <h2 className="text-lg sm:text-2xl font-bold text-[var(--foreground)] leading-tight line-clamp-2">
+              {displayTitle}
+            </h2>
+            <p className="text-sm sm:text-lg text-[var(--muted-foreground)] mt-0.5 sm:mt-1 line-clamp-1">
+              {displayArtist}
+            </p>
+            {song.album && (
+              <p className="text-xs sm:text-sm text-[var(--muted-foreground)]/70 mt-0.5 line-clamp-1 hidden sm:block">
+                {song.album}
+              </p>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
+
+          {/* User Info & Time */}
+          <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+            {/* User Card */}
             <button
               onClick={() => {
                 if (username) {
@@ -124,14 +145,14 @@ export function FriendSongCard({ song, open, onOpenChange }) {
                 }
               }}
               disabled={!username}
-              className={`flex items-center gap-4 w-full text-left rounded-xl p-2 -m-2 transition-colors ${
+              className={`flex items-center gap-3 sm:gap-4 w-full text-left rounded-xl sm:rounded-2xl p-2 sm:p-3 transition-all ${
                 username 
-                  ? 'hover:bg-[var(--secondary-bg)] cursor-pointer' 
+                  ? 'hover:bg-[var(--secondary-bg)] cursor-pointer active:scale-[0.98]' 
                   : 'cursor-default'
               }`}
               title={username ? `View ${song.shared_by}'s profile` : undefined}
             >
-              <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 ring-2 ring-[var(--glass-border)]">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 ring-2 ring-[var(--glass-border)] shadow-md">
                 {song.shared_by_avatar ? (
                   <img
                     src={song.shared_by_avatar}
@@ -139,59 +160,82 @@ export function FriendSongCard({ song, open, onOpenChange }) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
                     {song.shared_by?.split(' ').map(n => n[0]).join('').slice(0, 2) || '??'}
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[var(--foreground)] truncate flex items-center gap-2">
+                <p className="font-semibold text-sm sm:text-base text-[var(--foreground)] truncate flex items-center gap-2">
                   {song.shared_by || 'Anonymous'}
-                  {username && <User className="h-3 w-3 text-[var(--muted-foreground)]" />}
+                  {username && (
+                    <span className="text-xs text-[var(--accent)] font-normal items-center gap-1 hidden sm:flex">
+                      <ExternalLink className="h-3 w-3" />
+                      View Profile
+                    </span>
+                  )}
                 </p>
-                <p className="text-sm text-[var(--muted-foreground)]">
-                  {username ? `@${username} • Song of the day` : 'Shared this as their song of the day'}
+                <p className="text-xs sm:text-sm text-[var(--muted-foreground)]">
+                  {username ? `@${username}` : 'Shared this song'}
                 </p>
               </div>
+              {/* Mobile-only arrow indicator */}
+              {username && (
+                <ExternalLink className="h-4 w-4 text-[var(--muted-foreground)] sm:hidden flex-shrink-0" />
+              )}
             </button>
 
-            {/* Time posted */}
+            {/* Time Badge */}
             {song.shared_at && (
-              <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                <Clock className="h-4 w-4" aria-hidden="true" />
-                <span>{formatSharedTime(song.shared_at)}</span>
+              <div className="flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-[var(--muted-foreground)] bg-[var(--secondary-bg)] rounded-full py-1.5 sm:py-2 px-3 sm:px-4 w-fit mx-auto">
+                <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                <span>Shared {formatSharedTime(song.shared_at)}</span>
               </div>
             )}
 
-            {/* Platform Buttons - Always show both */}
-            <div className="flex gap-3">
+            {/* Platform Buttons - Icon-only for sleek design */}
+            <div className="flex justify-center gap-4 pt-1 sm:pt-2">
               <a
                 href={getSpotifyLink()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-colors ${
+                className={`group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl transition-all active:scale-95 ${
                   spotifyUrl 
-                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                    : 'bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-500/30'
+                    ? 'bg-[#1DB954] hover:bg-[#1ed760] text-white shadow-lg shadow-green-500/25 hover:shadow-green-500/40' 
+                    : 'bg-[#1DB954]/15 hover:bg-[#1DB954]/25 text-[#1DB954] border border-[#1DB954]/30 hover:border-[#1DB954]/50'
                 }`}
                 aria-label={spotifyUrl ? `Play ${displayTitle} on Spotify` : `Search ${displayTitle} on Spotify`}
+                title={spotifyUrl ? 'Play on Spotify' : 'Search on Spotify'}
               >
-                <SpotifyIcon className="h-5 w-5" aria-hidden="true" />
-                {spotifyUrl ? 'Play on Spotify' : 'Search Spotify'}
+                <SpotifyIcon className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
+                {!spotifyUrl && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded-full flex items-center justify-center">
+                    <svg className="w-2.5 h-2.5 text-[var(--muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </span>
+                )}
               </a>
               <a
                 href={getYouTubeLink()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-colors ${
+                className={`group relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl transition-all active:scale-95 ${
                   youtubeUrl 
-                    ? 'bg-red-600 hover:bg-red-700 text-white' 
-                    : 'bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30'
+                    ? 'bg-[#FF0000] hover:bg-[#ff1a1a] text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40' 
+                    : 'bg-[#FF0000]/15 hover:bg-[#FF0000]/25 text-[#FF0000] border border-[#FF0000]/30 hover:border-[#FF0000]/50'
                 }`}
                 aria-label={youtubeUrl ? `Play ${displayTitle} on YouTube` : `Search ${displayTitle} on YouTube`}
+                title={youtubeUrl ? 'Play on YouTube' : 'Search on YouTube'}
               >
-                <YouTubeIcon className="h-5 w-5" aria-hidden="true" />
-                {youtubeUrl ? 'Play on YouTube' : 'Search YouTube'}
+                <YouTubeIcon className="h-7 w-7 sm:h-8 sm:w-8" aria-hidden="true" />
+                {!youtubeUrl && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--secondary-bg)] border border-[var(--glass-border)] rounded-full flex items-center justify-center">
+                    <svg className="w-2.5 h-2.5 text-[var(--muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </span>
+                )}
               </a>
             </div>
           </div>
@@ -200,4 +244,3 @@ export function FriendSongCard({ song, open, onOpenChange }) {
     </Dialog>
   );
 }
-

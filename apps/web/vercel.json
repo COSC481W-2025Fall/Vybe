@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "path": "/api/export-jobs/retry-failed",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}
+

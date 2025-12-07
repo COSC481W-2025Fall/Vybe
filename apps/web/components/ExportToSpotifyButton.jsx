@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Music, CheckCircle, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Music, CheckCircle, AlertCircle, Clock, ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { useExportJob, shouldUseBackgroundExport } from '@/lib/hooks/useExportJob';
 
 /**
  * Accessible Progress Bar component
@@ -62,6 +63,8 @@ function ExportProgressBar({ isExporting, status, progress }) {
  * @param {string} props.defaultName - Default name shown in the dialog placeholder
  * @param {boolean} props.disabled - Whether the button is disabled
  * @param {string} props.className - Additional CSS classes for the button
+ * @param {number} props.trackCount - Estimated track count (used to suggest background export)
+ * @param {boolean} props.allowBackground - Whether to allow background export option (default: true)
  */
 export default function ExportToSpotifyButton({
   sourceType = 'group',
@@ -71,15 +74,79 @@ export default function ExportToSpotifyButton({
   defaultName = 'Playlist',
   disabled = false,
   className = '',
+  trackCount = 0,
+  allowBackground = true,
 }) {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [customPlaylistName, setCustomPlaylistName] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState('');
   const [exportProgress, setExportProgress] = useState(null);
+  const [useBackgroundExport, setUseBackgroundExport] = useState(false);
+  
+  // Background export hook
+  const { 
+    queueExport, 
+    jobStatus, 
+    isExporting: isBackgroundExporting,
+    cancelExport,
+    externalUrl,
+    isComplete: isBackgroundComplete,
+    isFailed: isBackgroundFailed
+  } = useExportJob();
+  
+  // Auto-suggest background export for large playlists
+  useEffect(() => {
+    if (allowBackground && shouldUseBackgroundExport(trackCount)) {
+      setUseBackgroundExport(true);
+    }
+  }, [trackCount, allowBackground]);
+  
+  // Handle background export completion
+  useEffect(() => {
+    if (isBackgroundComplete && externalUrl) {
+      setShowExportDialog(false);
+      toast.success('Background export completed!', {
+        duration: 8000,
+        action: {
+          label: 'Open Playlist',
+          onClick: () => window.open(externalUrl, '_blank')
+        }
+      });
+    } else if (isBackgroundFailed && jobStatus?.error_message) {
+      toast.error(`Export failed: ${jobStatus.error_message}`);
+    }
+  }, [isBackgroundComplete, isBackgroundFailed, externalUrl, jobStatus]);
+
+  // Handle background export
+  async function handleBackgroundExport() {
+    try {
+      await queueExport({
+        sourceType,
+        sourceId,
+        playlistId: sourceType === 'group' ? (playlistId === 'all' ? 'all' : playlistId) : undefined,
+        name: customPlaylistName.trim() || defaultName,
+        description: `Exported from Vybe${customPlaylistName.trim() ? ` - ${customPlaylistName.trim()}` : ''}`,
+        isPublic: false,
+        isCollaborative: false,
+      });
+      
+      toast.success('Export queued! You can close this page - the export will continue in the background.', {
+        duration: 6000,
+      });
+    } catch (error) {
+      console.error('[Export Spotify] Background export error:', error);
+      toast.error(error.message || 'Failed to queue export');
+    }
+  }
 
   async function handleExportConfirm() {
-    if (isExporting) return;
+    if (isExporting || isBackgroundExporting) return;
+    
+    // Use background export if selected
+    if (useBackgroundExport && allowBackground) {
+      return handleBackgroundExport();
+    }
     
     setIsExporting(true);
     setExportStatus('Preparing export...');
@@ -206,33 +273,89 @@ export default function ExportToSpotifyButton({
               Enter a custom name for your Spotify playlist, or leave blank to use the default name.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <label 
-              htmlFor="spotify-playlist-name"
-              className="block text-sm font-medium text-[var(--foreground)] mb-2"
-            >
-              Playlist Name
-            </label>
-            <input
-              id="spotify-playlist-name"
-              type="text"
-              value={customPlaylistName}
-              onChange={(e) => setCustomPlaylistName(e.target.value)}
-              placeholder={`Enter a name (Default: ${defaultName})`}
-              className="w-full px-4 py-2 bg-[var(--input-bg)] border-2 border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500"
-              disabled={isExporting}
-              aria-describedby={isExporting ? "export-progress" : undefined}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isExporting) {
-                  handleExportConfirm();
-                }
-              }}
-            />
+          <div className="py-4 space-y-4">
+            <div>
+              <label 
+                htmlFor="spotify-playlist-name"
+                className="block text-sm font-medium text-[var(--foreground)] mb-2"
+              >
+                Playlist Name
+              </label>
+              <input
+                id="spotify-playlist-name"
+                type="text"
+                value={customPlaylistName}
+                onChange={(e) => setCustomPlaylistName(e.target.value)}
+                placeholder={`Enter a name (Default: ${defaultName})`}
+                className="w-full px-4 py-2 bg-[var(--input-bg)] border-2 border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500"
+                disabled={isExporting || isBackgroundExporting}
+                aria-describedby={isExporting ? "export-progress" : undefined}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isExporting && !isBackgroundExporting) {
+                    handleExportConfirm();
+                  }
+                }}
+              />
+            </div>
             
-            {/* Progress Bar */}
+            {/* Background Export Option */}
+            {allowBackground && (
+              <label className="flex items-start gap-3 p-3 rounded-lg bg-[var(--secondary-bg)] border border-[var(--glass-border)] cursor-pointer hover:bg-[var(--secondary-hover)] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={useBackgroundExport}
+                  onChange={(e) => setUseBackgroundExport(e.target.checked)}
+                  disabled={isExporting || isBackgroundExporting}
+                  className="mt-0.5 w-4 h-4 accent-green-500"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+                    <Clock className="h-4 w-4 text-green-500" />
+                    Export in background
+                  </div>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                    {trackCount > 200 
+                      ? `Recommended for ${trackCount}+ tracks. Export continues even if you close this page.`
+                      : 'Export continues even if you close this page. Best for large playlists.'}
+                  </p>
+                </div>
+              </label>
+            )}
+            
+            {/* Background Export Progress */}
+            {isBackgroundExporting && jobStatus && (
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-400">Background Export</span>
+                  {jobStatus.progress != null && (
+                    <span className="text-sm text-green-400">{jobStatus.progress}%</span>
+                  )}
+                </div>
+                <p className="text-xs text-[var(--muted-foreground)]">{jobStatus.current_step}</p>
+                <div className="h-1.5 bg-green-500/20 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-500 rounded-full transition-all duration-300"
+                    style={{ width: `${jobStatus.progress || 0}%` }}
+                  />
+                </div>
+                {externalUrl && (
+                  <a 
+                    href={externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 mt-1"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Open in Spotify
+                  </a>
+                )}
+              </div>
+            )}
+            
+            {/* Regular Progress Bar */}
             <div id="export-progress">
               <ExportProgressBar 
-                isExporting={isExporting} 
+                isExporting={isExporting && !useBackgroundExport} 
                 status={exportStatus} 
                 progress={exportProgress} 
               />
@@ -244,23 +367,37 @@ export default function ExportToSpotifyButton({
               disabled={isExporting}
               className="px-4 py-2 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] border border-[var(--glass-border)] rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
+              {isBackgroundExporting ? 'Close' : 'Cancel'}
             </button>
-            <button
-              onClick={handleExportConfirm}
-              disabled={isExporting}
-              aria-busy={isExporting}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 active:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isExporting ? (
-                <>
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                  <span>Exporting...</span>
-                </>
-              ) : (
-                'Confirm Export'
-              )}
-            </button>
+            {isBackgroundExporting ? (
+              <button
+                onClick={cancelExport}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              >
+                Cancel Export
+              </button>
+            ) : (
+              <button
+                onClick={handleExportConfirm}
+                disabled={isExporting}
+                aria-busy={isExporting}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 active:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isExporting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                    <span>Exporting...</span>
+                  </>
+                ) : useBackgroundExport ? (
+                  <>
+                    <Clock className="h-4 w-4" />
+                    Queue Export
+                  </>
+                ) : (
+                  'Confirm Export'
+                )}
+              </button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
