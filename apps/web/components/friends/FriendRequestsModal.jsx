@@ -201,20 +201,26 @@ function FriendRequestsModalComponent({ onClose, onRequestsChanged }) {
   );
 }
 
-// Skeleton for loading state
+// Fixed height for request cards to prevent CLS
+const REQUEST_CARD_HEIGHT = 'min-h-[56px] sm:min-h-[60px]';
+
+// Skeleton for loading state - MUST match card dimensions
 const RequestsSkeleton = memo(function RequestsSkeleton() {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" style={{ contain: 'layout' }}>
       {[1, 2, 3].map((i) => (
-        <div key={i} className="flex items-center gap-3 p-3 bg-[var(--secondary-bg)] rounded-lg animate-pulse">
-          <div className="w-10 h-10 rounded-full bg-[var(--muted-foreground)]/20" />
-          <div className="flex-1 space-y-2">
-            <div className="h-4 bg-[var(--muted-foreground)]/20 rounded w-24" />
-            <div className="h-3 bg-[var(--muted-foreground)]/20 rounded w-16" />
+        <div 
+          key={i} 
+          className={`flex items-center gap-3 p-2.5 sm:p-3 bg-[var(--secondary-bg)] rounded-lg animate-pulse ${REQUEST_CARD_HEIGHT}`}
+        >
+          <div className="w-10 h-10 rounded-full bg-[var(--muted-foreground)]/20 flex-shrink-0" style={{ aspectRatio: '1/1' }} />
+          <div className="flex-1 space-y-2 min-w-0">
+            <div className="h-4 bg-[var(--muted-foreground)]/20 rounded w-24 max-w-full" />
+            <div className="h-3 bg-[var(--muted-foreground)]/20 rounded w-16 max-w-full" />
           </div>
-          <div className="flex gap-2">
-            <div className="w-16 h-7 bg-[var(--muted-foreground)]/20 rounded" />
-            <div className="w-16 h-7 bg-[var(--muted-foreground)]/20 rounded" />
+          <div className="flex gap-2 flex-shrink-0">
+            <div className="w-16 h-7 bg-[var(--muted-foreground)]/20 rounded-lg" />
+            <div className="w-16 h-7 bg-[var(--muted-foreground)]/20 rounded-lg" />
           </div>
         </div>
       ))}
@@ -222,35 +228,39 @@ const RequestsSkeleton = memo(function RequestsSkeleton() {
   );
 });
 
-// Empty state component
+// Empty state component - fixed height to prevent CLS
 const EmptyState = memo(function EmptyState({ icon: Icon, message, subtitle }) {
   return (
-    <div className="text-center py-8 sm:py-12">
-      <Icon className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mx-auto mb-4" aria-hidden="true" />
+    <div className="text-center py-8 sm:py-12 min-h-[200px] flex flex-col items-center justify-center">
+      <Icon className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mb-4 flex-shrink-0" aria-hidden="true" />
       <p className="text-[var(--muted-foreground)] text-sm sm:text-base">{message}</p>
       {subtitle && <p className="text-xs text-[var(--muted-foreground)] mt-1">{subtitle}</p>}
     </div>
   );
 });
 
-// Received request card
+// Received request card - fixed height
 const ReceivedRequestCard = memo(function ReceivedRequestCard({ request, onAccept, onReject }) {
   return (
     <div
-      className="flex items-center justify-between p-2.5 sm:p-3 bg-[var(--secondary-bg)] rounded-lg border border-[var(--glass-border)] gap-2"
+      className={`flex items-center justify-between p-2.5 sm:p-3 bg-[var(--secondary-bg)] rounded-lg border border-[var(--glass-border)] gap-2 ${REQUEST_CARD_HEIGHT}`}
       role="listitem"
+      style={{ contain: 'layout' }}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+        <div 
+          className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold flex-shrink-0"
+          style={{ aspectRatio: '1/1' }}
+        >
           <span aria-hidden="true">
             {request.name?.charAt(0)?.toUpperCase() || '?'}
           </span>
         </div>
         <div className="min-w-0">
-          <p className="text-[var(--foreground)] font-medium text-sm truncate">
+          <p className="text-[var(--foreground)] font-medium text-sm truncate leading-4 h-4">
             {request.name || 'Unknown User'}
           </p>
-          <p className="text-xs text-[var(--muted-foreground)] truncate">
+          <p className="text-xs text-[var(--muted-foreground)] truncate leading-3 h-3 mt-1">
             @{request.username || 'unknown'}
           </p>
         </div>
@@ -258,14 +268,14 @@ const ReceivedRequestCard = memo(function ReceivedRequestCard({ request, onAccep
       <div className="flex gap-2 flex-shrink-0">
         <button
           onClick={() => onAccept(request.friendship_id, request.name)}
-          className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs sm:text-sm transition-colors"
+          className="px-3 h-7 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs sm:text-sm transition-colors flex items-center justify-center"
           aria-label={`Accept friend request from ${request.name}`}
         >
           Accept
         </button>
         <button
           onClick={() => onReject(request.friendship_id, request.name)}
-          className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg text-xs sm:text-sm transition-colors"
+          className="px-3 h-7 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg text-xs sm:text-sm transition-colors flex items-center justify-center"
           aria-label={`Decline friend request from ${request.name}`}
         >
           Decline
@@ -275,32 +285,38 @@ const ReceivedRequestCard = memo(function ReceivedRequestCard({ request, onAccep
   );
 });
 
-// Sent request card
+// Sent request card - slightly taller due to extra line
+const SENT_CARD_HEIGHT = 'min-h-[68px] sm:min-h-[72px]';
+
 const SentRequestCard = memo(function SentRequestCard({ request, onCancel }) {
   return (
     <div
-      className="flex items-center justify-between p-2.5 sm:p-3 bg-[var(--secondary-bg)] rounded-lg border border-yellow-500/20 gap-2"
+      className={`flex items-center justify-between p-2.5 sm:p-3 bg-[var(--secondary-bg)] rounded-lg border border-yellow-500/20 gap-2 ${SENT_CARD_HEIGHT}`}
       role="listitem"
+      style={{ contain: 'layout' }}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+        <div 
+          className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white font-semibold flex-shrink-0"
+          style={{ aspectRatio: '1/1' }}
+        >
           <span aria-hidden="true">
             {request.name?.charAt(0)?.toUpperCase() || '?'}
           </span>
         </div>
         <div className="min-w-0">
-          <p className="text-[var(--foreground)] font-medium text-sm truncate">
+          <p className="text-[var(--foreground)] font-medium text-sm truncate leading-4 h-4">
             {request.name || 'Unknown User'}
           </p>
-          <p className="text-xs text-[var(--muted-foreground)] truncate">
+          <p className="text-xs text-[var(--muted-foreground)] truncate leading-3 h-3 mt-0.5">
             @{request.username || 'unknown'}
           </p>
-          <p className="text-xs text-yellow-400">Waiting for response...</p>
+          <p className="text-xs text-yellow-400 leading-3 h-3 mt-0.5">Waiting for response...</p>
         </div>
       </div>
       <button
         onClick={() => onCancel(request.friendship_id, request.name)}
-        className="px-3 py-1.5 bg-[var(--secondary-bg)] hover:bg-red-500/20 text-[var(--muted-foreground)] hover:text-red-400 border border-[var(--glass-border)] hover:border-red-500/30 rounded-lg text-xs sm:text-sm transition-colors"
+        className="px-3 h-7 bg-[var(--secondary-bg)] hover:bg-red-500/20 text-[var(--muted-foreground)] hover:text-red-400 border border-[var(--glass-border)] hover:border-red-500/30 rounded-lg text-xs sm:text-sm transition-colors flex items-center justify-center flex-shrink-0"
         aria-label={`Cancel friend request to ${request.name}`}
       >
         Cancel

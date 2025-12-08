@@ -178,12 +178,77 @@ export default function FriendsPage() {
     loadPendingRequestsCount();
   }, [loadFriends, loadPendingRequestsCount]);
 
-  // Initial loading state with skeleton
+  // Shared header component to prevent CLS
+  const renderHeader = (isLoading = false) => (
+    <div className="border-b border-[var(--glass-border)] min-h-[120px] sm:min-h-[140px]">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+          <div className="min-h-[72px] sm:min-h-[76px]">
+            {isLoading ? (
+              <div className="space-y-2 animate-pulse">
+                <div className="h-7 bg-[var(--muted-foreground)]/20 rounded w-32" />
+                <div className="h-4 bg-[var(--muted-foreground)]/20 rounded w-64 max-w-full" />
+                <div className="h-4 bg-[var(--muted-foreground)]/20 rounded w-20" />
+              </div>
+            ) : (
+              <>
+                <h1 className="page-title mb-1 text-xl sm:text-2xl leading-7">Friends</h1>
+                <p className="section-subtitle text-xs sm:text-sm leading-4">
+                  Manage your friends and see what they&apos;re listening to
+                </p>
+                <p className="text-xs sm:text-sm text-[var(--muted-foreground)] mt-1 leading-4 h-4">
+                  {`${friends.length} friend${friends.length !== 1 ? 's' : ''}`}
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto min-h-[44px] sm:min-h-[48px]">
+            {isLoading ? (
+              <div className="flex gap-3 animate-pulse">
+                <div className="h-10 sm:h-12 bg-[var(--muted-foreground)]/20 rounded-lg w-28" />
+                <div className="h-10 sm:h-12 bg-[var(--muted-foreground)]/20 rounded-lg w-32" />
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowFriendRequestsModal(true)}
+                  className="relative flex items-center justify-center gap-2 px-4 sm:px-6 h-10 sm:h-12 btn-secondary rounded-lg text-sm sm:text-base"
+                  aria-label={`Friend requests${pendingRequestsCount > 0 ? `, ${pendingRequestsCount} pending` : ''}`}
+                >
+                  <Mail className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
+                  <span>Requests</span>
+                  {pendingRequestsCount > 0 && (
+                    <span 
+                      className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
+                      aria-hidden="true"
+                    >
+                      {pendingRequestsCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setShowAddFriendsModal(true)}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 h-10 sm:h-12 btn-primary rounded-lg text-sm sm:text-base"
+                >
+                  <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
+                  <span>Add Friends</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Initial loading state with skeleton - same structure as loaded state
   if (loading && !user) {
     return (
       <div className="min-h-screen text-[var(--foreground)]">
-        <HeaderSkeleton />
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+        {renderHeader(true)}
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 min-h-[400px]">
           <FriendsGridSkeleton count={6} />
         </div>
       </div>
@@ -192,56 +257,11 @@ export default function FriendsPage() {
 
   return (
     <div className="min-h-screen text-[var(--foreground)]">
-      {/* Header */}
-      <div className="border-b border-[var(--glass-border)]">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
-            <div>
-              <h1 className="page-title mb-1 text-xl sm:text-2xl">Friends</h1>
-              <p className="section-subtitle text-xs sm:text-sm">
-                Manage your friends and see what they&apos;re listening to
-              </p>
-              <p className="text-xs sm:text-sm text-[var(--muted-foreground)] mt-1">
-                {loading ? (
-                  <span className="inline-block w-20 h-4 bg-[var(--muted-foreground)]/20 rounded animate-pulse" />
-                ) : (
-                  `${friends.length} friend${friends.length !== 1 ? 's' : ''}`
-                )}
-              </p>
-            </div>
+      {/* Header - consistent structure */}
+      {renderHeader(false)}
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <button
-                onClick={() => setShowFriendRequestsModal(true)}
-                className="relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 btn-secondary rounded-lg text-sm sm:text-base"
-                aria-label={`Friend requests${pendingRequestsCount > 0 ? `, ${pendingRequestsCount} pending` : ''}`}
-              >
-                <Mail className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-                <span>Requests</span>
-                {pendingRequestsCount > 0 && (
-                  <span 
-                    className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
-                    aria-hidden="true"
-                  >
-                    {pendingRequestsCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={() => setShowAddFriendsModal(true)}
-                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 btn-primary rounded-lg text-sm sm:text-base"
-              >
-                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-                <span>Add Friends</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+      {/* Main Content - fixed min-height prevents CLS */}
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 min-h-[400px]">
         {loading ? (
           <FriendsGridSkeleton count={6} />
         ) : friends.length === 0 ? (
@@ -288,41 +308,23 @@ export default function FriendsPage() {
   );
 }
 
-// Header skeleton for initial load
-function HeaderSkeleton() {
-  return (
-    <div className="border-b border-[var(--glass-border)]">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 animate-pulse">
-          <div className="space-y-2">
-            <div className="h-7 bg-[var(--muted-foreground)]/20 rounded w-32" />
-            <div className="h-4 bg-[var(--muted-foreground)]/20 rounded w-64" />
-            <div className="h-4 bg-[var(--muted-foreground)]/20 rounded w-20" />
-          </div>
-          <div className="flex gap-3">
-            <div className="h-10 bg-[var(--muted-foreground)]/20 rounded-lg w-28" />
-            <div className="h-10 bg-[var(--muted-foreground)]/20 rounded-lg w-32" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Empty state component
+// Empty state component - fixed height to prevent CLS when switching states
 function EmptyFriendsState({ onAddFriends }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 sm:py-16 md:py-20 text-center px-4">
-      <Users className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mb-4" aria-hidden="true" />
+    <div 
+      className="flex flex-col items-center justify-center py-12 sm:py-16 md:py-20 text-center px-4 min-h-[300px]"
+      style={{ contain: 'layout' }}
+    >
+      <Users className="h-12 w-12 sm:h-16 sm:w-16 text-[var(--muted-foreground)] mb-4 flex-shrink-0" aria-hidden="true" />
       <h2 className="text-xl sm:text-2xl font-semibold mb-2 text-[var(--foreground)]">No friends yet</h2>
       <p className="text-[var(--muted-foreground)] mb-6 text-sm sm:text-base max-w-md">
         Start connecting with friends to share music and see what they&apos;re listening to
       </p>
       <button
         onClick={onAddFriends}
-        className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 btn-primary rounded-lg text-sm sm:text-base"
+        className="flex items-center gap-2 px-4 sm:px-6 h-10 sm:h-12 btn-primary rounded-lg text-sm sm:text-base"
       >
-        <UserPlus className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+        <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
         Add Your First Friend
       </button>
     </div>
