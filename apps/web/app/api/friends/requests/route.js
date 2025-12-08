@@ -98,8 +98,8 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Friendship ID and action are required' }, { status: 400 });
     }
 
-    if (!['accept', 'reject'].includes(action)) {
-      return NextResponse.json({ error: 'Action must be accept or reject' }, { status: 400 });
+    if (!['accept', 'reject', 'cancel'].includes(action)) {
+      return NextResponse.json({ error: 'Action must be accept, reject, or cancel' }, { status: 400 });
     }
 
     // Use RPC to atomically validate and accept/reject (bypasses RLS safely)
@@ -133,9 +133,14 @@ export async function PATCH(request) {
     }
 
     // If we reach here, action succeeded
+    const messages = {
+      accept: 'Friend request accepted',
+      reject: 'Friend request rejected',
+      cancel: 'Friend request cancelled'
+    };
     return NextResponse.json({
       success: true,
-      message: action === 'accept' ? 'Friend request accepted' : 'Friend request rejected',
+      message: messages[action],
       friendship: Array.isArray(result) ? result[0] : result
     });
 

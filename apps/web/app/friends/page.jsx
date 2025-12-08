@@ -82,8 +82,10 @@ export default function FriendsPage() {
     if (!friendToRemove) return;
     
     try {
-      const response = await fetch(`/api/friends/${friendToRemove.id}`, {
+      const response = await fetch('/api/friends', {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendId: friendToRemove.id }),
       });
       const data = await response.json();
       
@@ -681,7 +683,7 @@ function FriendRequestsModal({ onClose, onRequestsChanged }) {
       const response = await fetch('/api/friends/requests', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ friendshipId, action: 'reject' }),
+        body: JSON.stringify({ friendshipId, action: 'cancel' }),
       });
       const data = await response.json();
       
