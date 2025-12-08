@@ -48,7 +48,13 @@ export default function FriendsPage() {
   async function loadFriends() {
     setLoading(true);
     try {
-      const response = await fetch('/api/friends');
+      // Add cache-busting to ensure fresh data
+      const response = await fetch('/api/friends', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       const data = await response.json();
       if (data.success) {
         setFriends(data.friends || []);
@@ -81,25 +87,35 @@ export default function FriendsPage() {
   async function confirmRemoveFriend() {
     if (!friendToRemove) return;
     
+    const removedFriendId = friendToRemove.id;
+    const previousFriends = [...friends];
+    
+    // Optimistic UI update - remove from list immediately
+    setFriends(prev => prev.filter(f => f.id !== removedFriendId));
+    setShowRemoveFriendModal(false);
+    setFriendToRemove(null);
+    
     try {
       const response = await fetch('/api/friends', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ friendId: friendToRemove.id }),
+        body: JSON.stringify({ friendId: removedFriendId }),
       });
       const data = await response.json();
       
       if (data.success) {
         toast.success('Friend removed');
+        // Reload to ensure sync with server
         loadFriends();
       } else {
+        // Revert on failure
+        setFriends(previousFriends);
         toast.error(data.error || "Couldn't remove this friend. Please try again.");
       }
     } catch (error) {
+      // Revert on network error
+      setFriends(previousFriends);
       toast.error("Couldn't connect to the server. Please check your internet.");
-    } finally {
-      setShowRemoveFriendModal(false);
-      setFriendToRemove(null);
     }
   }
 
@@ -622,7 +638,13 @@ function FriendRequestsModal({ onClose, onRequestsChanged }) {
   async function loadRequests() {
     setLoading(true);
     try {
-      const response = await fetch('/api/friends/requests');
+      // Add cache-busting to ensure fresh data
+      const response = await fetch('/api/friends/requests', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       const data = await response.json();
       if (data.success) {
         setReceivedRequests(data.received || []);
@@ -637,6 +659,11 @@ function FriendRequestsModal({ onClose, onRequestsChanged }) {
   }
 
   async function handleAccept(friendshipId, userName) {
+    const previousReceived = [...receivedRequests];
+    
+    // Optimistic UI update - remove from list immediately
+    setReceivedRequests(prev => prev.filter(r => r.friendship_id !== friendshipId));
+    
     try {
       const response = await fetch('/api/friends/requests', {
         method: 'PATCH',
@@ -647,17 +674,25 @@ function FriendRequestsModal({ onClose, onRequestsChanged }) {
       
       if (data.success) {
         toast.success(`You're now friends with ${userName}! 🎉`);
-        loadRequests();
         onRequestsChanged?.();
       } else {
+        // Revert on failure
+        setReceivedRequests(previousReceived);
         toast.error(data.error || "Couldn't accept the request. Please try again.");
       }
     } catch (error) {
+      // Revert on network error
+      setReceivedRequests(previousReceived);
       toast.error("Couldn't connect to the server. Please check your internet.");
     }
   }
 
   async function handleReject(friendshipId, userName) {
+    const previousReceived = [...receivedRequests];
+    
+    // Optimistic UI update - remove from list immediately
+    setReceivedRequests(prev => prev.filter(r => r.friendship_id !== friendshipId));
+    
     try {
       const response = await fetch('/api/friends/requests', {
         method: 'PATCH',
@@ -668,17 +703,25 @@ function FriendRequestsModal({ onClose, onRequestsChanged }) {
       
       if (data.success) {
         toast.success(`Declined request from ${userName}`);
-        loadRequests();
         onRequestsChanged?.();
       } else {
+        // Revert on failure
+        setReceivedRequests(previousReceived);
         toast.error(data.error || "Couldn't decline the request. Please try again.");
       }
     } catch (error) {
+      // Revert on network error
+      setReceivedRequests(previousReceived);
       toast.error("Couldn't connect to the server. Please check your internet.");
     }
   }
 
   async function handleCancelSent(friendshipId, userName) {
+    const previousSent = [...sentRequests];
+    
+    // Optimistic UI update - remove from list immediately
+    setSentRequests(prev => prev.filter(r => r.friendship_id !== friendshipId));
+    
     try {
       const response = await fetch('/api/friends/requests', {
         method: 'PATCH',
@@ -689,12 +732,15 @@ function FriendRequestsModal({ onClose, onRequestsChanged }) {
       
       if (data.success) {
         toast.success(`Cancelled request to ${userName}`);
-        loadRequests();
         onRequestsChanged?.();
       } else {
+        // Revert on failure
+        setSentRequests(previousSent);
         toast.error(data.error || "Couldn't cancel the request. Please try again.");
       }
     } catch (error) {
+      // Revert on network error
+      setSentRequests(previousSent);
       toast.error("Couldn't connect to the server. Please check your internet.");
     }
   }
