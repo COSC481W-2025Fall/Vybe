@@ -307,15 +307,55 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Friend ID is required' }, { status: 400 });
     }
 
-    // Delete the friendship (check both directions)
-    const { error: deleteError } = await supabase
-      .from('friendships')
-      .delete()
-      .or(`and(user_id.eq.${user.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${user.id})`);
+    console.log('[DELETE /api/friends] Removing friend:', { userId: user.id, friendId });
 
-    if (deleteError) {
-      console.error('Error removing friend:', deleteError);
+    // Use RPC function to remove friend (bypasses RLS, returns actual result)
+    const { data: result, error: rpcError } = await supabase.rpc('remove_friend', {
+      p_user_id: user.id,
+      p_friend_id: friendId
+    });
+
+    if (rpcError) {
+      console.error('[DELETE /api/friends] RPC error:', rpcError);
+      
+      // Fallback to direct delete if RPC doesn't exist
+      if (rpcError.code === 'PGRST202' || rpcError.code === '42883') {
+        console.log('[DELETE /api/friends] RPC not found, using fallback');
+        
+        // Try deleting in both directions separately
+        const { error: err1 } = await supabase
+          .from('friendships')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('friend_id', friendId);
+          
+        const { error: err2 } = await supabase
+          .from('friendships')
+          .delete()
+          .eq('user_id', friendId)
+          .eq('friend_id', user.id);
+        
+        if (err1 && err2) {
+          console.error('[DELETE /api/friends] Fallback errors:', { err1, err2 });
+          return NextResponse.json({ error: 'Failed to remove friend' }, { status: 500 });
+        }
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Friend removed successfully (fallback)'
+        });
+      }
+      
       return NextResponse.json({ error: 'Failed to remove friend' }, { status: 500 });
+    }
+
+    console.log('[DELETE /api/friends] RPC result:', result);
+
+    // Check if the RPC actually deleted anything
+    if (!result?.success) {
+      return NextResponse.json({ 
+        error: result?.error || 'Friendship not found' 
+      }, { status: 404 });
     }
 
     return NextResponse.json({
