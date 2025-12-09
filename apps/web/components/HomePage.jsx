@@ -582,9 +582,9 @@ export function HomePage({ onNavigate } = {}) {
                             platform = 'spotify';
                             external_id = spotifyMatch[1];
                           }
-                        } else if (song.platform === 'spotify' && song.external_id) {
+                        } else if (song.platform === 'spotify' && (song.external_id || song.id)) {
                           platform = 'spotify';
-                          external_id = song.external_id;
+                          external_id = song.external_id || song.id;
                         }
                         
                         if (!platform && song.youtube_url) {
@@ -593,9 +593,9 @@ export function HomePage({ onNavigate } = {}) {
                             platform = 'youtube';
                             external_id = ytMatch[1];
                           }
-                        } else if (!platform && song.platform === 'youtube' && song.external_id) {
+                        } else if (!platform && song.platform === 'youtube' && (song.external_id || song.id)) {
                           platform = 'youtube';
-                          external_id = song.external_id;
+                          external_id = song.external_id || song.id;
                         }
 
                         if (platform && external_id) {
@@ -612,7 +612,7 @@ export function HomePage({ onNavigate } = {}) {
                         }
                       };
 
-                      const canPlayInMiniplayer = !!(song.spotify_url || song.youtube_url || ((song.platform === 'spotify' || song.platform === 'youtube') && song.external_id));
+                      const canPlayInMiniplayer = !!(song.spotify_url || song.youtube_url || ((song.platform === 'spotify' || song.platform === 'youtube') && (song.external_id || song.id)));
                       
                       return (
                         <button
