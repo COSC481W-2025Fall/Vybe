@@ -32,7 +32,7 @@ function NavPill({ href, label, Icon, active }) {
         'group flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium transition-all nav-item backdrop-blur-sm border',
         active
           ? 'bg-[var(--foreground)] text-[var(--background)] shadow-md border-transparent'
-          : 'text-[var(--foreground)] bg-white/10 hover:bg-white/15 border-white/15 hover:border-white/25 [data-theme="light"]:bg-black/5 [data-theme="light"]:hover:bg-black/10 [data-theme="light"]:border-black/10 [data-theme="light"]:hover:border-black/20',
+          : 'text-[var(--foreground)] bg-[var(--glass-bg)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)] hover:border-[var(--glass-border-hover)]',
       ].join(' ')}
     >
       <Icon className={`h-4 w-4 ${active ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`} />
@@ -158,7 +158,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/help"
-            className="group relative flex items-center justify-center rounded-xl p-2 text-sm font-medium transition-all nav-item backdrop-blur-sm border text-[var(--foreground)] bg-white/10 hover:bg-white/15 border-white/15 hover:border-white/25 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:border-black/10 [data-theme='light']:hover:border-black/20"
+            className="group relative flex items-center justify-center rounded-xl p-2 text-sm font-medium transition-all nav-item backdrop-blur-sm border text-[var(--foreground)] bg-[var(--glass-bg)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)] hover:border-[var(--glass-border-hover)]"
             title="Help"
           >
             <HelpCircle className="h-4 w-4 opacity-80" />
@@ -171,7 +171,7 @@ export default function Navbar() {
           <button
             onClick={handleSignOut}
             disabled={isSigningOut}
-            className="group items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium transition-all nav-item backdrop-blur-sm border text-[var(--foreground)] bg-white/10 hover:bg-white/15 border-white/15 hover:border-white/25 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:border-black/10 [data-theme='light']:hover:border-black/20 disabled:opacity-50 disabled:cursor-not-allowed flex"
+            className="group items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium transition-all nav-item backdrop-blur-sm border text-[var(--foreground)] bg-[var(--glass-bg)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)] hover:border-[var(--glass-border-hover)] disabled:opacity-50 disabled:cursor-not-allowed flex"
             aria-label="Sign out"
             title="Sign out"
           >
@@ -194,7 +194,7 @@ export default function Navbar() {
           <button
             ref={hamburgerButtonRef}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="flex items-center justify-center w-10 h-10 rounded-lg text-[var(--foreground)] bg-white/10 hover:bg-white/15 border border-white/15 [data-theme='light']:bg-black/5 [data-theme='light']:hover:bg-black/10 [data-theme='light']:border-black/10 transition-colors"
+            className="flex items-center justify-center w-10 h-10 rounded-lg text-[var(--foreground)] bg-[var(--glass-bg)] hover:bg-[var(--secondary-hover)] border border-[var(--glass-border)] hover:border-[var(--glass-border-hover)] transition-colors"
             aria-label="Toggle menu"
             aria-expanded={isMobileMenuOpen}
           >
@@ -228,7 +228,7 @@ export default function Navbar() {
                       'flex items-center gap-3 px-4 py-3.5 text-base font-medium transition-colors border-b border-[var(--glass-border)] last:border-b-0',
                       active
                         ? 'bg-[var(--foreground)] text-[var(--background)]'
-                        : 'text-[var(--foreground)] hover:bg-white/10 [data-theme="light"]:hover:bg-black/5',
+                        : 'text-[var(--foreground)] hover:bg-[var(--secondary-hover)]',
                     ].join(' ')}
                     aria-current={active ? 'page' : undefined}
                   >
@@ -240,7 +240,7 @@ export default function Navbar() {
               <Link
                 href="/help"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3.5 text-base font-medium transition-colors text-[var(--foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/5 border-t border-[var(--glass-border)]"
+                className="flex items-center gap-3 px-4 py-3.5 text-base font-medium transition-colors text-[var(--foreground)] hover:bg-[var(--secondary-hover)] border-t border-[var(--glass-border)]"
               >
                 <HelpCircle className="h-5 w-5 opacity-80" />
                 <span>Help</span>
@@ -248,7 +248,7 @@ export default function Navbar() {
               <button
                 onClick={handleSignOut}
                 disabled={isSigningOut}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-base font-medium transition-colors text-[var(--foreground)] hover:bg-white/10 [data-theme='light']:hover:bg-black/5 disabled:opacity-50 disabled:cursor-not-allowed border-t border-[var(--glass-border)]"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-base font-medium transition-colors text-[var(--foreground)] hover:bg-[var(--secondary-hover)] disabled:opacity-50 disabled:cursor-not-allowed border-t border-[var(--glass-border)]"
                 aria-label="Sign out"
               >
                 <LogOut className={`h-5 w-5 opacity-80`} />
