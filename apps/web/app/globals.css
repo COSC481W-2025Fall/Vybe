@@ -15,7 +15,7 @@
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-border-hover: rgba(255, 255, 255, 0.2);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 80px rgba(139, 92, 246, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 
   /* Dropdown/popover specific - frosted glass */
   --dropdown-bg: rgba(15, 15, 25, 0.95);
@@ -30,6 +30,13 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.15);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
   --scrollbar-thumb-active: rgba(255, 255, 255, 0.35);
+  
+  /* Accent RGB for glass effects (default purple: 167, 139, 250) */
+  --accent-rgb: 167, 139, 250;
+  --glass-accent-glow: 0 0 80px rgba(167, 139, 250, 0.08);
+  --glass-accent-glow-hover: 0 0 60px rgba(167, 139, 250, 0.12);
+  --glass-accent-tint: rgba(167, 139, 250, 0.03);
+  --glass-accent-tint-hover: rgba(167, 139, 250, 0.05);
 }
 
 @theme inline {
@@ -70,6 +77,13 @@
   --scrollbar-thumb: rgba(0, 0, 0, 0.3);
   --scrollbar-thumb-hover: rgba(0, 0, 0, 0.5);
   --scrollbar-thumb-active: rgba(0, 0, 0, 0.6);
+  
+  /* Accent RGB for glass effects (black for light mode) */
+  --accent-rgb: 0, 0, 0;
+  --glass-accent-glow: 0 0 40px rgba(0, 0, 0, 0.05);
+  --glass-accent-glow-hover: 0 0 50px rgba(0, 0, 0, 0.08);
+  --glass-accent-tint: rgba(0, 0, 0, 0.02);
+  --glass-accent-tint-hover: rgba(0, 0, 0, 0.04);
 }
 
 [data-theme="custom"] {
@@ -101,6 +115,13 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.15);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
   --scrollbar-thumb-active: rgba(255, 255, 255, 0.35);
+  
+  /* Accent RGB for glass effects (will be set by ThemeProvider) */
+  --accent-rgb: 167, 139, 250;
+  --glass-accent-glow: 0 0 80px rgba(167, 139, 250, 0.08);
+  --glass-accent-glow-hover: 0 0 60px rgba(167, 139, 250, 0.12);
+  --glass-accent-tint: rgba(167, 139, 250, 0.03);
+  --glass-accent-tint-hover: rgba(167, 139, 250, 0.05);
 }
 
 @keyframes gradient-move {
@@ -339,7 +360,7 @@
   .glass-card:active {
     background: var(--secondary-hover);
     border-color: var(--glass-border-hover);
-    box-shadow: var(--glass-shadow), 0 0 20px rgba(139, 92, 246, 0.1);
+    box-shadow: var(--glass-shadow), 0 0 20px rgba(var(--accent-rgb), 0.1);
   }
 
   /* Dark mode liquid glass - frosted with iridescent edges */
@@ -349,7 +370,7 @@
       135deg,
       rgba(255, 255, 255, 0.05) 0%,
       rgba(255, 255, 255, 0.02) 50%,
-      rgba(139, 92, 246, 0.03) 100%
+      var(--glass-accent-tint) 100%
     );
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 
@@ -364,12 +385,12 @@
       135deg,
       rgba(255, 255, 255, 0.08) 0%,
       rgba(255, 255, 255, 0.04) 50%,
-      rgba(139, 92, 246, 0.05) 100%
+      var(--glass-accent-tint-hover) 100%
     );
     border-color: rgba(255, 255, 255, 0.15);
     box-shadow: 
       0 12px 40px rgba(0, 0, 0, 0.4),
-      0 0 60px rgba(139, 92, 246, 0.08),
+      var(--glass-accent-glow),
       0 0 0 1px rgba(255, 255, 255, 0.08) inset,
       0 1px 0 rgba(255, 255, 255, 0.15) inset;
   }

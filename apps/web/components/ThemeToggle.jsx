@@ -454,6 +454,13 @@ function ProviderThemeToggle({ prov }) {
         root.style.setProperty('--scrollbar-thumb', glassColors.scrollbarThumb);
         root.style.setProperty('--scrollbar-thumb-hover', glassColors.scrollbarThumbHover);
         
+        // Accent-based glass effects
+        root.style.setProperty('--accent-rgb', glassColors.accentRgb);
+        root.style.setProperty('--glass-accent-glow', glassColors.glassAccentGlow);
+        root.style.setProperty('--glass-accent-glow-hover', glassColors.glassAccentGlowHover);
+        root.style.setProperty('--glass-accent-tint', glassColors.glassAccentTint);
+        root.style.setProperty('--glass-accent-tint-hover', glassColors.glassAccentTintHover);
+        
         // Also update body background for immediate visual feedback
         document.body.style.backgroundColor = background;
       }
@@ -549,6 +556,13 @@ function ProviderThemeToggle({ prov }) {
       root.style.setProperty('--scrollbar-thumb', glassColors.scrollbarThumb);
       root.style.setProperty('--scrollbar-thumb-hover', glassColors.scrollbarThumbHover);
       
+      // Accent-based glass effects
+      root.style.setProperty('--accent-rgb', glassColors.accentRgb);
+      root.style.setProperty('--glass-accent-glow', glassColors.glassAccentGlow);
+      root.style.setProperty('--glass-accent-glow-hover', glassColors.glassAccentGlowHover);
+      root.style.setProperty('--glass-accent-tint', glassColors.glassAccentTint);
+      root.style.setProperty('--glass-accent-tint-hover', glassColors.glassAccentTintHover);
+      
       document.body.style.backgroundColor = background;
     } else if (originalTheme !== 'custom') {
       // If we weren't in custom mode, remove the inline styles to let CSS take over
@@ -572,6 +586,11 @@ function ProviderThemeToggle({ prov }) {
       root.style.removeProperty('--secondary-hover');
       root.style.removeProperty('--scrollbar-thumb');
       root.style.removeProperty('--scrollbar-thumb-hover');
+      root.style.removeProperty('--accent-rgb');
+      root.style.removeProperty('--glass-accent-glow');
+      root.style.removeProperty('--glass-accent-glow-hover');
+      root.style.removeProperty('--glass-accent-tint');
+      root.style.removeProperty('--glass-accent-tint-hover');
       document.body.style.removeProperty('background-color');
     }
     setDraftColors(null);

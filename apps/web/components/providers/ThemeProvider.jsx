@@ -101,6 +101,8 @@ function generateGlassColors(background, foreground, accent) {
   if (bgLum < 0.5) {
     // Dark background - liquid glass effect with translucency
     return {
+      // Accent as RGB for use in rgba()
+      accentRgb: `${acc.r}, ${acc.g}, ${acc.b}`,
       // Translucent glass with subtle white overlay
       glassBg: `rgba(255, 255, 255, 0.04)`,
       glassBorder: `rgba(255, 255, 255, 0.1)`,
@@ -117,10 +119,17 @@ function generateGlassColors(background, foreground, accent) {
       // Subtle scrollbar
       scrollbarThumb: `rgba(255, 255, 255, 0.15)`,
       scrollbarThumbHover: `rgba(255, 255, 255, 0.25)`,
+      // Accent glow for glass cards
+      glassAccentGlow: `0 0 80px rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.08)`,
+      glassAccentGlowHover: `0 0 60px rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.12)`,
+      glassAccentTint: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.03)`,
+      glassAccentTintHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.05)`,
     };
   } else {
     // Light background - clean glass with subtle shadows
     return {
+      // Accent as RGB for use in rgba()
+      accentRgb: `${acc.r}, ${acc.g}, ${acc.b}`,
       glassBg: `rgba(255, 255, 255, 0.7)`,
       glassBorder: `rgba(0, 0, 0, 0.08)`,
       glassBorderHover: `rgba(0, 0, 0, 0.15)`,
@@ -133,6 +142,11 @@ function generateGlassColors(background, foreground, accent) {
       secondaryHover: `rgba(0, 0, 0, 0.05)`,
       scrollbarThumb: `rgba(0, 0, 0, 0.2)`,
       scrollbarThumbHover: `rgba(0, 0, 0, 0.35)`,
+      // Accent glow for glass cards (subtle on light)
+      glassAccentGlow: `0 0 40px rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.05)`,
+      glassAccentGlowHover: `0 0 50px rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.08)`,
+      glassAccentTint: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.02)`,
+      glassAccentTintHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.04)`,
     };
   }
 }
@@ -241,6 +255,13 @@ export function ThemeProvider({ children }) {
       // Scrollbar
       root.style.setProperty('--scrollbar-thumb', glassColors.scrollbarThumb);
       root.style.setProperty('--scrollbar-thumb-hover', glassColors.scrollbarThumbHover);
+      
+      // Accent-based glass effects
+      root.style.setProperty('--accent-rgb', glassColors.accentRgb);
+      root.style.setProperty('--glass-accent-glow', glassColors.glassAccentGlow);
+      root.style.setProperty('--glass-accent-glow-hover', glassColors.glassAccentGlowHover);
+      root.style.setProperty('--glass-accent-tint', glassColors.glassAccentTint);
+      root.style.setProperty('--glass-accent-tint-hover', glassColors.glassAccentTintHover);
     };
 
     const removeCustomColors = () => {
@@ -259,6 +280,11 @@ export function ThemeProvider({ children }) {
       root.style.removeProperty('--secondary-hover');
       root.style.removeProperty('--scrollbar-thumb');
       root.style.removeProperty('--scrollbar-thumb-hover');
+      root.style.removeProperty('--accent-rgb');
+      root.style.removeProperty('--glass-accent-glow');
+      root.style.removeProperty('--glass-accent-glow-hover');
+      root.style.removeProperty('--glass-accent-tint');
+      root.style.removeProperty('--glass-accent-tint-hover');
     };
 
     if (theme === 'system') {
