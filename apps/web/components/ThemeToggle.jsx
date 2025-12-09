@@ -820,38 +820,35 @@ function ProviderThemeToggle({ prov }) {
                 </div>
               </div>
 
-              {/* Contrast Toggle */}
-              <div className="p-3 sm:p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--secondary-bg)]">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Contrast className="h-4 w-4 text-[var(--foreground)] flex-shrink-0" />
-                    <span className="text-sm font-medium text-[var(--foreground)] truncate">Contrast</span>
-                  </div>
-                  {/* Pill-shaped toggle switch */}
-                  <button
-                    onClick={toggleContrast}
-                    className={`relative inline-flex items-center rounded-full transition-colors cursor-pointer flex-shrink-0 ${
-                      isHighContrast ? 'bg-[var(--accent)]' : 'bg-[var(--glass-border)]'
-                    }`}
-                    style={{ width: '44px', height: '24px' }}
-                    role="switch"
-                    aria-checked={isHighContrast}
-                    aria-label="Toggle contrast mode"
+              {/* Contrast Toggle - Compact inline style */}
+              <button
+                onClick={toggleContrast}
+                className="w-full flex items-center justify-between gap-3 p-2.5 rounded-lg border border-[var(--glass-border)] hover:border-[var(--accent)] bg-[var(--secondary-bg)] transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center border-2"
+                    style={{ 
+                      background: isHighContrast ? 'var(--background)' : 'var(--secondary-bg)',
+                      borderColor: 'var(--accent)',
+                    }}
                   >
-                    <span
-                      className={`inline-block rounded-full bg-white shadow-sm transition-transform ${
-                        isHighContrast ? 'translate-x-[22px]' : 'translate-x-[2px]'
-                      }`}
-                      style={{ width: '20px', height: '20px' }}
-                    />
-                  </button>
+                    <Contrast className="h-4 w-4 text-[var(--foreground)]" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-[var(--foreground)]">Contrast</p>
+                    <p className="text-xs text-[var(--muted-foreground)] opacity-70">
+                      {isHighContrast ? 'High: Maximum visibility' : 'Low: Softer'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  {isHighContrast 
-                    ? 'High: Maximum visibility' 
-                    : 'Low: Softer appearance'}
-                </p>
-              </div>
+                {/* Small toggle indicator */}
+                <div className={`w-8 h-5 rounded-full transition-colors flex-shrink-0 flex items-center ${
+                  isHighContrast ? 'bg-[var(--accent)] justify-end' : 'bg-[var(--glass-border)] justify-start'
+                }`}>
+                  <span className="w-4 h-4 rounded-full bg-white shadow-sm mx-0.5" />
+                </div>
+              </button>
                         </div>
 
             {/* Column 3 - Custom Colors & Preview */}
