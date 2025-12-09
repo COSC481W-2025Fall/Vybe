@@ -103,10 +103,10 @@ function generateGlassColors(background, foreground, accent) {
     return {
       // Accent as RGB for use in rgba()
       accentRgb: `${acc.r}, ${acc.g}, ${acc.b}`,
-      // Translucent glass with subtle white overlay
+      // Translucent glass with subtle accent tint on borders
       glassBg: `rgba(255, 255, 255, 0.04)`,
-      glassBorder: `rgba(255, 255, 255, 0.1)`,
-      glassBorderHover: `rgba(255, 255, 255, 0.18)`,
+      glassBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.15)`,
+      glassBorderHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.4)`,
       glassShadow: `0 8px 32px rgba(0, 0, 0, 0.4), 0 0 60px rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.06)`,
       // Dropdown - frosted glass
       dropdownBg: `rgba(${Math.min(bg.r + 10, 30)}, ${Math.min(bg.g + 10, 30)}, ${Math.min(bg.b + 15, 40)}, 0.95)`,
@@ -131,8 +131,8 @@ function generateGlassColors(background, foreground, accent) {
       // Accent as RGB for use in rgba()
       accentRgb: `${acc.r}, ${acc.g}, ${acc.b}`,
       glassBg: `rgba(255, 255, 255, 0.7)`,
-      glassBorder: `rgba(0, 0, 0, 0.08)`,
-      glassBorderHover: `rgba(0, 0, 0, 0.15)`,
+      glassBorder: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.2)`,
+      glassBorderHover: `rgba(${acc.r}, ${acc.g}, ${acc.b}, 0.5)`,
       glassShadow: `0 4px 24px rgba(0, 0, 0, 0.08)`,
       dropdownBg: `rgba(255, 255, 255, 0.95)`,
       inputBg: `rgba(255, 255, 255, 0.9)`,
