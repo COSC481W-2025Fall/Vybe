@@ -141,7 +141,7 @@ export function FriendSongCard({ song, open, onOpenChange }) {
                 <button
                   onClick={canPlayInMiniplayer ? handlePlayInMiniplayer : undefined}
                   disabled={!canPlayInMiniplayer}
-                  className={`group w-32 h-32 sm:w-48 sm:h-48 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-2 sm:ring-4 ring-white/10 bg-gradient-to-br from-purple-600/30 to-pink-600/30 relative ${canPlayInMiniplayer ? 'cursor-pointer' : ''}`}
+                  className={`group w-32 h-32 sm:w-48 sm:h-48 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-2 sm:ring-4 ring-white/10 bg-gradient-to-br from-[var(--accent)]/30 to-pink-600/30 relative ${canPlayInMiniplayer ? 'cursor-pointer' : ''}`}
                 >
                   {song.image_url ? (
                     <img
@@ -166,7 +166,7 @@ export function FriendSongCard({ song, open, onOpenChange }) {
                 </button>
                 
                 {/* Decorative glow - hidden on mobile for performance */}
-                <div className="hidden sm:block absolute -inset-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl -z-10" />
+                <div className="hidden sm:block absolute -inset-4 bg-gradient-to-br from-[var(--accent)]/20 to-pink-500/20 rounded-3xl blur-2xl -z-10" />
               </div>
             </div>
           </div>
@@ -207,7 +207,7 @@ export function FriendSongCard({ song, open, onOpenChange }) {
               }`}
               title={username ? `View ${song.shared_by}'s profile` : undefined}
             >
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0 ring-2 ring-[var(--glass-border)] shadow-md">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden bg-gradient-to-br from-[var(--accent)] to-pink-500 flex-shrink-0 ring-2 ring-[var(--glass-border)] shadow-md">
                 {song.shared_by_avatar ? (
                   <img
                     src={song.shared_by_avatar}

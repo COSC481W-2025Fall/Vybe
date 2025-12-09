@@ -101,7 +101,7 @@ export default function PublicProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-[var(--muted-foreground)]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]" />
           <p>Loading profile…</p>
         </div>
       </div>
@@ -250,7 +250,7 @@ export default function PublicProfilePage() {
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
                     {/* Album Art with play overlay */}
-                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0">
+                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gradient-to-br from-[var(--accent)] to-pink-500 flex-shrink-0">
                       {song.image_url ? (
                         <Image
                           src={song.image_url}

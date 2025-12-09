@@ -988,12 +988,12 @@ export default function GroupDetailPage({ params }) {
                     {selectedPlaylist === 'all' && group?.all_songs_sort_order && group.all_songs_sort_order.length > 0 && (
                       <div className="sort-badge p-3 rounded-xl border flex items-center gap-3">
                         <div className="sort-badge-icon p-2 rounded-lg">
-                          <Sparkles className="w-4 h-4 text-purple-400 [data-theme='light']:text-purple-600" />
+                          <Sparkles className="w-4 h-4 text-[var(--accent)]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-purple-400 [data-theme='light']:text-purple-700">Vibe Mix Active</p>
+                          <p className="text-sm font-medium text-[var(--accent)]">Vibe Mix Active</p>
                           {group.all_songs_sorted_at && (
-                            <p className="text-xs text-[var(--muted-foreground)] [data-theme='light']:text-purple-600/70">
+                            <p className="text-xs text-[var(--muted-foreground)] ">
                               Sorted {new Date(group.all_songs_sorted_at).toLocaleDateString()}
                             </p>
                           )}
@@ -1003,12 +1003,12 @@ export default function GroupDetailPage({ params }) {
                     {selectedPlaylist !== 'all' && playlists.some(p => p.smart_sorted_order !== null) && (
                       <div className="sort-badge p-3 rounded-xl border flex items-center gap-3">
                         <div className="sort-badge-icon p-2 rounded-lg">
-                          <Sparkles className="w-4 h-4 text-purple-400 [data-theme='light']:text-purple-600" />
+                          <Sparkles className="w-4 h-4 text-[var(--accent)]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-purple-400 [data-theme='light']:text-purple-700">AI Smart Sort Active</p>
+                          <p className="text-sm font-medium text-[var(--accent)]">AI Smart Sort Active</p>
                           {playlists[0]?.last_sorted_at && (
-                            <p className="text-xs text-[var(--muted-foreground)] [data-theme='light']:text-purple-600/70">
+                            <p className="text-xs text-[var(--muted-foreground)] ">
                               Sorted {new Date(playlists[0].last_sorted_at).toLocaleDateString()}
                             </p>
                           )}
@@ -1045,7 +1045,7 @@ export default function GroupDetailPage({ params }) {
                         onClick={() => handleSmartSort(false)}
                         disabled={isSorting || playlists.length === 0}
                         title={selectedPlaylist === 'all' ? 'AI-enhanced sort with perfect transitions (may queue during high traffic)' : 'Sorts this playlist by AI recommendation'}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all shadow-sm"
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[var(--accent)] to-pink-600 hover:opacity-90 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-all shadow-sm"
                       >
                         {isSorting ? (
                           <>
@@ -1079,10 +1079,10 @@ export default function GroupDetailPage({ params }) {
 
                   {/* Progress Bar for Smart Sorting */}
                   {isSorting && (
-                    <div className="mb-4 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                    <div className="mb-4 p-4 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                          <Sparkles className="h-4 w-4 text-[var(--accent)] animate-pulse" />
                           <span className="text-sm font-medium text-[var(--foreground)]">
                             {sortProgress < 50 ? 'Analyzing songs...' : sortProgress < 90 ? 'Optimizing order...' : 'Finishing up...'}
                           </span>
@@ -1098,7 +1098,7 @@ export default function GroupDetailPage({ params }) {
                       </div>
                       <div className="h-2 bg-[var(--secondary-bg)] rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-200 ease-out"
+                          className="h-full bg-gradient-to-r from-[var(--accent)] to-pink-500 rounded-full transition-all duration-200 ease-out"
                           style={{ width: `${sortProgress}%` }}
                         />
                       </div>
@@ -1106,7 +1106,7 @@ export default function GroupDetailPage({ params }) {
                         <p className="text-xs text-[var(--muted-foreground)]">
                           {playlistSongs.length} songs • No consecutive same artist/genre
                         </p>
-                        <span className="text-xs text-purple-400">
+                        <span className="text-xs text-[var(--accent)]">
                           Fast local + AI verification
                         </span>
                       </div>
@@ -1533,7 +1533,7 @@ function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
       </span>
 
       {/* Album Art */}
-      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded flex-shrink-0 overflow-hidden">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[var(--accent)] to-pink-500 rounded flex-shrink-0 overflow-hidden">
         {song.thumbnail_url ? (
           <img src={song.thumbnail_url} alt={displayTitle} className="w-full h-full object-cover" />
         ) : (
@@ -1861,7 +1861,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
             </button>
             <button
               onClick={() => window.location.href = '/settings'}
-              className="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-medium transition-colors"
+              className="flex-1 px-4 py-2.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-xl font-medium transition-colors"
             >
               Go to Settings
             </button>
@@ -1900,7 +1900,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                   onClick={() => setPlatform(null)}
                   className={`px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-colors border ${
                     platform === null
-                      ? 'bg-purple-600 text-white border-purple-600'
+                      ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
                       : 'bg-[var(--secondary-bg)] text-[var(--foreground)] hover:bg-[var(--secondary-hover)] border-[var(--glass-border)]'
                   }`}
                 >
@@ -2000,7 +2000,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                           setSelectedPlaylistPlatform(playlistPlatform);
                         }}
                         className={`w-full flex items-center gap-3 p-3 hover:bg-[var(--secondary-hover)] transition-colors border-b border-[var(--glass-border)] last:border-b-0 ${
-                          isSelected ? 'bg-purple-500/10 border-l-2 border-l-purple-500' : ''
+                          isSelected ? 'bg-[var(--accent)]/10 border-l-2 border-l-[var(--accent)]' : ''
                         }`}
                       >
                         {playlistImage && (
@@ -2026,7 +2026,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
                           )}
                         </div>
                         {isSelected && (
-                          <div className="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center">
+                          <div className="w-5 h-5 rounded-full bg-[var(--accent)] flex items-center justify-center">
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
@@ -2060,7 +2060,7 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
             <button
               type="submit"
               disabled={loading || !selectedPlaylistId}
-              className="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white disabled:text-gray-200 rounded-xl font-medium transition-colors"
+              className="flex-1 px-4 py-2.5 bg-[var(--accent)] hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed text-white disabled:text-gray-200 rounded-xl font-medium transition-colors"
             >
               {loading
                 ? (userExistingPlaylist ? 'Replacing...' : 'Adding...')

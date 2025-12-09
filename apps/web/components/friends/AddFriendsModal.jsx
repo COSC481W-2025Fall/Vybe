@@ -235,7 +235,7 @@ const UserCard = memo(function UserCard({ user, onSendRequest, onAcceptRequest, 
     >
       {/* User Info */}
       <div className="text-center mb-3">
-        <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+        <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-blue-500 to-[var(--accent)] flex items-center justify-center text-white font-semibold text-sm">
           {user.name?.charAt(0)?.toUpperCase() || '?'}
         </div>
         <p className="text-[var(--foreground)] font-medium text-sm truncate">{user.name}</p>

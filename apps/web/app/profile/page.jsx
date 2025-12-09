@@ -194,7 +194,7 @@ export default function ProfilePage() {
         <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <div className="flex items-start gap-4 sm:gap-6">
             {/* Profile Picture */}
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl sm:text-2xl font-bold flex-shrink-0 overflow-hidden">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-[var(--accent)] to-pink-500 flex items-center justify-center text-xl sm:text-2xl font-bold flex-shrink-0 overflow-hidden">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}

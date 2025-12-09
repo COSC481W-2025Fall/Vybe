@@ -129,9 +129,9 @@ function NotificationSettingsContent() {
   if (loading) {
     return (
       <>
-        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-[var(--accent)]/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
-            <Bell className="h-6 w-6 text-purple-400" />
+            <Bell className="h-6 w-6 text-[var(--accent)]" />
             <div>
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Notifications</h2>
               <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
@@ -142,7 +142,7 @@ function NotificationSettingsContent() {
         </div>
         <div className="p-6 w-full">
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)]"></div>
           </div>
         </div>
       </>
@@ -153,9 +153,9 @@ function NotificationSettingsContent() {
   if (notificationError) {
     return (
       <>
-        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+        <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-[var(--accent)]/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
           <div className="flex items-center gap-3">
-            <Bell className="h-6 w-6 text-purple-400" />
+            <Bell className="h-6 w-6 text-[var(--accent)]" />
             <div>
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Notifications</h2>
               <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
@@ -176,9 +176,9 @@ function NotificationSettingsContent() {
   return (
     <div className="w-full">
       {/* Section Header */}
-      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-purple-500/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
+      <div className="border-b border-white/10 [data-theme='light']:border-black/10 bg-gradient-to-r from-[var(--accent)]/10 to-blue-500/10 px-6 py-4 w-full flex-shrink-0">
         <div className="flex items-center gap-3">
-          <Bell className="h-6 w-6 text-purple-400" />
+          <Bell className="h-6 w-6 text-[var(--accent)]" />
           <div>
             <h2 className="text-xl font-semibold text-[var(--foreground)]">Notifications</h2>
             <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
@@ -192,7 +192,7 @@ function NotificationSettingsContent() {
       <form onSubmit={handleSubmit(onSubmit)} className="p-6 w-full">
         <div className="space-y-8 w-full">
           {/* Master Toggle */}
-          <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4">
+          <div className="rounded-lg border border-[var(--accent)]/20 bg-[var(--accent)]/5 p-4">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <h3 className="text-sm font-medium text-[var(--foreground)] mb-1">Enable All Notifications</h3>
@@ -204,8 +204,8 @@ function NotificationSettingsContent() {
                 type="button"
                 onClick={() => handleMasterToggle(!notificationsEnabled)}
                 className={[
-                  'relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black',
-                  notificationsEnabled ? 'bg-purple-500' : 'bg-gray-600',
+                  'relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-black',
+                  notificationsEnabled ? 'bg-[var(--accent)]' : 'bg-gray-600',
                 ].join(' ')}
                 aria-label={`Notifications ${notificationsEnabled ? 'enabled' : 'disabled'}`}
               >
@@ -228,7 +228,7 @@ function NotificationSettingsContent() {
               id="email_frequency"
               {...register('email_frequency')}
               onChange={(e) => setValue('email_frequency', e.target.value, { shouldDirty: true })}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 [data-theme='light']:bg-black/10 border border-white/20 [data-theme='light']:border-black/30 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+              className="w-full px-4 py-2 rounded-lg bg-white/10 [data-theme='light']:bg-black/10 border border-white/20 [data-theme='light']:border-black/30 text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:border-[var(--accent)]/50"
             >
               <option value="instant">Instant - Receive emails immediately</option>
               <option value="daily">Daily Digest - One email per day</option>
@@ -245,7 +245,7 @@ function NotificationSettingsContent() {
           {/* Social Notifications */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <Users className="h-5 w-5 text-purple-400" />
+              <Users className="h-5 w-5 text-[var(--accent)]" />
               <h3 className="text-lg font-medium text-[var(--foreground)]">Social Notifications</h3>
             </div>
 
@@ -292,7 +292,7 @@ function NotificationSettingsContent() {
           {/* Playlist Notifications */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <Music className="h-5 w-5 text-purple-400" />
+              <Music className="h-5 w-5 text-[var(--accent)]" />
               <h3 className="text-lg font-medium text-[var(--foreground)]">Playlist Notifications</h3>
             </div>
 
@@ -327,7 +327,7 @@ function NotificationSettingsContent() {
           {/* System Notifications */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <Megaphone className="h-5 w-5 text-purple-400" />
+              <Megaphone className="h-5 w-5 text-[var(--accent)]" />
               <h3 className="text-lg font-medium text-[var(--foreground)]">System Notifications</h3>
             </div>
 

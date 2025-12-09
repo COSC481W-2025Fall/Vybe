@@ -64,7 +64,7 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
           {group.name}
         </h3>
         {isOwner ? (
-          <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 rounded-full text-xs font-medium border border-purple-500/30 flex-shrink-0">
+          <span className="px-2 py-0.5 bg-[var(--accent)]/20 text-[var(--accent)] rounded-full text-xs font-medium border border-[var(--accent)]/30 flex-shrink-0">
             Owner
           </span>
         ) : (
@@ -102,7 +102,7 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
           {displayMembers.map((member, index) => (
             <div
               key={member?.id || index}
-              className="w-7 h-7 rounded-full border-2 border-[var(--background)] overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500"
+              className="w-7 h-7 rounded-full border-2 border-[var(--background)] overflow-hidden bg-gradient-to-br from-[var(--accent)] to-pink-500"
               title={member?.username || 'Member'}
             >
               {member?.profile_picture_url ? (

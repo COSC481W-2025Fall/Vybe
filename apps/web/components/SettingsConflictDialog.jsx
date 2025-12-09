@@ -165,11 +165,11 @@ export default function SettingsConflictDialog({
                       {/* Remote Value */}
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <Download className="h-4 w-4 text-purple-400" />
-                          <span className="text-xs font-medium text-purple-400">Remote Changes</span>
+                          <Download className="h-4 w-4 text-[var(--accent)]" />
+                          <span className="text-xs font-medium text-[var(--accent)]">Remote Changes</span>
                         </div>
-                        <div className="rounded bg-purple-500/10 border border-purple-500/20 p-2">
-                          <code className="text-xs text-purple-200 break-all">
+                        <div className="rounded bg-[var(--accent)]/10 border border-[var(--accent)]/20 p-2">
+                          <code className="text-xs text-[var(--accent)] break-all">
                             {formatValue(field.remote)}
                           </code>
                         </div>
@@ -218,7 +218,7 @@ export default function SettingsConflictDialog({
             </button>
             <button
               onClick={handleKeepRemote}
-              className="px-6 py-2 rounded-lg text-sm font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30 hover:text-purple-300 transition-colors flex items-center gap-2"
+              className="px-6 py-2 rounded-lg text-sm font-medium bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 hover:bg-[var(--accent)]/30 hover:opacity-80 transition-colors flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
               Keep Remote Changes

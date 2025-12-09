@@ -92,9 +92,9 @@ export default function GlobalMiniplayer() {
   // Minimized bar (compact controls only)
   if (isMinimized) {
     return (
-      <div className="fixed z-50 bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[340px] sm:max-w-[calc(100vw-3rem)] sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-300 bg-[var(--card-bg)] border border-[var(--border-color)]">
+      <div className="fixed z-50 bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[340px] sm:max-w-[calc(100vw-3rem)] sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-300 bg-[#1a1a1a] [data-theme='light']:bg-white border border-[var(--border-color)]">
         {/* Minimized header */}
-        <div className="flex items-center justify-between px-3 py-2.5 bg-[var(--secondary-bg)]">
+        <div className="flex items-center justify-between px-3 py-2.5 bg-[#222] [data-theme='light']:bg-gray-100">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {song.thumbnail_url && (
               <img
@@ -137,7 +137,8 @@ export default function GlobalMiniplayer() {
             {/* Expand */}
             <button
               onClick={() => setIsMinimized(false)}
-              className="p-2 rounded-full bg-purple-600 hover:bg-purple-500 transition-colors"
+              className="p-2 rounded-full transition-colors"
+              style={{ backgroundColor: 'var(--accent)' }}
               title="Show player"
             >
               <ChevronUp className="h-4 w-4 text-white" />
@@ -156,15 +157,15 @@ export default function GlobalMiniplayer() {
         
         {/* Queue progress */}
         {queueInfo && (
-          <div className="px-3 pb-2 pt-1 bg-[var(--card-bg)]">
+          <div className="px-3 pb-2 pt-1 bg-[#1a1a1a] [data-theme='light']:bg-white">
             <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
               <span>Queue</span>
               <span>{queueInfo}</span>
             </div>
             <div className="h-1 bg-[var(--secondary-bg)] rounded-full overflow-hidden">
               <div 
-                className="h-full bg-purple-500 rounded-full transition-all duration-300"
-                style={{ width: `${((currentQueueIndex + 1) / songQueue.length) * 100}%` }}
+                className="h-full rounded-full transition-all duration-300"
+                style={{ width: `${((currentQueueIndex + 1) / songQueue.length) * 100}%`, backgroundColor: 'var(--accent)' }}
               />
             </div>
           </div>
@@ -208,9 +209,9 @@ export default function GlobalMiniplayer() {
   
   // Expanded player (full view)
   return (
-    <div className="fixed z-50 shadow-2xl overflow-hidden transition-all duration-300 bg-[var(--card-bg)] border border-[var(--border-color)] bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-w-[calc(100vw-3rem)] sm:rounded-xl">
+    <div className="fixed z-50 shadow-2xl overflow-hidden transition-all duration-300 bg-[#1a1a1a] [data-theme='light']:bg-white border border-[var(--border-color)] bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-w-[calc(100vw-3rem)] sm:rounded-xl">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-[var(--border-color)] bg-[var(--secondary-bg)]">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-[var(--border-color)] bg-[#222] [data-theme='light']:bg-gray-100">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           {song.thumbnail_url && (
             <img
@@ -228,7 +229,10 @@ export default function GlobalMiniplayer() {
             </p>
           </div>
           {queueInfo && (
-            <span className="hidden sm:inline-block px-2 py-1 bg-purple-600 text-white text-xs font-medium rounded whitespace-nowrap flex-shrink-0">
+            <span 
+              className="hidden sm:inline-block px-2 py-1 text-white text-xs font-medium rounded whitespace-nowrap flex-shrink-0"
+              style={{ backgroundColor: 'var(--accent)' }}
+            >
               {queueInfo}
             </span>
           )}
@@ -276,7 +280,7 @@ export default function GlobalMiniplayer() {
       </div>
       
       {/* Player embed */}
-      <div className="overflow-hidden bg-[var(--card-bg)]">
+      <div className="overflow-hidden bg-[#1a1a1a] [data-theme='light']:bg-white">
         {isYouTube ? (
           <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
             <iframe
@@ -304,15 +308,15 @@ export default function GlobalMiniplayer() {
       
       {/* Mobile queue info */}
       {queueInfo && (
-        <div className="sm:hidden px-3 py-2 border-t border-[var(--border-color)] bg-[var(--secondary-bg)]">
+        <div className="sm:hidden px-3 py-2 border-t border-[var(--border-color)] bg-[#222] [data-theme='light']:bg-gray-100">
           <div className="flex items-center justify-between text-xs">
             <span className="text-[var(--muted-foreground)]">Queue</span>
-            <span className="text-purple-400 font-medium">{queueInfo}</span>
+            <span className="font-medium" style={{ color: 'var(--accent)' }}>{queueInfo}</span>
           </div>
           <div className="mt-1.5 h-1 bg-[var(--secondary-hover)] rounded-full overflow-hidden">
             <div 
-              className="h-full bg-purple-500 rounded-full transition-all duration-300"
-              style={{ width: `${((currentQueueIndex + 1) / songQueue.length) * 100}%` }}
+              className="h-full rounded-full transition-all duration-300"
+              style={{ width: `${((currentQueueIndex + 1) / songQueue.length) * 100}%`, backgroundColor: 'var(--accent)' }}
             />
           </div>
         </div>

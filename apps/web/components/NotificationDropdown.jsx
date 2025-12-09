@@ -87,12 +87,12 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
       aria-label="Notifications"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--glass-border)] bg-gradient-to-r from-purple-500/10 to-blue-500/10">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--glass-border)] bg-gradient-to-r from-[var(--accent)]/10 to-blue-500/10">
         <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-purple-400" />
+          <Bell className="h-5 w-5 text-[var(--accent)]" />
           <h3 className="text-sm font-semibold text-[var(--foreground)]">Notifications</h3>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full">
+            <span className="px-2 py-0.5 text-xs font-medium bg-[var(--accent)]/20 text-[var(--accent)] rounded-full">
               {unreadCount} new
             </span>
           )}
@@ -123,7 +123,7 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
       <div className="max-h-[400px] overflow-y-auto modal-scroll">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--accent)]"></div>
           </div>
         ) : error ? (
           <div className="px-4 py-8 text-center">
@@ -142,7 +142,7 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
                 key={notification.id}
                 className={[
                   'px-4 py-3 hover:bg-white/5 [data-theme="light"]:hover:bg-black/5 transition-colors cursor-pointer',
-                  !notification.read && 'bg-purple-500/5',
+                  !notification.read && 'bg-[var(--accent)]/5',
                 ].join(' ')}
                 onClick={() => {
                   // TODO: Handle notification click (navigate to relevant page)
@@ -162,7 +162,7 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
                     </p>
                   </div>
                   {!notification.read && (
-                    <div className="h-2 w-2 rounded-full bg-purple-400 flex-shrink-0 mt-2" />
+                    <div className="h-2 w-2 rounded-full bg-[var(--accent)] flex-shrink-0 mt-2" />
                   )}
                 </div>
               </div>
@@ -175,7 +175,7 @@ export default function NotificationDropdown({ isOpen, onClose, position = {} })
       {notifications.length > 0 && (
         <div className="px-4 py-2 border-t border-[var(--glass-border)] bg-white/5 [data-theme='light']:bg-black/5">
           <button
-            className="w-full text-xs text-center text-purple-400 hover:text-purple-300 transition-colors py-1"
+            className="w-full text-xs text-center text-[var(--accent)] hover:text-[var(--accent)] transition-colors py-1"
             onClick={() => {
               // TODO: Navigate to full notifications page if it exists
               console.log('View all notifications');

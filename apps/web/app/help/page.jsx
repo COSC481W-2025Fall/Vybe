@@ -53,7 +53,7 @@ function getSubjectButtonClasses(optionColor, isSelected) {
     case 'yellow': return 'bg-yellow-500/20 text-yellow-400 border-2 border-yellow-500/50';
     case 'blue': return 'bg-blue-500/20 text-blue-400 border-2 border-blue-500/50';
     case 'green': return 'bg-green-500/20 text-green-400 border-2 border-green-500/50';
-    default: return 'bg-purple-500/20 text-purple-400 border-2 border-purple-500/50';
+    default: return 'bg-[var(--accent)]/20 text-[var(--accent)] border-2 border-[var(--accent)]/50';
   }
 }
 
@@ -103,8 +103,8 @@ export default function HelpPage() {
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-purple-500/20 mb-4">
-            <HelpCircle className="h-8 w-8 text-purple-400" />
+          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-[var(--accent)]/20 mb-4">
+            <HelpCircle className="h-8 w-8 text-[var(--accent)]" />
           </div>
           <h1 className="page-title text-3xl sm:text-4xl mb-3">Help Center</h1>
           <p className="section-subtitle text-lg">
@@ -118,9 +118,9 @@ export default function HelpPage() {
             href="/groups"
             target="_blank"
             rel="noopener noreferrer"
-            className="glass-card p-6 rounded-2xl hover:border-purple-500/50 transition-all group text-center"
+            className="glass-card p-6 rounded-2xl hover:border-[var(--accent)]/50 transition-all group text-center"
           >
-            <Users className="h-8 w-8 text-purple-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+            <Users className="h-8 w-8 text-[var(--accent)] mx-auto mb-3 group-hover:scale-110 transition-transform" />
             <h3 className="font-semibold text-[var(--foreground)] mb-1">Groups</h3>
             <p className="text-sm text-[var(--muted-foreground)]">Collaborate with friends</p>
           </a>
@@ -149,7 +149,7 @@ export default function HelpPage() {
         {/* FAQ Section */}
         <div className="glass-card rounded-2xl p-6 sm:p-8 mb-12">
           <h2 className="section-title text-xl sm:text-2xl mb-6 flex items-center gap-2">
-            <MessageCircle className="h-6 w-6 text-purple-400" />
+            <MessageCircle className="h-6 w-6 text-[var(--accent)]" />
             Frequently Asked Questions
           </h2>
           
@@ -161,7 +161,7 @@ export default function HelpPage() {
                   key={index}
                   className={`rounded-xl overflow-hidden transition-all duration-200 ${
                     isOpen 
-                      ? 'bg-purple-500/10 border border-purple-500/30' 
+                      ? 'bg-[var(--accent)]/10 border border-[var(--accent)]/30' 
                       : 'bg-[var(--secondary-bg)] border border-transparent hover:border-[var(--glass-border)]'
                   }`}
                 >
@@ -169,14 +169,14 @@ export default function HelpPage() {
                     onClick={() => setOpenFAQ(isOpen ? null : index)}
                     className="w-full flex items-center justify-between p-4 text-left gap-4"
                   >
-                    <span className={`font-medium ${isOpen ? 'text-purple-400' : 'text-[var(--foreground)]'}`}>
+                    <span className={`font-medium ${isOpen ? 'text-[var(--accent)]' : 'text-[var(--foreground)]'}`}>
                       {item.question}
                     </span>
                     <div className={`flex-shrink-0 p-1 rounded-lg transition-all duration-200 ${
-                      isOpen ? 'bg-purple-500/20 rotate-180' : 'bg-[var(--glass-border)]'
+                      isOpen ? 'bg-[var(--accent)]/20 rotate-180' : 'bg-[var(--glass-border)]'
                     }`}>
                       <ChevronDown className={`h-4 w-4 transition-colors ${
-                        isOpen ? 'text-purple-400' : 'text-[var(--muted-foreground)]'
+                        isOpen ? 'text-[var(--accent)]' : 'text-[var(--muted-foreground)]'
                       }`} />
                     </div>
                   </button>
@@ -198,7 +198,7 @@ export default function HelpPage() {
         {/* Contact Form */}
         <div className="glass-card rounded-2xl p-6 sm:p-8">
           <h2 className="section-title text-xl sm:text-2xl mb-2 flex items-center gap-2">
-            <Send className="h-6 w-6 text-purple-400" />
+            <Send className="h-6 w-6 text-[var(--accent)]" />
             Contact Us
           </h2>
           <p className="section-subtitle mb-6">
@@ -217,7 +217,7 @@ export default function HelpPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:border-[var(--accent)]/50 transition-all"
                   placeholder="Your name"
                 />
               </div>
@@ -231,7 +231,7 @@ export default function HelpPage() {
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+                  className="w-full px-4 py-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:border-[var(--accent)]/50 transition-all"
                   placeholder="you@example.com"
                 />
               </div>
@@ -272,7 +272,7 @@ export default function HelpPage() {
                 rows={5}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all resize-none"
+                className="w-full px-4 py-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:border-[var(--accent)]/50 transition-all resize-none"
                 placeholder="Tell us what's on your mind..."
               />
             </div>
@@ -294,7 +294,7 @@ export default function HelpPage() {
             <button
               type="submit"
               disabled={isSubmitting || !formData.subject}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-[var(--accent)] to-pink-600 hover:opacity-90 text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>

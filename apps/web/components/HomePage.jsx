@@ -286,7 +286,7 @@ export function HomePage({ onNavigate } = {}) {
                 >
                   {/* Avatar with music badge */}
                   <div className="relative mb-1.5 sm:mb-2 flex-shrink-0">
-                    <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 group-hover:scale-105 transition-transform shadow-lg">
+                    <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gradient-to-br from-[var(--accent)] to-pink-500 group-hover:scale-105 transition-transform shadow-lg">
                       {friend.shared_by_avatar ? (
                         <img src={friend.shared_by_avatar} alt={friend.shared_by} className="w-full h-full object-cover" />
                       ) : (
@@ -380,7 +380,7 @@ export function HomePage({ onNavigate } = {}) {
                   {community.name}
                 </h3>
                 {community.member_count > 2000 && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-900/40 text-purple-300 text-xs font-medium rounded-full border border-purple-800/50 flex-shrink-0">
+                  <span className="flex items-center gap-1 px-2 py-0.5 bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-medium rounded-full border border-[var(--accent)]/30 flex-shrink-0">
                     <TrendingUp className="h-3 w-3" />
                   </span>
                 )}

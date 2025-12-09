@@ -122,8 +122,8 @@ function FriendRequestsModalComponent({ onClose, onRequestsChanged }) {
       <div className="glass-card rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between mb-4 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
-              <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" aria-hidden="true" />
+            <div className="p-1.5 sm:p-2 bg-[var(--accent)]/20 rounded-lg border border-[var(--accent)]/30">
+              <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--accent)]" aria-hidden="true" />
             </div>
             <h2 id="friend-requests-title" className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">
               Friend Requests
@@ -144,7 +144,7 @@ function FriendRequestsModalComponent({ onClose, onRequestsChanged }) {
             onClick={() => setActiveTab('received')}
             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'received'
-                ? 'bg-purple-500 text-white'
+                ? 'bg-[var(--accent)] text-white'
                 : 'bg-[var(--secondary-bg)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
             }`}
           >
@@ -249,7 +249,7 @@ const ReceivedRequestCard = memo(function ReceivedRequestCard({ request, onAccep
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div 
-          className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold flex-shrink-0"
+          className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)] to-pink-500 flex items-center justify-center text-white font-semibold flex-shrink-0"
           style={{ aspectRatio: '1/1' }}
         >
           <span aria-hidden="true">

@@ -861,7 +861,7 @@ function ProviderThemeToggle({ prov }) {
                   disabled={!hasChanges}
                   className={`w-full flex items-center justify-center gap-2 p-3 rounded-lg font-medium transition-all ${
                     hasChanges
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-[var(--accent)] to-pink-600 hover:opacity-90 text-white shadow-lg'
                       : 'bg-[var(--secondary-bg)] text-[var(--muted-foreground)] cursor-not-allowed'
                   }`}
                 >

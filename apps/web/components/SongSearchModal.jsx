@@ -248,8 +248,8 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
       <div className="glass-card rounded-xl sm:rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-4 sm:p-6 pb-3 sm:pb-4 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 bg-purple-400/20 rounded-lg border border-purple-400/30">
-              <Music className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" aria-hidden="true" />
+            <div className="p-1.5 sm:p-2 bg-[var(--accent)]/20 rounded-lg border border-[var(--accent)]/30">
+              <Music className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--accent)]" aria-hidden="true" />
             </div>
             <h2 id="song-search-title" className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">Search for a Song</h2>
           </div>
@@ -269,14 +269,14 @@ export default function SongSearchModal({ onClose, onSelectSong }) {
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-[var(--input-bg)] border-2 border-[var(--glass-border)] rounded-lg text-[var(--foreground)] text-base sm:text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400"
+              className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-[var(--input-bg)] border-2 border-[var(--glass-border)] rounded-lg text-[var(--foreground)] text-base sm:text-sm placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:border-[var(--accent)]"
               placeholder="Search by song name or artist..."
               autoFocus
               aria-label="Search for songs"
             />
             {loading && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="h-4 w-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
+                <div className="h-4 w-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
                 <span className="sr-only">Searching...</span>
               </div>
             )}

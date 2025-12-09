@@ -28,7 +28,7 @@ const TaskProgressCard = memo(function TaskProgressCard({ task, onCancel }) {
   const isRunning = task.status === 'running';
   
   const bgGradient = isSort 
-    ? 'from-purple-600 to-pink-600' 
+    ? 'from-[var(--accent)] to-pink-600' 
     : 'from-blue-600 to-cyan-600';
   
   return (

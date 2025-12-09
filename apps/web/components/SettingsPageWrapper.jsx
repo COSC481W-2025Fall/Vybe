@@ -208,7 +208,7 @@ export default function SettingsPageWrapper({ children }) {
                       'px-6 py-2.5 rounded-lg text-sm font-medium transition-all',
                       'flex items-center justify-center gap-2 min-w-[140px] w-full sm:w-auto',
                       hasUnsavedChanges && !isSaving
-                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 cursor-pointer shadow-lg shadow-purple-500/20'
+                        ? 'bg-gradient-to-r from-[var(--accent)] to-blue-500 text-white hover:opacity-90 cursor-pointer shadow-lg shadow-[var(--accent)]/20'
                         : 'bg-white/10 [data-theme="light"]:bg-black/5 text-[var(--muted-foreground)] border border-white/20 [data-theme="light"]:border-black/20 cursor-not-allowed',
                     ].join(' ')}
                   >

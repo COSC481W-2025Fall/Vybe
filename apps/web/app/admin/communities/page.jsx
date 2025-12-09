@@ -534,11 +534,11 @@ export default function AdminCommunitiesPage() {
   // Password Screen
   if (!isAdminAuthed) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-purple-900/20 via-[var(--background)] to-pink-900/20">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-[var(--accent)]/20 via-[var(--background)] to-pink-900/20">
         <div className="w-full max-w-md">
           {/* Logo/Brand Area */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 mb-4 shadow-lg shadow-purple-500/25">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-pink-500 mb-4 shadow-lg" style={{ boxShadow: '0 10px 25px -5px color-mix(in srgb, var(--accent) 25%, transparent)' }}>
               <Sparkles className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-[var(--foreground)]">Vybe Admin</h1>
@@ -546,7 +546,7 @@ export default function AdminCommunitiesPage() {
           </div>
 
           {/* Login Card */}
-          <div className="glass-card rounded-2xl p-8 border border-purple-500/20">
+          <div className="glass-card rounded-2xl p-8 border border-[var(--accent)]/20">
             <form onSubmit={handlePasswordSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--foreground)]">Admin Password</label>
@@ -557,7 +557,7 @@ export default function AdminCommunitiesPage() {
                     value={passwordInput}
                     onChange={(e) => setPasswordInput(e.target.value)}
                     placeholder="Enter password"
-                    className="w-full pl-12 pr-4 py-4 bg-[var(--background)] border-2 border-[var(--glass-border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
+                    className="w-full pl-12 pr-4 py-4 bg-[var(--background)] border-2 border-[var(--glass-border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 transition-all"
                     autoFocus
                   />
                 </div>
@@ -570,7 +570,8 @@ export default function AdminCommunitiesPage() {
               </div>
               <button
                 type="submit"
-                className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-semibold transition-all shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+                className="w-full py-4 px-6 bg-gradient-to-r from-[var(--accent)] to-pink-600 hover:opacity-90 text-white rounded-xl font-semibold transition-all shadow-lg"
+                style={{ boxShadow: '0 10px 25px -5px color-mix(in srgb, var(--accent) 25%, transparent)' }}
               >
                 Access Dashboard
               </button>
@@ -586,8 +587,8 @@ export default function AdminCommunitiesPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-500/20 animate-pulse">
-            <Music className="h-8 w-8 text-purple-400" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--accent)]/20 animate-pulse">
+            <Music className="h-8 w-8 text-[var(--accent)]" />
           </div>
           <p className="text-[var(--muted-foreground)]">Loading communities...</p>
         </div>
@@ -605,7 +606,7 @@ export default function AdminCommunitiesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/20">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-[var(--accent)] to-pink-500 shadow-lg" style={{ boxShadow: '0 10px 25px -5px color-mix(in srgb, var(--accent) 20%, transparent)' }}>
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -628,10 +629,10 @@ export default function AdminCommunitiesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="glass-card rounded-xl p-4 border-l-4 border-l-purple-500">
+          <div className="glass-card rounded-xl p-4 border-l-4 border-l-[var(--accent)]">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/20">
-                <Globe className="h-5 w-5 text-purple-400" />
+              <div className="p-2 rounded-lg bg-[var(--accent)]/20">
+                <Globe className="h-5 w-5 text-[var(--accent)]" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-[var(--foreground)]">{communities.length}</p>
@@ -685,7 +686,7 @@ export default function AdminCommunitiesPage() {
                 placeholder="Search communities..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 transition-all"
               />
             </div>
 
@@ -725,7 +726,7 @@ export default function AdminCommunitiesPage() {
               
               <button
                 onClick={openCreateDialog}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-lg shadow-purple-500/20"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[var(--accent)] to-pink-600 hover:opacity-90 text-white rounded-lg font-medium transition-all shadow-lg shadow-[var(--accent)]/20"
               >
                 <Plus className="h-4 w-4" />
                 New Community
@@ -737,14 +738,14 @@ export default function AdminCommunitiesPage() {
         {/* Communities Grid */}
         {communities.length === 0 ? (
           <div className="glass-card rounded-2xl p-12 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-purple-500/10 mb-6">
-              <Music className="h-10 w-10 text-purple-400" />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[var(--accent)]/10 mb-6">
+              <Music className="h-10 w-10 text-[var(--accent)]" />
             </div>
             <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">No communities yet</h3>
             <p className="text-[var(--muted-foreground)] mb-6">Create your first community to get started</p>
             <button
               onClick={openCreateDialog}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[var(--accent)] to-pink-600 text-white rounded-xl font-medium"
             >
               <Plus className="h-5 w-5" />
               Create Community
@@ -762,18 +763,18 @@ export default function AdminCommunitiesPage() {
                 key={community.id}
                 className={`glass-card rounded-xl overflow-hidden transition-all hover:shadow-lg ${
                   selectedCommunities.includes(community.id) 
-                    ? 'ring-2 ring-purple-500 shadow-purple-500/20' 
-                    : 'hover:border-purple-500/30'
+                    ? 'ring-2 ring-[var(--accent)] shadow-[var(--accent)]/20' 
+                    : 'hover:border-[var(--accent)]/30'
                 }`}
               >
                 {/* Card Header */}
-                <div className="p-4 border-b border-[var(--glass-border)] bg-gradient-to-r from-purple-500/5 to-pink-500/5">
+                <div className="p-4 border-b border-[var(--glass-border)] bg-gradient-to-r from-[var(--accent)]/5 to-pink-500/5">
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       checked={selectedCommunities.includes(community.id)}
                       onChange={() => toggleCommunitySelection(community.id)}
-                      className="mt-1 w-4 h-4 rounded border-[var(--glass-border)] text-purple-600 focus:ring-purple-500"
+                      className="mt-1 w-4 h-4 rounded border-[var(--glass-border)] text-[var(--accent)] focus:ring-[var(--accent)]"
                     />
                     
                     {editingInline === community.id ? (
@@ -782,19 +783,19 @@ export default function AdminCommunitiesPage() {
                           type="text"
                           value={inlineName}
                           onChange={(e) => setInlineName(e.target.value)}
-                          className="w-full px-3 py-2 bg-[var(--background)] border border-purple-500/50 rounded-lg text-[var(--foreground)] font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                          className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--accent)]/50 rounded-lg text-[var(--foreground)] font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
                         />
                         <textarea
                           value={inlineDescription}
                           onChange={(e) => setInlineDescription(e.target.value)}
-                          className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                          className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
                           rows={2}
                           placeholder="Description..."
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={() => saveInlineEdit(community)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[var(--accent)] hover:opacity-80 text-white text-sm rounded-lg"
                           >
                             <Save className="h-3 w-3" />
                             Save
@@ -894,7 +895,7 @@ export default function AdminCommunitiesPage() {
                     {community.playlist_links?.length > 0 && (
                       <button
                         onClick={() => openCurationDialog(community)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-sm font-medium transition-colors border border-purple-500/20"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 text-[var(--accent)] rounded-lg text-sm font-medium transition-colors border border-[var(--accent)]/20"
                       >
                         <Filter className="h-4 w-4" />
                         Curate Songs
@@ -919,7 +920,7 @@ export default function AdminCommunitiesPage() {
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0 pr-8">
             <DialogTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-purple-400" />
+              <Filter className="h-5 w-5 text-[var(--accent)]" />
               Curate Songs - {curatingCommunity?.name}
             </DialogTitle>
             <DialogDescription>
@@ -931,7 +932,7 @@ export default function AdminCommunitiesPage() {
             {/* Stats Bar */}
             <div className="flex items-center gap-3 pb-3 border-b border-[var(--glass-border)] mb-3 flex-wrap">
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--secondary-bg)] rounded-lg">
-                <Music className="h-4 w-4 text-purple-400" />
+                <Music className="h-4 w-4 text-[var(--accent)]" />
                 <span className="text-sm font-medium text-[var(--foreground)]">{songStats.total}</span>
                 <span className="text-xs text-[var(--muted-foreground)]">total</span>
               </div>
@@ -963,7 +964,7 @@ export default function AdminCommunitiesPage() {
                     placeholder="Search songs..."
                     value={songSearchQuery}
                     onChange={(e) => setSongSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-sm text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    className="w-full pl-9 pr-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-sm text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
                   />
                 </div>
                 <div className="flex items-center gap-1 bg-[var(--secondary-bg)] rounded-lg p-1">
@@ -976,7 +977,7 @@ export default function AdminCommunitiesPage() {
                           ? status === 'approved' ? 'bg-green-500 text-white' 
                             : status === 'removed' ? 'bg-red-500 text-white'
                             : status === 'pending' ? 'bg-yellow-500 text-black'
-                            : 'bg-purple-500 text-white'
+                            : 'bg-[var(--accent)] text-white'
                           : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
                       }`}
                     >
@@ -1017,8 +1018,8 @@ export default function AdminCommunitiesPage() {
 
             {/* Selection Actions Bar */}
             {selectedSongs.length > 0 && (
-              <div className="flex items-center gap-3 pb-3 mb-3 bg-purple-500/10 -mx-6 px-6 py-3 border-y border-purple-500/20">
-                <span className="text-sm font-medium text-purple-400">
+              <div className="flex items-center gap-3 pb-3 mb-3 bg-[var(--accent)]/10 -mx-6 px-6 py-3 border-y border-[var(--accent)]/20">
+                <span className="text-sm font-medium text-[var(--accent)]">
                   {selectedSongs.length} selected
                 </span>
                 <div className="flex items-center gap-2 ml-auto">
@@ -1060,8 +1061,8 @@ export default function AdminCommunitiesPage() {
             <div className="flex-1 overflow-y-auto modal-scroll">
               {loadingSongs ? (
                 <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-purple-500/20 animate-pulse mb-4">
-                    <Music className="h-6 w-6 text-purple-400" />
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--accent)]/20 animate-pulse mb-4">
+                    <Music className="h-6 w-6 text-[var(--accent)]" />
                   </div>
                   <p className="text-[var(--muted-foreground)]">Loading songs...</p>
                 </div>
@@ -1080,7 +1081,7 @@ export default function AdminCommunitiesPage() {
                       type="checkbox"
                       checked={selectedSongs.length === filteredSongs.length && filteredSongs.length > 0}
                       onChange={selectAllFilteredSongs}
-                      className="w-4 h-4 rounded border-[var(--glass-border)] text-purple-600 focus:ring-purple-500"
+                      className="w-4 h-4 rounded border-[var(--glass-border)] text-[var(--accent)] focus:ring-[var(--accent)]"
                     />
                     <span className="text-sm text-[var(--muted-foreground)]">
                       {selectedSongs.length === filteredSongs.length ? 'Deselect all' : 'Select all'} ({filteredSongs.length} songs)
@@ -1092,9 +1093,9 @@ export default function AdminCommunitiesPage() {
                     return (
                       <div 
                         key={`${song.id}-${song.playlist_link_index}-${idx}`} 
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer hover:border-purple-500/30 ${
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer hover:border-[var(--accent)]/30 ${
                           isSelected 
-                            ? 'bg-purple-500/10 border-purple-500/30 ring-1 ring-purple-500/20'
+                            ? 'bg-[var(--accent)]/10 border-[var(--accent)]/30 ring-1 ring-[var(--accent)]/20'
                             : song.curation_status === 'approved' 
                             ? 'bg-green-500/5 border-green-500/20' 
                             : song.curation_status === 'removed'
@@ -1107,7 +1108,7 @@ export default function AdminCommunitiesPage() {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="w-4 h-4 rounded border-[var(--glass-border)] text-purple-600 focus:ring-purple-500 pointer-events-none"
+                          className="w-4 h-4 rounded border-[var(--glass-border)] text-[var(--accent)] focus:ring-[var(--accent)] pointer-events-none"
                         />
                         {song.thumbnail && (
                           <img
@@ -1183,7 +1184,7 @@ export default function AdminCommunitiesPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto modal-scroll">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {editingCommunity ? <Edit className="h-5 w-5 text-purple-400" /> : <Plus className="h-5 w-5 text-purple-400" />}
+              {editingCommunity ? <Edit className="h-5 w-5 text-[var(--accent)]" /> : <Plus className="h-5 w-5 text-[var(--accent)]" />}
               {editingCommunity ? 'Edit Community' : 'Create Community'}
             </DialogTitle>
             <DialogDescription>
@@ -1200,7 +1201,7 @@ export default function AdminCommunitiesPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Chill Vibes"
-                  className="w-full px-4 py-3 bg-[var(--background)] border border-[var(--glass-border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                  className="w-full px-4 py-3 bg-[var(--background)] border border-[var(--glass-border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:border-[var(--accent)]"
                 />
               </div>
 
@@ -1211,7 +1212,7 @@ export default function AdminCommunitiesPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="What makes this collection special?"
                   rows={3}
-                  className="w-full px-4 py-3 bg-[var(--background)] border border-[var(--glass-border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 resize-none"
+                  className="w-full px-4 py-3 bg-[var(--background)] border border-[var(--glass-border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 focus:border-[var(--accent)] resize-none"
                 />
               </div>
             </div>
@@ -1223,7 +1224,7 @@ export default function AdminCommunitiesPage() {
                 <button
                   type="button"
                   onClick={addPlaylistLink}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-[var(--accent)] hover:opacity-80 hover:bg-[var(--accent)]/10 rounded-lg transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   Add Link
@@ -1256,7 +1257,7 @@ export default function AdminCommunitiesPage() {
                           <select
                             value={link.platform}
                             onChange={(e) => updatePlaylistLink(index, 'platform', e.target.value)}
-                            className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
                           >
                             <option value="spotify">Spotify</option>
                             <option value="youtube">YouTube</option>
@@ -1269,7 +1270,7 @@ export default function AdminCommunitiesPage() {
                             value={link.label || ''}
                             onChange={(e) => updatePlaylistLink(index, 'label', e.target.value)}
                             placeholder="e.g., Weekly Mix"
-                            className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                            className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
                           />
                         </div>
                       </div>
@@ -1281,7 +1282,7 @@ export default function AdminCommunitiesPage() {
                           value={link.url}
                           onChange={(e) => updatePlaylistLink(index, 'url', e.target.value)}
                           placeholder="https://open.spotify.com/playlist/..."
-                          className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                          className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
                         />
                       </div>
                     </div>
@@ -1300,7 +1301,7 @@ export default function AdminCommunitiesPage() {
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-purple-500/20"
+                className="px-6 py-2.5 bg-gradient-to-r from-[var(--accent)] to-pink-600 hover:opacity-90 text-white rounded-xl font-medium transition-all shadow-lg shadow-[var(--accent)]/20"
               >
                 {editingCommunity ? 'Update' : 'Create'}
               </button>

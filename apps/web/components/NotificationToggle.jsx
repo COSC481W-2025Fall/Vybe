@@ -83,7 +83,7 @@ export function NotificationToggle({
             'flex-shrink-0 rounded-lg p-2 transition-colors duration-200',
             required
               ? 'bg-blue-500/20 text-blue-400'
-              : 'bg-purple-500/20 text-purple-400',
+              : 'bg-[var(--accent)]/20 text-[var(--accent)]',
           ].join(' ')}>
             <NotificationIcon className="h-5 w-5" aria-hidden="true" />
           </div>
@@ -125,7 +125,7 @@ export function NotificationToggle({
           >
             <Bell className={[
               'h-4 w-4 transition-colors duration-200',
-              inAppEnabled ? 'text-purple-400' : 'text-gray-500',
+              inAppEnabled ? 'text-[var(--accent)]' : 'text-gray-500',
             ].join(' ')} aria-hidden="true" />
             <span className={[
               'text-sm transition-colors duration-200',
@@ -142,8 +142,8 @@ export function NotificationToggle({
             onClick={handleInAppToggle}
             disabled={disabled || required}
             className={[
-              'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black',
-              inAppEnabled ? 'bg-purple-500 shadow-lg shadow-purple-500/30' : 'bg-gray-600',
+              'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-black',
+              inAppEnabled ? 'bg-[var(--accent)] shadow-lg shadow-[var(--accent)]/30' : 'bg-gray-600',
               (disabled || required) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105',
             ].join(' ')}
           >
@@ -182,8 +182,8 @@ export function NotificationToggle({
             onClick={handleEmailToggle}
             disabled={disabled || required}
             className={[
-              'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black',
-              emailEnabled ? 'bg-purple-500 shadow-lg shadow-purple-500/30' : 'bg-gray-600',
+              'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-black',
+              emailEnabled ? 'bg-[var(--accent)] shadow-lg shadow-[var(--accent)]/30' : 'bg-gray-600',
               (disabled || required) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105',
             ].join(' ')}
           >
@@ -223,8 +223,8 @@ export function NotificationToggle({
               onClick={handlePushToggle}
               disabled={disabled || required}
               className={[
-                'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black',
-                pushEnabled ? 'bg-purple-500 shadow-lg shadow-purple-500/30' : 'bg-gray-600',
+                'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-black',
+                pushEnabled ? 'bg-[var(--accent)] shadow-lg shadow-[var(--accent)]/30' : 'bg-gray-600',
                 (disabled || required) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105',
               ].join(' ')}
             >

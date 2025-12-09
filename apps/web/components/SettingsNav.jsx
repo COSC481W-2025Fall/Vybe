@@ -212,7 +212,7 @@ export default function SettingsNav({
                   </h2>
                   <button
                     onClick={handleToggleMenu}
-                    className="rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition focus:outline-none focus:ring-2 focus:ring-purple-500/50 touch-manipulation"
+                    className="rounded-lg p-2 text-[var(--muted-foreground)] hover:bg-white/5 [data-theme='light']:hover:bg-black/5 hover:text-[var(--foreground)] transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 touch-manipulation"
                     aria-label="Close menu"
                   >
                     <X className="h-5 w-5" aria-hidden="true" />
