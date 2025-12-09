@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Moon, Sun, Monitor, Palette, Check, Settings2, RotateCcw, Contrast, AlertTriangle, CheckCircle } from 'lucide-react';
-import { useTheme } from './providers/ThemeProvider';
+import { useTheme, ensureReadableContrast, generateMutedForeground, generateGlassColors } from './providers/ThemeProvider';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -397,8 +397,9 @@ function ProviderThemeToggle({ prov }) {
     const [draftColors, setDraftColors] = useState(null);
     const [hasChanges, setHasChanges] = useState(false);
 
-    // Store original colors when customizer opens for reverting
+    // Store original colors and theme when customizer opens for reverting
     const [originalColors, setOriginalColors] = useState(null);
+    const [originalTheme, setOriginalTheme] = useState(null);
     
     // Initialize draft colors when customizer opens
     useEffect(() => {
@@ -410,6 +411,7 @@ function ProviderThemeToggle({ prov }) {
           contrast: customColors.contrast || DEFAULT_THEME.contrast,
         };
         setOriginalColors(currentColors);
+        setOriginalTheme(theme);
         setDraftColors(currentColors);
         setHasChanges(false);
       }
@@ -419,11 +421,41 @@ function ProviderThemeToggle({ prov }) {
     useEffect(() => {
       if (showCustomizer && draftColors) {
         const root = document.documentElement;
-        root.style.setProperty('--background', draftColors.background);
-        root.style.setProperty('--foreground', draftColors.foreground);
-        root.style.setProperty('--accent', draftColors.accent);
+        const { background, foreground, accent, contrast } = draftColors;
+        
+        // Ensure foreground has enough contrast with background
+        const safeForeground = ensureReadableContrast(background, foreground);
+        const mutedForeground = generateMutedForeground(background, safeForeground, contrast);
+        const glassColors = generateGlassColors(background, safeForeground, accent);
+        
+        // Set data-theme to custom so CSS knows we're in custom mode
+        root.setAttribute('data-theme', 'custom');
+        
+        // Core colors
+        root.style.setProperty('--background', background);
+        root.style.setProperty('--foreground', safeForeground);
+        root.style.setProperty('--muted-foreground', mutedForeground);
+        root.style.setProperty('--accent', accent);
+        
+        // Glass colors
+        root.style.setProperty('--glass-bg', glassColors.glassBg);
+        root.style.setProperty('--glass-border', glassColors.glassBorder);
+        root.style.setProperty('--glass-border-hover', glassColors.glassBorderHover);
+        root.style.setProperty('--glass-shadow', glassColors.glassShadow);
+        root.style.setProperty('--dropdown-bg', glassColors.dropdownBg);
+        root.style.setProperty('--input-bg', glassColors.inputBg);
+        
+        // Secondary element styling
+        root.style.setProperty('--secondary-bg', glassColors.secondaryBg);
+        root.style.setProperty('--secondary-border', glassColors.secondaryBorder);
+        root.style.setProperty('--secondary-hover', glassColors.secondaryHover);
+        
+        // Scrollbar
+        root.style.setProperty('--scrollbar-thumb', glassColors.scrollbarThumb);
+        root.style.setProperty('--scrollbar-thumb-hover', glassColors.scrollbarThumbHover);
+        
         // Also update body background for immediate visual feedback
-        document.body.style.backgroundColor = draftColors.background;
+        document.body.style.backgroundColor = background;
       }
     }, [showCustomizer, draftColors]);
 
@@ -474,6 +506,7 @@ function ProviderThemeToggle({ prov }) {
       setHasChanges(false);
     }
     setOriginalColors(null);
+    setOriginalTheme(null);
     setShowCustomizer(false);
   };
 
@@ -482,13 +515,68 @@ function ProviderThemeToggle({ prov }) {
     // Revert CSS variables to original colors
     if (originalColors) {
       const root = document.documentElement;
-      root.style.setProperty('--background', originalColors.background);
-      root.style.setProperty('--foreground', originalColors.foreground);
-      root.style.setProperty('--accent', originalColors.accent);
-      document.body.style.backgroundColor = originalColors.background;
+      const { background, foreground, accent, contrast } = originalColors;
+      
+      // Restore all CSS variables
+      const safeForeground = ensureReadableContrast(background, foreground);
+      const mutedForeground = generateMutedForeground(background, safeForeground, contrast);
+      const glassColors = generateGlassColors(background, safeForeground, accent);
+      
+      // Restore data-theme
+      const restoreTheme = originalTheme || theme;
+      root.setAttribute('data-theme', restoreTheme === 'custom' ? 'custom' : restoreTheme);
+      
+      // Core colors
+      root.style.setProperty('--background', background);
+      root.style.setProperty('--foreground', safeForeground);
+      root.style.setProperty('--muted-foreground', mutedForeground);
+      root.style.setProperty('--accent', accent);
+      
+      // Glass colors
+      root.style.setProperty('--glass-bg', glassColors.glassBg);
+      root.style.setProperty('--glass-border', glassColors.glassBorder);
+      root.style.setProperty('--glass-border-hover', glassColors.glassBorderHover);
+      root.style.setProperty('--glass-shadow', glassColors.glassShadow);
+      root.style.setProperty('--dropdown-bg', glassColors.dropdownBg);
+      root.style.setProperty('--input-bg', glassColors.inputBg);
+      
+      // Secondary element styling
+      root.style.setProperty('--secondary-bg', glassColors.secondaryBg);
+      root.style.setProperty('--secondary-border', glassColors.secondaryBorder);
+      root.style.setProperty('--secondary-hover', glassColors.secondaryHover);
+      
+      // Scrollbar
+      root.style.setProperty('--scrollbar-thumb', glassColors.scrollbarThumb);
+      root.style.setProperty('--scrollbar-thumb-hover', glassColors.scrollbarThumbHover);
+      
+      document.body.style.backgroundColor = background;
+    } else if (originalTheme !== 'custom') {
+      // If we weren't in custom mode, remove the inline styles to let CSS take over
+      const root = document.documentElement;
+      const restoreTheme = originalTheme || theme;
+      root.setAttribute('data-theme', restoreTheme === 'system' 
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') 
+        : restoreTheme);
+      root.style.removeProperty('--background');
+      root.style.removeProperty('--foreground');
+      root.style.removeProperty('--muted-foreground');
+      root.style.removeProperty('--accent');
+      root.style.removeProperty('--glass-bg');
+      root.style.removeProperty('--glass-border');
+      root.style.removeProperty('--glass-border-hover');
+      root.style.removeProperty('--glass-shadow');
+      root.style.removeProperty('--dropdown-bg');
+      root.style.removeProperty('--input-bg');
+      root.style.removeProperty('--secondary-bg');
+      root.style.removeProperty('--secondary-border');
+      root.style.removeProperty('--secondary-hover');
+      root.style.removeProperty('--scrollbar-thumb');
+      root.style.removeProperty('--scrollbar-thumb-hover');
+      document.body.style.removeProperty('background-color');
     }
     setDraftColors(null);
     setOriginalColors(null);
+    setOriginalTheme(null);
     setHasChanges(false);
     setShowCustomizer(false);
   };
@@ -500,6 +588,7 @@ function ProviderThemeToggle({ prov }) {
     // Switch to dark mode (liquid glass)
     setTheme('dark');
     setOriginalColors(null);
+    setOriginalTheme(null);
     setShowCustomizer(false);
   };
   

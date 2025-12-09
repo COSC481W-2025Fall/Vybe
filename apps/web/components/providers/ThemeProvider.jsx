@@ -291,3 +291,6 @@ export function ThemeProvider({ children }) {
   );
 }
 
+// Export helper functions for live preview in ThemeToggle
+export { hexToRgb, getLuminance, ensureReadableContrast, generateMutedForeground, generateGlassColors };
+
