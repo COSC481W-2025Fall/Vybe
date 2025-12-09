@@ -397,18 +397,35 @@ function ProviderThemeToggle({ prov }) {
     const [draftColors, setDraftColors] = useState(null);
     const [hasChanges, setHasChanges] = useState(false);
 
+    // Store original colors when customizer opens for reverting
+    const [originalColors, setOriginalColors] = useState(null);
+    
     // Initialize draft colors when customizer opens
     useEffect(() => {
       if (showCustomizer) {
-        setDraftColors({
+        const currentColors = {
           background: customColors.background || DEFAULT_THEME.background,
           foreground: customColors.foreground || DEFAULT_THEME.foreground,
           accent: customColors.accent || DEFAULT_THEME.accent,
           contrast: customColors.contrast || DEFAULT_THEME.contrast,
-        });
+        };
+        setOriginalColors(currentColors);
+        setDraftColors(currentColors);
         setHasChanges(false);
       }
     }, [showCustomizer]);
+    
+    // Apply draft colors to page in real-time for live preview
+    useEffect(() => {
+      if (showCustomizer && draftColors) {
+        const root = document.documentElement;
+        root.style.setProperty('--background', draftColors.background);
+        root.style.setProperty('--foreground', draftColors.foreground);
+        root.style.setProperty('--accent', draftColors.accent);
+        // Also update body background for immediate visual feedback
+        document.body.style.backgroundColor = draftColors.background;
+      }
+    }, [showCustomizer, draftColors]);
 
     useEffect(() => {
     function handleClickOutside(event) {
@@ -449,19 +466,29 @@ function ProviderThemeToggle({ prov }) {
     setHasChanges(true);
   };
 
-  // Actually apply the theme
+  // Actually apply the theme (colors are already applied via live preview)
   const applyTheme = () => {
     if (draftColors) {
       setCustomColors(draftColors);
       setTheme('custom');
       setHasChanges(false);
     }
+    setOriginalColors(null);
     setShowCustomizer(false);
   };
 
-  // Cancel without applying
+  // Cancel without applying - revert to original colors
   const cancelCustomizer = () => {
+    // Revert CSS variables to original colors
+    if (originalColors) {
+      const root = document.documentElement;
+      root.style.setProperty('--background', originalColors.background);
+      root.style.setProperty('--foreground', originalColors.foreground);
+      root.style.setProperty('--accent', originalColors.accent);
+      document.body.style.backgroundColor = originalColors.background;
+    }
     setDraftColors(null);
+    setOriginalColors(null);
     setHasChanges(false);
     setShowCustomizer(false);
   };
@@ -472,6 +499,7 @@ function ProviderThemeToggle({ prov }) {
     localStorage.removeItem('customTheme');
     // Switch to dark mode (liquid glass)
     setTheme('dark');
+    setOriginalColors(null);
     setShowCustomizer(false);
   };
   
@@ -765,9 +793,9 @@ function ProviderThemeToggle({ prov }) {
                 }}
               />
 
-              {/* Live Preview */}
+              {/* Preview Card */}
               <div className="mt-4">
-                <h4 className="text-sm font-medium text-[var(--foreground)] mb-2">Live Preview</h4>
+                <h4 className="text-sm font-medium text-[var(--foreground)] mb-2">Preview Card <span className="text-xs font-normal text-[var(--muted-foreground)]">(page updates live)</span></h4>
                 {/* Page background */}
                 <div
                   className="p-3 rounded-xl"
