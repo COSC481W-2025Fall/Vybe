@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { User, AlertCircle, Music, ArrowLeft, Clock } from 'lucide-react';
+import { User, AlertCircle, Music, ArrowLeft, Clock, Play } from 'lucide-react';
+import { useMiniplayer } from '@/lib/context/GlobalStateContext';
 
 // Spotify Logo SVG Component
 function SpotifyIcon({ className }) {
@@ -26,6 +27,7 @@ function YouTubeIcon({ className }) {
 export default function PublicProfilePage() {
   const pathname = usePathname();
   const router = useRouter();
+  const { playSong } = useMiniplayer();
 
   // Normalize username from URL (lowercase)
   const username = (pathname?.split('/').pop() || '').toLowerCase();
@@ -196,15 +198,58 @@ export default function PublicProfilePage() {
             const isSpotifyDirect = Boolean(song.spotify_url);
             const isYouTubeDirect = Boolean(song.youtube_url);
 
+            // Handle playing in miniplayer
+            const handlePlayInMiniplayer = () => {
+              let platform = null;
+              let external_id = null;
+
+              if (song.spotify_url) {
+                const spotifyMatch = song.spotify_url.match(/track\/([a-zA-Z0-9]+)/);
+                if (spotifyMatch) {
+                  platform = 'spotify';
+                  external_id = spotifyMatch[1];
+                }
+              }
+              
+              if (!platform && song.youtube_url) {
+                const ytMatch = song.youtube_url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+                if (ytMatch) {
+                  platform = 'youtube';
+                  external_id = ytMatch[1];
+                }
+              }
+
+              if (platform && external_id) {
+                playSong({
+                  id: song.id || `${platform}-${external_id}`,
+                  external_id,
+                  platform,
+                  title: displayTitle,
+                  parsed_title: displayTitle,
+                  artist: displayArtist,
+                  parsed_artist: displayArtist,
+                  thumbnail_url: song.image_url,
+                });
+              }
+            };
+
+            const canPlayInMiniplayer = !!(song.spotify_url || song.youtube_url);
+
             return (
               <div className="mb-6">
                 <h2 className="text-sm font-semibold text-[var(--muted-foreground)] mb-3 flex items-center gap-2">
                   <Music className="h-4 w-4" />
                   Song of the Day
                 </h2>
-                <div className="p-3 sm:p-4 bg-[var(--secondary-bg)] rounded-xl border border-[var(--glass-border)]">
+                <button
+                  onClick={canPlayInMiniplayer ? handlePlayInMiniplayer : undefined}
+                  disabled={!canPlayInMiniplayer}
+                  className={`w-full p-3 sm:p-4 bg-[var(--secondary-bg)] rounded-xl border border-[var(--glass-border)] text-left transition-all ${
+                    canPlayInMiniplayer ? 'hover:bg-[var(--secondary-hover)] hover:border-[var(--glass-border-hover)] cursor-pointer group' : ''
+                  }`}
+                >
                   <div className="flex items-center gap-3 sm:gap-4">
-                    {/* Album Art */}
+                    {/* Album Art with play overlay */}
                     <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0">
                       {song.image_url ? (
                         <Image
@@ -217,6 +262,12 @@ export default function PublicProfilePage() {
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <Music className="h-5 w-5 sm:h-6 sm:w-6 text-white/70" />
+                        </div>
+                      )}
+                      {/* Play overlay */}
+                      {canPlayInMiniplayer && (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Play className="h-6 w-6 text-white" fill="currentColor" />
                         </div>
                       )}
                     </div>
@@ -242,6 +293,7 @@ export default function PublicProfilePage() {
                         href={spotifyUrl}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           isSpotifyDirect 
                             ? 'bg-green-600 hover:bg-green-700 text-white' 
@@ -256,6 +308,7 @@ export default function PublicProfilePage() {
                         href={youtubeUrl}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           isYouTubeDirect 
                             ? 'bg-red-600 hover:bg-red-700 text-white' 
@@ -268,7 +321,7 @@ export default function PublicProfilePage() {
                       </a>
                     </div>
                   </div>
-                </div>
+                </button>
                 {song.shared_at && (
                   <p className="text-xs text-[var(--muted-foreground)] mt-2 flex items-center gap-1">
                     <Clock className="h-3 w-3" />

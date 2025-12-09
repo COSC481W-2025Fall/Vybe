@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent } from "../ui/dialog";
-import { Music, Clock, User, ExternalLink } from "lucide-react";
+import { Music, Clock, User, ExternalLink, Play } from "lucide-react";
+import { useMiniplayer } from '@/lib/context/GlobalStateContext';
 
 // Spotify Logo SVG Component
 function SpotifyIcon({ className }) {
@@ -28,6 +29,7 @@ function YouTubeIcon({ className }) {
  */
 export function FriendSongCard({ song, open, onOpenChange }) {
   const router = useRouter();
+  const { playSong } = useMiniplayer();
   
   if (!song) return null;
 
@@ -52,6 +54,46 @@ export function FriendSongCard({ song, open, onOpenChange }) {
     const searchQuery = encodeURIComponent(`${displayTitle} ${displayArtist}`);
     return `https://www.youtube.com/results?search_query=${searchQuery}`;
   };
+
+  // Handle playing in miniplayer
+  const handlePlayInMiniplayer = () => {
+    // Determine platform and external_id from URLs or data
+    let platform = null;
+    let external_id = null;
+
+    if (spotifyUrl) {
+      // Extract Spotify track ID from URL
+      const spotifyMatch = spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
+      if (spotifyMatch) {
+        platform = 'spotify';
+        external_id = spotifyMatch[1];
+      }
+    }
+    
+    if (!platform && youtubeUrl) {
+      // Extract YouTube video ID from URL
+      const ytMatch = youtubeUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+      if (ytMatch) {
+        platform = 'youtube';
+        external_id = ytMatch[1];
+      }
+    }
+
+    if (platform && external_id) {
+      playSong({
+        id: song.id || `${platform}-${external_id}`,
+        external_id,
+        platform,
+        title: displayTitle,
+        parsed_title: displayTitle,
+        artist: displayArtist,
+        parsed_artist: displayArtist,
+        thumbnail_url: song.image_url,
+      });
+    }
+  };
+
+  const canPlayInMiniplayer = !!(spotifyUrl || youtubeUrl);
 
   const username = song.shared_by_username;
   
@@ -93,10 +135,14 @@ export function FriendSongCard({ song, open, onOpenChange }) {
               </svg>
             </button>
 
-            {/* Centered Album Art */}
+            {/* Centered Album Art - Clickable to play */}
             <div className="flex justify-center">
               <div className="relative">
-                <div className="w-32 h-32 sm:w-48 sm:h-48 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-2 sm:ring-4 ring-white/10 bg-gradient-to-br from-purple-600/30 to-pink-600/30">
+                <button
+                  onClick={canPlayInMiniplayer ? handlePlayInMiniplayer : undefined}
+                  disabled={!canPlayInMiniplayer}
+                  className={`group w-32 h-32 sm:w-48 sm:h-48 rounded-xl sm:rounded-2xl overflow-hidden shadow-xl ring-2 sm:ring-4 ring-white/10 bg-gradient-to-br from-purple-600/30 to-pink-600/30 relative ${canPlayInMiniplayer ? 'cursor-pointer' : ''}`}
+                >
                   {song.image_url ? (
                     <img
                       src={song.image_url}
@@ -108,7 +154,16 @@ export function FriendSongCard({ song, open, onOpenChange }) {
                       <Music className="h-12 sm:h-16 w-12 sm:w-16 text-[var(--muted-foreground)] opacity-50" />
                     </div>
                   )}
-                </div>
+                  
+                  {/* Play overlay */}
+                  {canPlayInMiniplayer && (
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                        <Play className="h-6 w-6 sm:h-8 sm:w-8 text-black ml-1" fill="currentColor" />
+                      </div>
+                    </div>
+                  )}
+                </button>
                 
                 {/* Decorative glow - hidden on mobile for performance */}
                 <div className="hidden sm:block absolute -inset-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl -z-10" />

@@ -4,6 +4,7 @@
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { Clock, ListMusic } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMiniplayer } from '@/lib/context/GlobalStateContext';
 
 // Platform Icons
 const SpotifyIcon = ({ className }) => (
@@ -48,7 +49,7 @@ function TabButton({ isActive, children, onClick }) {
   );
 }
 
-function Row({ item }) {
+function Row({ item, onPlay }) {
   // Build external URLs for both platforms
   const getSpotifyUrl = () => {
     if (item.spotifyUrl) return item.spotifyUrl;
@@ -91,12 +92,34 @@ function Row({ item }) {
   const hasDirectSpotify = item.platform === 'spotify' || !!item.spotifyUrl;
   const hasDirectYouTube = item.platform === 'youtube' || !!item.youtubeUrl;
 
+  // Handle playing in miniplayer
+  const handleClick = () => {
+    if (onPlay && item.trackId && item.platform) {
+      onPlay({
+        id: item.id,
+        external_id: item.trackId,
+        platform: item.platform,
+        title: item.title,
+        parsed_title: item.title,
+        artist: item.artist,
+        parsed_artist: item.artist,
+        thumbnail_url: item.cover,
+      });
+    }
+  };
+
+  const canPlay = !!(item.trackId && item.platform);
+
   return (
-    <div className="group glass-card rounded-xl p-3 sm:p-4 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 transition-all duration-300">
+    <button
+      onClick={canPlay ? handleClick : undefined}
+      disabled={!canPlay}
+      className={`group glass-card rounded-xl p-3 sm:p-4 border border-white/10 [data-theme='light']:border-black/10 hover:border-white/20 [data-theme='light']:hover:border-black/20 transition-all duration-300 w-full text-left ${canPlay ? 'cursor-pointer' : ''}`}
+    >
       {/* Fixed column grid: cover | info | time | buttons */}
       <div className="grid grid-cols-[48px_1fr_auto] sm:grid-cols-[56px_1fr_100px_auto] gap-3 sm:gap-4 items-center">
-        {/* Cover Art - fixed width */}
-        <div className="flex-shrink-0">
+        {/* Cover Art - fixed width with play overlay */}
+        <div className="flex-shrink-0 relative">
           <img
             src={item.cover}
             width={64}
@@ -105,6 +128,14 @@ function Row({ item }) {
             alt=""
             aria-hidden="true"
           />
+          {/* Play overlay */}
+          {canPlay && (
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+              <svg className="h-5 w-5 sm:h-6 sm:w-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+          )}
         </div>
         
         {/* Song Info - flexible width */}
@@ -164,7 +195,7 @@ function Row({ item }) {
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -255,6 +286,7 @@ const TABS = [
 
 export default function LibraryView() {
   const [tab, setTab] = useState('recent');
+  const { playSong } = useMiniplayer();
 
   // User identity and provider
   const [userInfo, setUserInfo] = useState(null);
@@ -762,7 +794,7 @@ export default function LibraryView() {
         {recent.length > 0 && (
           <>
             <div className="grid gap-3">
-              {recent.map((it) => <Row key={it.id} item={it} />)}
+              {recent.map((it) => <Row key={it.id} item={it} onPlay={playSong} />)}
             </div>
 
             {hasMore && (
@@ -787,7 +819,7 @@ export default function LibraryView() {
         )}
       </div>
     );
-  }, [tab, recent, loadingRec, recError, hasMore, loadMore, playlists, loadingPlaylists, playlistsError, provider]);
+  }, [tab, recent, loadingRec, recError, hasMore, loadMore, playlists, loadingPlaylists, playlistsError, provider, playSong]);
 
   return (
     <section className="mx-auto max-w-6xl px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">

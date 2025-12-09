@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import ExportPlaylistButton from "./ExportPlaylistButton";
 import ExportToSpotifyButton from "./ExportToSpotifyButton";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { useMiniplayer } from "@/lib/context/GlobalStateContext";
 /**
  * HomePage component - Main dashboard view for authenticated users
  * Displays groups, friends' songs, and music communities (tehe)
@@ -27,6 +28,7 @@ export function HomePage({ onNavigate } = {}) {
   const router = useRouter();
   const { groups, createGroup, loading: groupsLoading, error: groupsError } = useGroups();
   const { friendsSongsOfTheDay, communities, loading: socialLoading, error: socialError } = useSocial();
+  const { playSong } = useMiniplayer();
   const createGroupDialog = useDialog();
   const communitiesDialog = useDialog();
   const [showSongSearchModal, setShowSongSearchModal] = useState(false);
@@ -568,24 +570,79 @@ export function HomePage({ onNavigate } = {}) {
                       const youtubeUrl = getYouTubeUrl();
                       const isSpotifyDirect = song.spotify_url || song.platform === 'spotify';
                       const isYouTubeDirect = song.youtube_url || song.platform === 'youtube';
+
+                      // Handle playing in miniplayer
+                      const handlePlayInMiniplayer = () => {
+                        let platform = null;
+                        let external_id = null;
+
+                        if (song.spotify_url) {
+                          const spotifyMatch = song.spotify_url.match(/track\/([a-zA-Z0-9]+)/);
+                          if (spotifyMatch) {
+                            platform = 'spotify';
+                            external_id = spotifyMatch[1];
+                          }
+                        } else if (song.platform === 'spotify' && song.external_id) {
+                          platform = 'spotify';
+                          external_id = song.external_id;
+                        }
+                        
+                        if (!platform && song.youtube_url) {
+                          const ytMatch = song.youtube_url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+                          if (ytMatch) {
+                            platform = 'youtube';
+                            external_id = ytMatch[1];
+                          }
+                        } else if (!platform && song.platform === 'youtube' && song.external_id) {
+                          platform = 'youtube';
+                          external_id = song.external_id;
+                        }
+
+                        if (platform && external_id) {
+                          playSong({
+                            id: song.id || `${platform}-${external_id}`,
+                            external_id,
+                            platform,
+                            title: displayTitle,
+                            parsed_title: displayTitle,
+                            artist: displayArtist,
+                            parsed_artist: displayArtist,
+                            thumbnail_url: song.thumbnail,
+                          });
+                        }
+                      };
+
+                      const canPlayInMiniplayer = !!(song.spotify_url || song.youtube_url || ((song.platform === 'spotify' || song.platform === 'youtube') && song.external_id));
                       
                       return (
-                        <div
+                        <button
                           key={song.id || idx}
-                          className="flex items-center gap-3 p-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] hover:bg-[var(--secondary-hover)] transition-colors h-[72px] w-full"
+                          onClick={canPlayInMiniplayer ? handlePlayInMiniplayer : undefined}
+                          disabled={!canPlayInMiniplayer}
+                          className={`flex items-center gap-3 p-3 rounded-xl bg-[var(--secondary-bg)] border border-[var(--glass-border)] hover:bg-[var(--secondary-hover)] hover:border-[var(--glass-border-hover)] transition-colors h-[72px] w-full text-left ${canPlayInMiniplayer ? 'cursor-pointer group' : ''}`}
                         >
-                          {/* Thumbnail - fixed size */}
-                          {song.thumbnail ? (
-                            <img
-                              src={song.thumbnail}
-                              alt={displayTitle}
-                              className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-lg bg-[var(--glass-bg)] flex items-center justify-center flex-shrink-0">
-                              <Music className="h-5 w-5 text-[var(--muted-foreground)]" />
-                            </div>
-                          )}
+                          {/* Thumbnail - fixed size with play overlay */}
+                          <div className="relative w-12 h-12 flex-shrink-0">
+                            {song.thumbnail ? (
+                              <img
+                                src={song.thumbnail}
+                                alt={displayTitle}
+                                className="w-12 h-12 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-[var(--glass-bg)] flex items-center justify-center">
+                                <Music className="h-5 w-5 text-[var(--muted-foreground)]" />
+                              </div>
+                            )}
+                            {/* Play overlay */}
+                            {canPlayInMiniplayer && (
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                                <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M8 5v14l11-7z"/>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                           {/* Info */}
                           <div className="flex-1 min-w-0">
                             <p className="text-xs sm:text-sm font-medium text-[var(--foreground)] truncate">
@@ -630,7 +687,7 @@ export function HomePage({ onNavigate } = {}) {
                               </svg>
                             </a>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                 </div>
