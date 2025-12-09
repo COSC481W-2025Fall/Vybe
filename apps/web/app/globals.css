@@ -989,9 +989,13 @@ body {
   display: none;
 }
 
-main {
-  height: 100vh;
+/* Login page specific - center the login box */
+main:has(#login-box) {
+  min-height: calc(100vh - 48px); /* Account for navbar if present */
+  min-height: calc(100dvh - 48px);
   display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #login-box {
