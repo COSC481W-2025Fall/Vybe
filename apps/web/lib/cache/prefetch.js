@@ -31,73 +31,85 @@ function scheduleIdleTask(task, timeout = 2000) {
 
 /**
  * Prefetch user's groups in the background
+ * Note: Uses a simpler query to avoid Supabase join issues
  */
 export async function prefetchUserGroups(supabase, userId) {
   if (!userId) return;
   
   // Skip if cache is fresh
   if (!isCacheStale(CACHE_KEYS.USER_GROUPS)) {
-    console.log('[prefetch] User groups cache is fresh, skipping');
     return getCache(CACHE_KEYS.USER_GROUPS);
   }
   
   try {
-    const { data, error } = await supabase
+    // Get group IDs the user is a member of
+    const { data: memberships, error: memberError } = await supabase
       .from('group_members')
-      .select(`
-        group:groups (
-          id,
-          name,
-          description,
-          image_url,
-          slug,
-          created_at
-        )
-      `)
+      .select('group_id')
       .eq('user_id', userId);
     
-    if (error) throw error;
+    if (memberError) throw memberError;
     
-    const groups = data?.map(m => m.group).filter(Boolean) || [];
-    setCache(CACHE_KEYS.USER_GROUPS, groups, CACHE_TTL.USER_GROUPS);
-    console.log(`[prefetch] Cached ${groups.length} user groups`);
+    if (!memberships || memberships.length === 0) {
+      setCache(CACHE_KEYS.USER_GROUPS, [], CACHE_TTL.USER_GROUPS);
+      return [];
+    }
+    
+    // Get group details
+    const groupIds = memberships.map(m => m.group_id);
+    const { data: groups, error: groupError } = await supabase
+      .from('groups')
+      .select('id, name, description, image_url, slug, created_at')
+      .in('id', groupIds);
+    
+    if (groupError) throw groupError;
+    
+    setCache(CACHE_KEYS.USER_GROUPS, groups || [], CACHE_TTL.USER_GROUPS);
+    console.log(`[prefetch] Cached ${groups?.length || 0} user groups`);
     return groups;
   } catch (error) {
-    console.error('[prefetch] Error prefetching groups:', error);
+    // Silent fail - prefetch is not critical
+    console.warn('[prefetch] Could not prefetch groups:', error?.message || 'Unknown error');
     return null;
   }
 }
 
 /**
  * Prefetch user's friends in the background
+ * Uses the API endpoint which handles the complex friend query
  */
 export async function prefetchUserFriends(supabase, userId) {
   if (!userId) return;
   
   // Skip if cache is fresh
   if (!isCacheStale(CACHE_KEYS.USER_FRIENDS)) {
-    console.log('[prefetch] User friends cache is fresh, skipping');
     return getCache(CACHE_KEYS.USER_FRIENDS);
   }
   
   try {
-    const { data, error } = await supabase.rpc('get_accepted_friends', {
-      p_user_id: userId
-    });
+    // Use the API endpoint which handles friends properly
+    const response = await fetch('/api/friends');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
     
-    if (error) throw error;
-    
-    setCache(CACHE_KEYS.USER_FRIENDS, data || [], CACHE_TTL.USER_FRIENDS);
-    console.log(`[prefetch] Cached ${data?.length || 0} user friends`);
-    return data;
+    const data = await response.json();
+    if (data.success && data.friends) {
+      setCache(CACHE_KEYS.USER_FRIENDS, data.friends, CACHE_TTL.USER_FRIENDS);
+      console.log(`[prefetch] Cached ${data.friends.length} user friends`);
+      return data.friends;
+    }
+    return null;
   } catch (error) {
-    console.error('[prefetch] Error prefetching friends:', error);
+    // Silent fail - prefetch is not critical
+    console.warn('[prefetch] Could not prefetch friends:', error?.message || 'Unknown error');
     return null;
   }
 }
 
 /**
  * Prefetch connected accounts status
+ * Uses auth identities which are always available
  */
 export async function prefetchConnectedAccounts(supabase, userId) {
   if (!userId) return;
@@ -108,35 +120,31 @@ export async function prefetchConnectedAccounts(supabase, userId) {
   }
   
   try {
-    const [spotifyResult, youtubeResult] = await Promise.all([
-      supabase
-        .from('spotify_tokens')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle(),
-      supabase
-        .from('youtube_tokens')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle(),
-    ]);
+    // Get user's auth identities (more reliable than token tables)
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return null;
+    }
     
     const accounts = {
-      spotify: !!spotifyResult.data,
-      youtube: !!youtubeResult.data,
+      spotify: user.identities?.some(id => id.provider === 'spotify') || false,
+      youtube: user.identities?.some(id => id.provider === 'google') || false,
     };
     
     setCache(CACHE_KEYS.CONNECTED_ACCOUNTS, accounts, CACHE_TTL.USER_PROFILE);
     console.log('[prefetch] Cached connected accounts status');
     return accounts;
   } catch (error) {
-    console.error('[prefetch] Error prefetching connected accounts:', error);
+    // Silent fail - prefetch is not critical
+    console.warn('[prefetch] Could not prefetch connected accounts:', error?.message || 'Unknown error');
     return null;
   }
 }
 
 /**
  * Prefetch user profile
+ * Note: Profile may not exist for all users, so we handle 404 gracefully
  */
 export async function prefetchUserProfile(supabase, userId) {
   if (!userId) return;
@@ -151,15 +159,21 @@ export async function prefetchUserProfile(supabase, userId) {
       .from('profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle(); // Use maybeSingle to handle missing profiles
     
-    if (error) throw error;
+    // If profile doesn't exist, that's okay
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
     
-    setCache(CACHE_KEYS.USER_PROFILE, data, CACHE_TTL.USER_PROFILE);
-    console.log('[prefetch] Cached user profile');
+    if (data) {
+      setCache(CACHE_KEYS.USER_PROFILE, data, CACHE_TTL.USER_PROFILE);
+      console.log('[prefetch] Cached user profile');
+    }
     return data;
   } catch (error) {
-    console.error('[prefetch] Error prefetching profile:', error);
+    // Silent fail - prefetch is not critical
+    console.warn('[prefetch] Could not prefetch profile:', error?.message || 'Unknown error');
     return null;
   }
 }

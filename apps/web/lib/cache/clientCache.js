@@ -16,8 +16,8 @@
 
 const CACHE_VERSION = 'v1';
 const CACHE_PREFIX = 'vybe_cache_';
-const MAX_CACHE_SIZE = 5 * 1024 * 1024; // 5MB max total cache
-const MAX_ITEM_SIZE = 500 * 1024; // 500KB max per item
+const MAX_CACHE_SIZE = 10 * 1024 * 1024; // 10MB max total cache
+const MAX_ITEM_SIZE = 8 * 1024 * 1024; // 8MB max per item (friends list can be large)
 
 // Default TTLs for different data types
 export const CACHE_TTL = {
