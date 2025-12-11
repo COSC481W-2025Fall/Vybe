@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Youtube, Clock, ExternalLink } from 'lucide-react';
+import { Youtube, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -85,12 +85,10 @@ export default function ExportPlaylistButton({
   // Background export hook
   const { 
     queueExport, 
-    jobStatus, 
-    isExporting: isBackgroundExporting,
-    cancelExport,
     externalUrl,
     isComplete: isBackgroundComplete,
-    isFailed: isBackgroundFailed
+    isFailed: isBackgroundFailed,
+    jobStatus
   } = useExportJob();
 
   // Auto-suggest background export for large playlists (lower threshold for YouTube due to API quotas)
@@ -100,24 +98,29 @@ export default function ExportPlaylistButton({
     }
   }, [trackCount, allowBackground]);
 
-  // Handle background export completion
+  // Handle background export completion - show toast notification
   useEffect(() => {
     if (isBackgroundComplete && externalUrl) {
-      setShowExportDialog(false);
-      toast.success('Background export completed!', {
-        duration: 8000,
+      toast.success('YouTube export completed!', {
+        duration: 10000,
         action: {
           label: 'Open Playlist',
           onClick: () => window.open(externalUrl, '_blank')
         }
       });
     } else if (isBackgroundFailed && jobStatus?.error_message) {
-      toast.error(`Export failed: ${jobStatus.error_message}`);
+      toast.error(`Export failed: ${jobStatus.error_message}`, {
+        duration: 8000
+      });
     }
   }, [isBackgroundComplete, isBackgroundFailed, externalUrl, jobStatus]);
 
-  // Handle background export
+  // Handle background export - close dialog immediately and show toast
   async function handleBackgroundExport() {
+    // Close dialog immediately
+    setShowExportDialog(false);
+    setCustomPlaylistName('');
+    
     try {
       await queueExport({
         platform: 'youtube',
@@ -128,8 +131,9 @@ export default function ExportPlaylistButton({
         description: `Exported from Vybe${customPlaylistName.trim() ? ` - ${customPlaylistName.trim()}` : ''}`,
       });
       
-      toast.success('Export queued! You can close this page - the export will continue in the background.', {
-        duration: 6000,
+      // Show simple toast - no progress bar, just notification
+      toast.success("Export queued! We'll notify you when it's done.", {
+        duration: 5000,
       });
     } catch (error) {
       console.error('[Export YouTube] Background export error:', error);
@@ -222,9 +226,9 @@ export default function ExportPlaylistButton({
   });
 
   function handleExportConfirm() {
-    if (exportToYouTubeMutation.isPending || isBackgroundExporting) return;
+    if (exportToYouTubeMutation.isPending) return;
     
-    // Use background export if selected
+    // Use background export if selected - closes dialog immediately
     if (useBackgroundExport && allowBackground) {
       return handleBackgroundExport();
     }
@@ -291,10 +295,10 @@ export default function ExportPlaylistButton({
                 onChange={(e) => setCustomPlaylistName(e.target.value)}
                 placeholder={`Enter a name (Default: [Vybe Export] ${defaultName})`}
                 className="w-full px-4 py-2 bg-[var(--input-bg)] border-2 border-[var(--glass-border)] rounded-lg text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500"
-                disabled={exportToYouTubeMutation.isPending || isBackgroundExporting}
+                disabled={exportToYouTubeMutation.isPending}
                 aria-describedby={exportToYouTubeMutation.isPending ? "youtube-export-progress" : undefined}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !exportToYouTubeMutation.isPending && !isBackgroundExporting) {
+                  if (e.key === 'Enter' && !exportToYouTubeMutation.isPending) {
                     handleExportConfirm();
                   }
                 }}
@@ -308,7 +312,7 @@ export default function ExportPlaylistButton({
                   type="checkbox"
                   checked={useBackgroundExport}
                   onChange={(e) => setUseBackgroundExport(e.target.checked)}
-                  disabled={exportToYouTubeMutation.isPending || isBackgroundExporting}
+                  disabled={exportToYouTubeMutation.isPending}
                   className="mt-0.5 w-4 h-4 accent-red-500"
                 />
                 <div className="flex-1">
@@ -318,44 +322,14 @@ export default function ExportPlaylistButton({
                   </div>
                   <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
                     {trackCount > 100 
-                      ? `Recommended for ${trackCount}+ tracks. Export continues even if you close this page.`
-                      : 'Export continues even if you close this page. Best for large playlists.'}
+                      ? `Recommended for ${trackCount}+ tracks. We'll notify you when it's done.`
+                      : "We'll notify you when it's done. Best for large playlists."}
                   </p>
                 </div>
               </label>
             )}
-
-            {/* Background Export Progress */}
-            {isBackgroundExporting && jobStatus && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-red-400">Background Export</span>
-                  {jobStatus.progress != null && (
-                    <span className="text-sm text-red-400">{jobStatus.progress}%</span>
-                  )}
-                </div>
-                <p className="text-xs text-[var(--muted-foreground)]">{jobStatus.current_step}</p>
-                <div className="h-1.5 bg-red-500/20 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-red-500 rounded-full transition-all duration-300"
-                    style={{ width: `${jobStatus.progress || 0}%` }}
-                  />
-                </div>
-                {externalUrl && (
-                  <a 
-                    href={externalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 mt-1"
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    Open in YouTube
-                  </a>
-                )}
-              </div>
-            )}
             
-            {/* Regular Progress Bar */}
+            {/* Regular Progress Bar - only for synchronous export */}
             <div id="youtube-export-progress">
               <ExportProgressBar 
                 isExporting={exportToYouTubeMutation.isPending && !useBackgroundExport} 
@@ -370,37 +344,28 @@ export default function ExportPlaylistButton({
               disabled={exportToYouTubeMutation.isPending}
               className="px-4 py-2 bg-[var(--secondary-bg)] hover:bg-[var(--secondary-hover)] text-[var(--foreground)] border border-[var(--glass-border)] rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isBackgroundExporting ? 'Close' : 'Cancel'}
+              Cancel
             </button>
-            {isBackgroundExporting ? (
-              <button
-                onClick={cancelExport}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                Cancel Export
-              </button>
-            ) : (
-              <button
-                onClick={handleExportConfirm}
-                disabled={exportToYouTubeMutation.isPending}
-                aria-busy={exportToYouTubeMutation.isPending}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {exportToYouTubeMutation.isPending ? (
-                  <>
-                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                    <span>Exporting...</span>
-                  </>
-                ) : useBackgroundExport ? (
-                  <>
-                    <Clock className="h-4 w-4" />
-                    Queue Export
-                  </>
-                ) : (
-                  'Confirm Export'
-                )}
-              </button>
-            )}
+            <button
+              onClick={handleExportConfirm}
+              disabled={exportToYouTubeMutation.isPending}
+              aria-busy={exportToYouTubeMutation.isPending}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {exportToYouTubeMutation.isPending ? (
+                <>
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                  <span>Exporting...</span>
+                </>
+              ) : useBackgroundExport ? (
+                <>
+                  <Clock className="h-4 w-4" />
+                  Queue Export
+                </>
+              ) : (
+                'Confirm Export'
+              )}
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

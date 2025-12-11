@@ -3,6 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 import { getValidAccessToken as getSpotifyToken } from '@/lib/spotify';
 import { getValidAccessToken as getYouTubeToken } from '@/lib/youtube';
 import { trackIdToUri, searchSpotifyTrack } from '@/lib/services/spotifyExport';
+import { 
+  prefetchCachedPlatformIds, 
+  getCachedIdFromMap,
+  batchCacheSearchResults 
+} from '@/lib/services/globalSongDatabase';
 
 // Lazy initialization of supabase admin client
 let _supabaseAdmin = null;
@@ -69,38 +74,80 @@ async function fetchWithRateLimit(url, options, jobId, retryCount = 0) {
 // Process Spotify export
 async function processSpotifyExport(jobId, tracks, accessToken, playlistName, description, isPublic, isCollaborative) {
   await updateJobProgress(jobId, {
-    current_step: 'Converting tracks to Spotify format...',
+    current_step: 'Pre-fetching cache...',
     total_tracks: tracks.length,
+    progress: 5
+  });
+
+  // OPTIMIZATION: Pre-fetch all cache entries in parallel before processing
+  // This batches database queries instead of making them one-by-one
+  const tracksToLookup = tracks.filter(t => {
+    const platform = t.playlist_platform || t.platform || 'youtube';
+    return platform !== 'spotify' && t.title; // Only non-Spotify tracks need cache lookup
+  });
+  
+  const { cacheMap, hits: prefetchHits, misses: prefetchMisses } = 
+    await prefetchCachedPlatformIds(tracksToLookup, 'spotify');
+  
+  console.log(`[export-jobs-process] ⚡ Spotify pre-fetch: ${prefetchHits} cache hits, ${prefetchMisses} will need API search`);
+  
+  await updateJobProgress(jobId, {
+    current_step: 'Converting tracks to Spotify format...',
     progress: 10
   });
 
-  // Convert tracks to Spotify URIs
+  // Convert tracks to Spotify URIs - uses pre-fetched cache for O(1) lookups
   const trackUris = [];
   const failedTracks = [];
+  const resultsToCache = []; // Collect results for batch caching
+  let cacheHits = 0;
+  let cacheMisses = 0;
 
   for (let i = 0; i < tracks.length; i++) {
     const track = tracks[i];
     
-    // Check if job was cancelled
-    const { data: currentJob } = await getSupabaseAdmin()
-      .from('export_jobs')
-      .select('status')
-      .eq('id', jobId)
-      .single();
-    
-    if (currentJob?.status === 'cancelled') {
-      console.log(`[export-jobs-process] Spotify job ${jobId} was cancelled`);
-      return;
+    // Check if job was cancelled (less frequently to reduce DB queries)
+    if (i % 20 === 0) {
+      const { data: currentJob } = await getSupabaseAdmin()
+        .from('export_jobs')
+        .select('status')
+        .eq('id', jobId)
+        .single();
+      
+      if (currentJob?.status === 'cancelled') {
+        console.log(`[export-jobs-process] Spotify job ${jobId} was cancelled`);
+        return;
+      }
     }
 
     try {
       let uri = null;
       const trackPlatform = track.playlist_platform || track.platform || 'youtube';
       
+      // If track is already from Spotify, use its ID directly
       if (trackPlatform === 'spotify' && track.external_id) {
         uri = trackIdToUri(track.external_id);
+        // Queue for background caching (non-blocking)
+        resultsToCache.push({ title: track.title, artist: track.artist, platformId: track.external_id });
       } else if (track.title) {
-        uri = await searchSpotifyTrack(track.title, track.artist, accessToken);
+        // Use O(1) lookup from pre-fetched cache map
+        const cachedSpotifyId = getCachedIdFromMap(cacheMap, track.title, track.artist);
+        
+        if (cachedSpotifyId) {
+          // Cache hit! No Spotify API search needed
+          uri = trackIdToUri(cachedSpotifyId);
+          cacheHits++;
+        } else {
+          // Cache miss - search Spotify API
+          cacheMisses++;
+          uri = await searchSpotifyTrack(track.title, track.artist, accessToken);
+          
+          // Queue for background caching if found
+          if (uri) {
+            const spotifyId = uri.replace('spotify:track:', '');
+            resultsToCache.push({ title: track.title, artist: track.artist, platformId: spotifyId });
+          }
+        }
       }
       
       if (uri) {
@@ -117,18 +164,25 @@ async function processSpotifyExport(jobId, tracks, accessToken, playlistName, de
     if (i % 10 === 0 || i === tracks.length - 1) {
       const conversionProgress = Math.floor((i / tracks.length) * 40) + 10;
       await updateJobProgress(jobId, {
-        current_step: `Converting tracks... (${i + 1}/${tracks.length})`,
+        current_step: `Converting tracks... (${i + 1}/${tracks.length}, ${cacheHits} cached)`,
         progress: conversionProgress,
         exported_tracks: trackUris.length,
         failed_tracks: failedTracks.length
       });
     }
 
-    // Small delay to avoid rate limits during search
-    if (i % 5 === 4) {
+    // Small delay to avoid rate limits during search (not needed for cache hits)
+    if (cacheMisses > 0 && cacheMisses % 5 === 0) {
       await delay(100);
     }
   }
+  
+  // Batch cache all new results in background (non-blocking)
+  if (resultsToCache.length > 0) {
+    batchCacheSearchResults(resultsToCache, 'spotify');
+  }
+  
+  console.log(`[export-jobs-process] 📊 Spotify cache stats: ${cacheHits} hits, ${cacheMisses} misses`);
 
   if (!trackUris.length) {
     throw new Error('No tracks could be found on Spotify');
@@ -243,8 +297,19 @@ async function processSpotifyExport(jobId, tracks, accessToken, playlistName, de
 // Process YouTube export
 async function processYouTubeExport(jobId, tracks, accessToken, playlistName, description) {
   await updateJobProgress(jobId, {
-    current_step: 'Creating YouTube playlist...',
+    current_step: 'Pre-fetching cache...',
     total_tracks: tracks.length,
+    progress: 5
+  });
+
+  // OPTIMIZATION: Pre-fetch all cache entries in parallel before processing
+  const { cacheMap, hits: prefetchHits, misses: prefetchMisses } = 
+    await prefetchCachedPlatformIds(tracks, 'youtube');
+  
+  console.log(`[export-jobs-process] ⚡ YouTube pre-fetch: ${prefetchHits} cache hits, ${prefetchMisses} will need API search`);
+
+  await updateJobProgress(jobId, {
+    current_step: 'Creating YouTube playlist...',
     progress: 10
   });
 
@@ -281,56 +346,81 @@ async function processYouTubeExport(jobId, tracks, accessToken, playlistName, de
     external_playlist_url: `https://www.youtube.com/playlist?list=${youtubePlaylistId}`
   });
 
-  // Search and add videos one by one (YouTube requires search for each)
+  // Search and add videos - uses pre-fetched cache for O(1) lookups
   let addedTracks = 0;
   let failedTracks = 0;
+  let cacheHits = 0;
+  let cacheMisses = 0;
+  const resultsToCache = []; // Collect results for batch caching
 
   for (let i = 0; i < tracks.length; i++) {
     const track = tracks[i];
     
-    // Check if job was cancelled
-    const { data: currentJob } = await getSupabaseAdmin()
-      .from('export_jobs')
-      .select('status')
-      .eq('id', jobId)
-      .single();
-    
-    if (currentJob?.status === 'cancelled') {
-      console.log(`[export-jobs-process] YouTube job ${jobId} was cancelled`);
-      return;
+    // Check if job was cancelled (less frequently to reduce DB queries)
+    if (i % 20 === 0) {
+      const { data: currentJob } = await getSupabaseAdmin()
+        .from('export_jobs')
+        .select('status')
+        .eq('id', jobId)
+        .single();
+      
+      if (currentJob?.status === 'cancelled') {
+        console.log(`[export-jobs-process] YouTube job ${jobId} was cancelled`);
+        return;
+      }
     }
 
     try {
-      // Build search query
-      const searchQuery = track.artist 
-        ? `${track.artist} - ${track.title}`
-        : track.title;
+      let videoId = null;
+      
+      // Use O(1) lookup from pre-fetched cache map
+      const cachedVideoId = getCachedIdFromMap(cacheMap, track.title, track.artist);
+      
+      if (cachedVideoId) {
+        // Cache hit! No YouTube API search needed - saves API quota
+        videoId = cachedVideoId;
+        cacheHits++;
+      } else {
+        // Cache miss - search YouTube API
+        cacheMisses++;
+        
+        // Build search query
+        const searchQuery = track.artist 
+          ? `${track.artist} - ${track.title}`
+          : track.title;
 
-      // Search YouTube for the song
-      const searchResponse = await fetch(
-        `${YOUTUBE_API_BASE}/search?part=snippet&type=video&q=${encodeURIComponent(searchQuery)}&maxResults=1`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` }
+        // Search YouTube for the song
+        const searchResponse = await fetch(
+          `${YOUTUBE_API_BASE}/search?part=snippet&type=video&q=${encodeURIComponent(searchQuery)}&maxResults=1`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          }
+        );
+
+        if (!searchResponse.ok) {
+          console.error(`[export-jobs-process] YouTube search failed for "${searchQuery}"`);
+          failedTracks++;
+          await delay(YOUTUBE_DELAY_MS);
+          continue;
         }
-      );
 
-      if (!searchResponse.ok) {
-        console.error(`[export-jobs-process] YouTube search failed for "${searchQuery}"`);
-        failedTracks++;
+        const searchData = await searchResponse.json();
+
+        if (!searchData.items || searchData.items.length === 0) {
+          console.log(`[export-jobs-process] No YouTube results for "${searchQuery}"`);
+          failedTracks++;
+          await delay(YOUTUBE_DELAY_MS);
+          continue;
+        }
+
+        videoId = searchData.items[0].id.videoId;
+        
+        // Queue for batch caching (non-blocking)
+        resultsToCache.push({ title: track.title, artist: track.artist, platformId: videoId });
+        
+        // Delay only needed for API calls, not cache hits
         await delay(YOUTUBE_DELAY_MS);
-        continue;
       }
-
-      const searchData = await searchResponse.json();
-
-      if (!searchData.items || searchData.items.length === 0) {
-        console.log(`[export-jobs-process] No YouTube results for "${searchQuery}"`);
-        failedTracks++;
-        await delay(YOUTUBE_DELAY_MS);
-        continue;
-      }
-
-      const videoId = searchData.items[0].id.videoId;
 
       // Add video to playlist
       const addResponse = await fetch(`${YOUTUBE_API_BASE}/playlistItems?part=snippet`, {
@@ -386,18 +476,28 @@ async function processYouTubeExport(jobId, tracks, accessToken, playlistName, de
       failedTracks++;
     }
 
-    // Update progress
+    // Update progress with cache stats
     const progress = 20 + Math.floor((i / tracks.length) * 75);
     await updateJobProgress(jobId, {
-      current_step: `Adding videos... (${i + 1}/${tracks.length})`,
+      current_step: `Adding videos... (${i + 1}/${tracks.length}, ${cacheHits} cached)`,
       progress,
       exported_tracks: addedTracks,
       failed_tracks: failedTracks
     });
 
-    // Slow-rolling delay for YouTube (1 second between requests)
-    await delay(YOUTUBE_DELAY_MS);
+    // Small delay for cache hits to avoid YouTube playlist API rate limits
+    const wasCacheHit = getCachedIdFromMap(cacheMap, track.title, track.artist) !== null;
+    if (wasCacheHit) {
+      await delay(300); // Faster for cache hits
+    }
   }
+  
+  // Batch cache all new results in background (non-blocking)
+  if (resultsToCache.length > 0) {
+    batchCacheSearchResults(resultsToCache, 'youtube');
+  }
+  
+  console.log(`[export-jobs-process] 📊 YouTube cache stats: ${cacheHits} hits, ${cacheMisses} misses`);
 
   // Mark as completed
   await updateJobProgress(jobId, {

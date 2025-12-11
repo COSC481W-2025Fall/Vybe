@@ -13,6 +13,40 @@ const memoryCache = new Map();
 const MEMORY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for in-memory only
 const MEMORY_CACHE_MAX = 500;
 
+// Concurrency control for parallel operations
+const DEFAULT_CONCURRENCY = 10; // Max parallel database operations
+
+/**
+ * Execute async functions with controlled concurrency
+ * @param {Array<() => Promise<T>>} tasks - Array of functions returning promises
+ * @param {number} concurrency - Max concurrent executions
+ * @returns {Promise<Array<T>>} - Results in original order
+ */
+async function parallelLimit(tasks, concurrency = DEFAULT_CONCURRENCY) {
+  const results = new Array(tasks.length);
+  let currentIndex = 0;
+  
+  async function runNext() {
+    while (currentIndex < tasks.length) {
+      const index = currentIndex++;
+      try {
+        results[index] = await tasks[index]();
+      } catch (error) {
+        results[index] = null;
+        console.error(`[parallelLimit] Task ${index} failed:`, error.message);
+      }
+    }
+  }
+  
+  // Start `concurrency` number of workers
+  const workers = Array(Math.min(concurrency, tasks.length))
+    .fill(null)
+    .map(() => runNext());
+  
+  await Promise.all(workers);
+  return results;
+}
+
 function generateSearchKey(title, artist) {
   const t = (title || '').toLowerCase().trim().replace(/[^\w\s]/g, '');
   const a = (artist || '').toLowerCase().trim().replace(/[^\w\s]/g, '');
@@ -265,5 +299,293 @@ export async function getDatabaseStats() {
   }
 }
 
-export default { lookupSong, registerSong, batchRegisterSongs, updateSongMetadata, addSongAlias, getDatabaseStats };
+/**
+ * Find a cached platform ID from the global song database.
+ * This checks all users' previous exports - when any user finds a song,
+ * all future users benefit from that cached mapping.
+ * 
+ * @param {string} title - Song title to search for
+ * @param {string} artist - Artist name (optional)
+ * @param {string} platform - Target platform: 'spotify' or 'youtube'
+ * @returns {string|null} - Platform ID if found, null otherwise
+ */
+export async function findCachedPlatformId(title, artist, platform) {
+  if (!title || !platform) return null;
+  
+  // Check in-memory cache first for performance
+  const cacheKey = `${platform}:${generateSearchKey(title, artist)}`;
+  const cached = checkCache(cacheKey);
+  if (cached) {
+    console.log(`[globalSongDB] ⚡ Memory cache hit for "${artist} - ${title}" on ${platform}`);
+    return cached;
+  }
+  
+  try {
+    const supabase = supabaseServer();
+    
+    const { data, error } = await supabase.rpc('find_cached_platform_id', {
+      p_title: title,
+      p_artist: artist || '',
+      p_target_platform: platform
+    });
+    
+    if (error) {
+      // Handle function not existing (migration not run yet)
+      if (error.message?.includes('does not exist') || error.code === '42883') {
+        console.log('[globalSongDB] find_cached_platform_id function not found, falling back to direct lookup');
+        // Fallback to direct lookup
+        return await fallbackPlatformLookup(title, artist, platform);
+      }
+      console.error('[globalSongDB] RPC error:', error.message);
+      return null;
+    }
+    
+    if (data) {
+      // Cache the result in memory for fast repeated lookups
+      addCache(cacheKey, data);
+      console.log(`[globalSongDB] 🎯 Cache HIT for "${artist} - ${title}" on ${platform}: ${data}`);
+    }
+    
+    return data;
+  } catch (e) {
+    console.error('[globalSongDB] findCachedPlatformId error:', e.message);
+    return null;
+  }
+}
+
+/**
+ * Fallback lookup when RPC function doesn't exist yet
+ */
+async function fallbackPlatformLookup(title, artist, platform) {
+  try {
+    const supabase = supabaseServer();
+    const searchTitle = title.toLowerCase().trim();
+    const searchArtist = (artist || '').toLowerCase().trim();
+    
+    let query = supabase.from('global_songs').select(platform === 'spotify' ? 'spotify_id' : 'youtube_id');
+    
+    // Try canonical title match
+    query = query.ilike('canonical_title', searchTitle);
+    if (searchArtist) {
+      query = query.ilike('canonical_artist', searchArtist);
+    }
+    
+    const { data, error } = await query.not(platform === 'spotify' ? 'spotify_id' : 'youtube_id', 'is', null).limit(1).single();
+    
+    if (error || !data) return null;
+    return platform === 'spotify' ? data.spotify_id : data.youtube_id;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cache a successful search result in the global database.
+ * This stores the mapping so future users benefit from this search.
+ * 
+ * @param {string} title - Song title that was searched
+ * @param {string} artist - Artist name (optional)
+ * @param {string} platformId - The found platform ID (Spotify track ID or YouTube video ID)
+ * @param {string} platform - Platform: 'spotify' or 'youtube'
+ * @returns {string|null} - The global song ID, or null on error
+ */
+export async function cacheSearchResult(title, artist, platformId, platform) {
+  if (!title || !platformId || !platform) return null;
+  
+  try {
+    const supabase = supabaseServer();
+    
+    const { data, error } = await supabase.rpc('cache_platform_search_result', {
+      p_title: title,
+      p_artist: artist || '',
+      p_platform_id: platformId,
+      p_platform: platform
+    });
+    
+    if (error) {
+      // Handle function not existing (migration not run yet)
+      if (error.message?.includes('does not exist') || error.code === '42883') {
+        console.log('[globalSongDB] cache_platform_search_result function not found, using registerSong fallback');
+        // Fallback to existing registerSong function
+        const result = await registerSong({
+          originalTitle: title,
+          originalArtist: artist,
+          spotifyId: platform === 'spotify' ? platformId : null,
+          youtubeId: platform === 'youtube' ? platformId : null,
+        });
+        return result?.id || null;
+      }
+      console.error('[globalSongDB] Cache RPC error:', error.message);
+      return null;
+    }
+    
+    // Also update memory cache
+    const cacheKey = `${platform}:${generateSearchKey(title, artist)}`;
+    addCache(cacheKey, platformId);
+    
+    console.log(`[globalSongDB] 💾 Cached "${artist} - ${title}" -> ${platform}:${platformId}`);
+    return data;
+  } catch (e) {
+    console.error('[globalSongDB] cacheSearchResult error:', e.message);
+    return null;
+  }
+}
+
+/**
+ * Batch lookup platform IDs from the cache with controlled concurrency.
+ * More efficient than individual lookups for large playlists.
+ * 
+ * @param {Array<{title: string, artist: string}>} songs - Songs to look up
+ * @param {string} platform - Target platform: 'spotify' or 'youtube'
+ * @param {number} concurrency - Max parallel lookups (default: 10)
+ * @returns {Array<string|null>} - Array of platform IDs (null for cache misses)
+ */
+export async function batchFindCachedPlatformIds(songs, platform, concurrency = DEFAULT_CONCURRENCY) {
+  if (!songs?.length || !platform) return songs?.map(() => null) || [];
+  
+  const startTime = Date.now();
+  
+  // First pass: check memory cache (synchronous, instant)
+  const memoryResults = songs.map(song => {
+    const cacheKey = `${platform}:${generateSearchKey(song.title, song.artist)}`;
+    return checkCache(cacheKey);
+  });
+  
+  const memoryCacheHits = memoryResults.filter(r => r !== null).length;
+  
+  // Second pass: for memory cache misses, query database in parallel
+  const missIndices = memoryResults
+    .map((result, index) => result === null ? index : -1)
+    .filter(index => index !== -1);
+  
+  if (missIndices.length > 0) {
+    const tasks = missIndices.map(index => () => 
+      findCachedPlatformId(songs[index].title, songs[index].artist, platform)
+    );
+    
+    const dbResults = await parallelLimit(tasks, concurrency);
+    
+    // Merge results
+    missIndices.forEach((originalIndex, resultIndex) => {
+      memoryResults[originalIndex] = dbResults[resultIndex];
+    });
+  }
+  
+  const totalHits = memoryResults.filter(r => r !== null).length;
+  const duration = Date.now() - startTime;
+  
+  console.log(`[globalSongDB] 📊 Batch lookup (${duration}ms): ${totalHits}/${songs.length} cache hits for ${platform} (${memoryCacheHits} from memory)`);
+  
+  return memoryResults;
+}
+
+/**
+ * Pre-fetch cache results for a list of songs with parallel processing.
+ * Returns a Map for O(1) lookup during export processing.
+ * 
+ * @param {Array<{title: string, artist: string}>} songs - Songs to look up
+ * @param {string} platform - Target platform: 'spotify' or 'youtube'
+ * @returns {Promise<{cacheMap: Map<string, string>, hits: number, misses: number}>}
+ */
+export async function prefetchCachedPlatformIds(songs, platform) {
+  if (!songs?.length || !platform) {
+    return { cacheMap: new Map(), hits: 0, misses: 0 };
+  }
+  
+  const startTime = Date.now();
+  const cacheMap = new Map();
+  
+  // Generate keys for all songs first
+  const keys = songs.map(song => ({
+    key: generateSearchKey(song.title, song.artist),
+    song
+  }));
+  
+  // Deduplicate songs with same normalized key
+  const uniqueKeys = new Map();
+  keys.forEach(({ key, song }) => {
+    if (!uniqueKeys.has(key)) {
+      uniqueKeys.set(key, song);
+    }
+  });
+  
+  const uniqueSongs = Array.from(uniqueKeys.values());
+  
+  // Batch lookup with parallelization
+  const results = await batchFindCachedPlatformIds(uniqueSongs, platform);
+  
+  // Build the cache map
+  let hits = 0;
+  let misses = 0;
+  
+  uniqueSongs.forEach((song, index) => {
+    const key = generateSearchKey(song.title, song.artist);
+    const platformId = results[index];
+    
+    if (platformId) {
+      cacheMap.set(key, platformId);
+      hits++;
+    } else {
+      misses++;
+    }
+  });
+  
+  const duration = Date.now() - startTime;
+  console.log(`[globalSongDB] ⚡ Pre-fetch complete (${duration}ms): ${hits} hits, ${misses} misses for ${platform}`);
+  
+  return { cacheMap, hits, misses };
+}
+
+/**
+ * Batch cache multiple search results in parallel.
+ * Fire-and-forget style - doesn't block on completion.
+ * 
+ * @param {Array<{title: string, artist: string, platformId: string}>} results - Results to cache
+ * @param {string} platform - Platform: 'spotify' or 'youtube'
+ */
+export function batchCacheSearchResults(results, platform) {
+  if (!results?.length || !platform) return;
+  
+  // Run in background without blocking
+  Promise.all(
+    results.map(({ title, artist, platformId }) => 
+      cacheSearchResult(title, artist, platformId, platform).catch(() => null)
+    )
+  ).then(cached => {
+    const success = cached.filter(r => r !== null).length;
+    console.log(`[globalSongDB] 💾 Background cached ${success}/${results.length} results for ${platform}`);
+  }).catch(() => {
+    // Silently ignore batch cache errors
+  });
+}
+
+/**
+ * Get a cached platform ID using a pre-built cache map (O(1) lookup).
+ * 
+ * @param {Map<string, string>} cacheMap - Pre-built cache map from prefetchCachedPlatformIds
+ * @param {string} title - Song title
+ * @param {string} artist - Artist name
+ * @returns {string|null} - Platform ID or null
+ */
+export function getCachedIdFromMap(cacheMap, title, artist) {
+  const key = generateSearchKey(title, artist);
+  return cacheMap.get(key) || null;
+}
+
+export default { 
+  lookupSong, 
+  registerSong, 
+  batchRegisterSongs, 
+  updateSongMetadata, 
+  addSongAlias, 
+  getDatabaseStats,
+  // Cross-platform caching
+  findCachedPlatformId,
+  cacheSearchResult,
+  batchFindCachedPlatformIds,
+  // Parallel processing utilities
+  prefetchCachedPlatformIds,
+  batchCacheSearchResults,
+  getCachedIdFromMap
+};
 

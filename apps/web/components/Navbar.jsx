@@ -7,6 +7,7 @@ import { CONFIG } from '../config/constants.js';
 import VybeLogo from './common/VybeLogo';
 import ThemeToggle from './ThemeToggle';
 import { useState, useEffect, useRef } from 'react';
+import { invalidateUserCache } from '@/lib/cache/clientCache';
 
 const links = CONFIG.NAV_LINKS.map(link => {
   const iconMap = {
@@ -89,6 +90,9 @@ export default function Navbar() {
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
+      // Clear user-specific cache before signing out
+      invalidateUserCache();
+      
       const response = await fetch('/sign-out', {
         method: 'POST',
         headers: {

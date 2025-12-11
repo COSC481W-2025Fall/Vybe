@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { getValidAccessToken } from '@/lib/youtube';
+import { 
+  prefetchCachedPlatformIds, 
+  getCachedIdFromMap,
+  batchCacheSearchResults 
+} from '@/lib/services/globalSongDatabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -401,56 +406,86 @@ export async function POST(request) {
     const youtubePlaylistId = youtubePlaylist.id;
 
     // Step 5: Search for songs and add them to the YouTube playlist
+    // OPTIMIZATION: Pre-fetch all cache entries in parallel before processing
+    const { cacheMap, hits: prefetchHits, misses: prefetchMisses } = 
+      await prefetchCachedPlatformIds(songs, 'youtube');
+    
+    console.log(`[Export YouTube] ⚡ Pre-fetch: ${prefetchHits} cache hits, ${prefetchMisses} will need API search`);
+
     const addResults = {
       successful: [],
       failed: [],
-      skipped: []
+      skipped: [],
+      cacheHits: 0,
+      cacheMisses: 0
     };
+    
+    const resultsToCache = []; // Collect results for batch caching
 
     for (const song of songs) {
       try {
-        // Build search query: "artist - title" or just "title" if no artist
-        const searchQuery = song.artist 
-          ? `${song.artist} - ${song.title}`
-          : song.title;
+        let videoId = null;
+        
+        // Use O(1) lookup from pre-fetched cache map
+        const cachedVideoId = getCachedIdFromMap(cacheMap, song.title, song.artist);
+        
+        if (cachedVideoId) {
+          // Cache hit! No API call needed
+          videoId = cachedVideoId;
+          addResults.cacheHits++;
+        } else {
+          // Cache miss - need to search YouTube API
+          addResults.cacheMisses++;
+          
+          // Build search query: "artist - title" or just "title" if no artist
+          const searchQuery = song.artist 
+            ? `${song.artist} - ${song.title}`
+            : song.title;
 
-        // Search YouTube for the song
-        const searchResponse = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(searchQuery)}&maxResults=1`,
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-            },
+          // Search YouTube for the song
+          const searchResponse = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(searchQuery)}&maxResults=1`,
+            {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          if (!searchResponse.ok) {
+            const errorText = await searchResponse.text();
+            console.error(`[Export YouTube] Search failed for "${searchQuery}":`, errorText);
+            addResults.failed.push({
+              song: `${song.artist} - ${song.title}`,
+              reason: 'Search failed',
+              error: errorText
+            });
+            // Throttle even on failure to avoid hammering the API
+            await sleep(1000);
+            continue;
           }
-        );
 
-        if (!searchResponse.ok) {
-          const errorText = await searchResponse.text();
-          console.error(`[Export YouTube] Search failed for "${searchQuery}":`, errorText);
-          addResults.failed.push({
-            song: `${song.artist} - ${song.title}`,
-            reason: 'Search failed',
-            error: errorText
-          });
-          // Throttle even on failure to avoid hammering the API
+          const searchData = await searchResponse.json();
+
+          // Check if we found any results
+          if (!searchData.items || searchData.items.length === 0) {
+            addResults.failed.push({
+              song: `${song.artist} - ${song.title}`,
+              reason: 'No YouTube results found'
+            });
+            // Throttle even on failure
+            await sleep(1000);
+            continue;
+          }
+
+          videoId = searchData.items[0].id.videoId;
+          
+          // Queue for batch caching (non-blocking)
+          resultsToCache.push({ title: song.title, artist: song.artist, platformId: videoId });
+          
+          // Throttle API calls (not needed for cache hits)
           await sleep(1000);
-          continue;
         }
-
-        const searchData = await searchResponse.json();
-
-        // Check if we found any results
-        if (!searchData.items || searchData.items.length === 0) {
-          addResults.failed.push({
-            song: `${song.artist} - ${song.title}`,
-            reason: 'No YouTube results found'
-          });
-          // Throttle even on failure
-          await sleep(1000);
-          continue;
-        }
-
-        const videoId = searchData.items[0].id.videoId;
 
         // Add the video to the playlist with retry logic
         const addResult = await addVideoToPlaylistWithRetry(
@@ -463,7 +498,8 @@ export async function POST(request) {
         if (addResult.success) {
           addResults.successful.push({
             song: `${song.artist} - ${song.title}`,
-            videoId
+            videoId,
+            fromCache: !!cachedVideoId
           });
         } else {
           addResults.failed.push({
@@ -474,9 +510,10 @@ export async function POST(request) {
           });
         }
 
-        // Throttle: wait 1 second between each request to avoid rate limits
-        // Reliability > Speed
-        await sleep(1000);
+        // Small delay even for cache hits to avoid YouTube playlist API rate limits
+        if (cachedVideoId) {
+          await sleep(300); // Faster for cache hits
+        }
 
       } catch (error) {
         console.error(`[Export YouTube] Error processing song "${song.title}":`, error);
@@ -489,6 +526,14 @@ export async function POST(request) {
         await sleep(1000);
       }
     }
+    
+    // Batch cache all new results in background (non-blocking)
+    if (resultsToCache.length > 0) {
+      batchCacheSearchResults(resultsToCache, 'youtube');
+    }
+    
+    // Log cache statistics
+    console.log(`[Export YouTube] 📊 Cache stats: ${addResults.cacheHits} hits, ${addResults.cacheMisses} misses (${((addResults.cacheHits / songs.length) * 100).toFixed(1)}% hit rate)`);
 
     // Step 6: Return success with detailed results
     return NextResponse.json(
@@ -505,6 +550,12 @@ export async function POST(request) {
         totalSongs: songs.length,
         songsAdded: addResults.successful.length,
         songsFailed: addResults.failed.length,
+        // Cache statistics - shows API quota savings from global cache
+        cacheStats: {
+          hits: addResults.cacheHits,
+          misses: addResults.cacheMisses,
+          hitRate: songs.length > 0 ? ((addResults.cacheHits / songs.length) * 100).toFixed(1) + '%' : '0%'
+        },
         results: {
           successful: addResults.successful,
           failed: addResults.failed

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { Users, UserPlus, Mail } from 'lucide-react';
 import { toast } from 'sonner';
+import { getCachedUserFriends, cacheUserFriends } from '@/lib/cache/clientCache';
+import { useRealtime } from '@/lib/realtime/RealtimeProvider';
 
 // Optimized components
 import { FriendCard } from '@/components/friends/FriendCard';
@@ -48,10 +50,23 @@ function ModalLoadingFallback() {
 export default function FriendsPage() {
   const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
+  const { subscribe } = useRealtime();
   
   const [user, setUser] = useState(null);
-  const [friends, setFriends] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Initialize with cached data for instant load
+  const [friends, setFriends] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return getCachedUserFriends() || [];
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    // If we have cached data, don't show loading state
+    if (typeof window !== 'undefined') {
+      return getCachedUserFriends() === null;
+    }
+    return true;
+  });
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   
   // Modal states
@@ -71,7 +86,7 @@ export default function FriendsPage() {
     return session.user;
   }, [supabase, router]);
 
-  // Load friends with cache-busting
+  // Load friends - uses cache for instant display, then fetches fresh data
   const loadFriends = useCallback(async () => {
     try {
       const response = await fetch('/api/friends', {
@@ -80,7 +95,10 @@ export default function FriendsPage() {
       });
       const data = await response.json();
       if (data.success) {
-        setFriends(data.friends || []);
+        const friendsList = data.friends || [];
+        setFriends(friendsList);
+        // Cache for next time
+        cacheUserFriends(friendsList);
       }
     } catch {
       toast.error("Couldn't load your friends. Please refresh the page.");
@@ -106,7 +124,12 @@ export default function FriendsPage() {
   // Initial load - parallel fetching
   useEffect(() => {
     async function init() {
-      setLoading(true);
+      // Only show loading spinner if we have no cached data to display
+      const hasCachedData = friends.length > 0;
+      if (!hasCachedData) {
+        setLoading(true);
+      }
+      
       const authenticatedUser = await checkAuth();
       if (authenticatedUser) {
         // Fetch both in parallel for faster load
@@ -119,6 +142,53 @@ export default function FriendsPage() {
     }
     init();
   }, [checkAuth, loadFriends, loadPendingRequestsCount]);
+
+  // Subscribe to realtime updates for friendships and friend requests
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Listen for friendship changes
+    const unsub1 = subscribe({
+      table: 'friendships',
+      event: '*',
+      callback: (payload) => {
+        const isInvolved = payload.new?.user1_id === user.id || 
+                          payload.new?.user2_id === user.id ||
+                          payload.old?.user1_id === user.id ||
+                          payload.old?.user2_id === user.id;
+        
+        if (!isInvolved) return;
+        
+        console.log('[Friends] Friendship change:', payload.eventType);
+        // Refetch friends list to get updated data
+        loadFriends();
+      },
+      channelName: `friends-${user.id}-list`,
+    });
+
+    // Listen for friend requests
+    const unsub2 = subscribe({
+      table: 'friend_requests',
+      event: '*',
+      filter: `receiver_id=eq.${user.id}`,
+      callback: (payload) => {
+        console.log('[Friends] Friend request:', payload.eventType);
+        
+        if (payload.eventType === 'INSERT') {
+          setPendingRequestsCount(prev => prev + 1);
+          toast.info('New friend request received!');
+        } else if (payload.eventType === 'DELETE') {
+          setPendingRequestsCount(prev => Math.max(0, prev - 1));
+        }
+      },
+      channelName: `friends-${user.id}-requests`,
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [user?.id, subscribe, loadFriends]);
 
   // Handlers
   const handleRemoveFriend = useCallback((friend) => {

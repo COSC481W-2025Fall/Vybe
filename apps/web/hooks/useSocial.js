@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { useRealtime } from '@/lib/realtime/RealtimeProvider';
 
 /**
  * Helper function to populate communities with song counts from curated_songs table
@@ -55,17 +56,15 @@ async function populateCommunitiesWithSongCounts(communities, supabase) {
 }
 
 export function useSocial() {
+  const { subscribe, isConnected } = useRealtime();
   const [songOfTheDay, setSongOfTheDay] = useState(null);
   const [friendsSongsOfTheDay, setFriendsSongsOfTheDay] = useState([]);
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
 
-  useEffect(() => {
-    loadSocialData();
-  }, []);
-
-  const loadSocialData = async () => {
+  const loadSocialData = useCallback(async () => {
     try {
       setLoading(true);
       const supabase = supabaseBrowser();
@@ -76,6 +75,8 @@ export function useSocial() {
         setLoading(false);
         return;
       }
+
+      setUserId(session.user.id);
 
       const fetchJson = async (url) => {
         const response = await fetch(url);
@@ -140,13 +141,53 @@ export function useSocial() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    loadSocialData();
+  }, [loadSocialData]);
+
+  // Helper to fetch just friends' songs (for realtime updates)
+  const fetchFriendsSongs = useCallback(async () => {
+    try {
+      const response = await fetch('/api/friends/songs');
+      const data = await response.json();
+      if (data.success) {
+        setFriendsSongsOfTheDay(data.songs || []);
+      }
+    } catch (err) {
+      console.warn('Failed to refresh friends songs:', err);
+    }
+  }, []);
+
+  // Subscribe to realtime updates for song of the day
+  useEffect(() => {
+    if (!userId) return;
+
+    // Listen for any song of the day changes (from friends)
+    const unsub = subscribe({
+      table: 'song_of_the_day',
+      event: '*',
+      callback: (payload) => {
+        console.log('[useSocial] Song of the day change:', payload.eventType);
+        // Refetch to get friend info included
+        fetchFriendsSongs();
+      },
+      channelName: 'song-of-the-day-updates',
+    });
+
+    return unsub;
+  }, [userId, subscribe, fetchFriendsSongs]);
 
   return {
     songOfTheDay,
     friendsSongsOfTheDay,
     communities,
     loading,
-    error
+    error,
+    refetch: loadSocialData,
+    refetchFriendsSongs: fetchFriendsSongs,
+    isConnected
   };
 }

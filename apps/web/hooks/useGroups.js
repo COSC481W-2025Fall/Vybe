@@ -1,20 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import { useRealtime } from '@/lib/realtime/RealtimeProvider';
+import { getCachedUserGroups, cacheUserGroups } from '@/lib/cache/clientCache';
 
 export function useGroups() {
-  const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { subscribe, isConnected } = useRealtime();
+  // Initialize with cached data for instant display
+  const [groups, setGroups] = useState(() => getCachedUserGroups() || []);
+  const [loading, setLoading] = useState(() => getCachedUserGroups() === null);
   const [error, setError] = useState(null);
+  const [userId, setUserId] = useState(null);
 
-  useEffect(() => {
-    loadGroups();
-  }, []);
-
-  const loadGroups = async () => {
+  const loadGroups = useCallback(async () => {
     try {
-      setLoading(true);
+      // Don't show loading if we have cached data
+      if (groups.length === 0) {
+        setLoading(true);
+      }
       const supabase = supabaseBrowser();
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -23,6 +27,8 @@ export function useGroups() {
         setLoading(false);
         return;
       }
+
+      setUserId(session.user.id);
 
       // Get groups where user is owner (with member count and playlists for song count)
       const { data: ownedGroups, error: ownedError } = await supabase
@@ -58,16 +64,15 @@ export function useGroups() {
       };
 
       // Transform and combine groups
-      // Member count: group_members count + 1 for owner (matching groups page)
       const memberGroupsList = (memberGroups || []).map(m => ({
         ...m.groups,
-        memberCount: (m.groups.group_members?.[0]?.count || 0) + 1, // +1 for owner
-        songCount: calculateSongCount(m.groups.group_playlists)
-      }));
+        memberCount: (m.groups?.group_members?.[0]?.count || 0) + 1,
+        songCount: calculateSongCount(m.groups?.group_playlists)
+      })).filter(g => g.id);
 
       const ownedGroupsList = (ownedGroups || []).map(g => ({
         ...g,
-        memberCount: (g.group_members?.[0]?.count || 0) + 1, // +1 for owner
+        memberCount: (g.group_members?.[0]?.count || 0) + 1,
         songCount: calculateSongCount(g.group_playlists)
       }));
 
@@ -78,13 +83,80 @@ export function useGroups() {
       );
 
       setGroups(uniqueGroups);
+      setError(null);
+      // Cache for next time
+      cacheUserGroups(uniqueGroups);
     } catch (err) {
       console.error('Error loading groups:', err);
       setError(err.message || 'Failed to load groups');
     } finally {
       setLoading(false);
     }
-  };
+  }, [groups.length]);
+
+  // Initial load
+  useEffect(() => {
+    loadGroups();
+  }, []);
+
+  // Subscribe to realtime updates for user's group membership
+  useEffect(() => {
+    if (!userId) return;
+
+    // Listen for user being added/removed from groups
+    const unsub1 = subscribe({
+      table: 'group_members',
+      event: '*',
+      filter: `user_id=eq.${userId}`,
+      callback: (payload) => {
+        console.log('[useGroups] Membership change:', payload.eventType);
+        if (payload.eventType === 'INSERT' || payload.eventType === 'DELETE') {
+          // Refetch to get full group data
+          loadGroups();
+        }
+      },
+      channelName: `user-${userId}-group-membership`,
+    });
+
+    // Listen for group metadata updates (name, description, etc.)
+    const unsub2 = subscribe({
+      table: 'groups',
+      event: 'UPDATE',
+      callback: (payload) => {
+        setGroups(prev => {
+          // Only update if this group is in our list
+          if (!prev.some(g => g.id === payload.new.id)) return prev;
+          
+          const updated = prev.map(g => 
+            g.id === payload.new.id ? { ...g, ...payload.new } : g
+          );
+          cacheUserGroups(updated);
+          return updated;
+        });
+      },
+      channelName: `user-${userId}-group-updates`,
+    });
+
+    // Listen for group deletions
+    const unsub3 = subscribe({
+      table: 'groups',
+      event: 'DELETE',
+      callback: (payload) => {
+        setGroups(prev => {
+          const updated = prev.filter(g => g.id !== payload.old.id);
+          cacheUserGroups(updated);
+          return updated;
+        });
+      },
+      channelName: `user-${userId}-group-deletions`,
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
+  }, [userId, subscribe, loadGroups]);
 
   const createGroup = async (name, description = '') => {
     try {
@@ -136,6 +208,8 @@ export function useGroups() {
     groups,
     createGroup,
     loading,
-    error
+    error,
+    refetch: loadGroups,
+    isConnected
   };
 }

@@ -14,6 +14,7 @@ import { GlobalStateProvider } from '@/lib/context/GlobalStateContext';
 import GlobalProgressBar from '@/components/shared/GlobalProgressBar';
 import GlobalMiniplayer from '@/components/shared/GlobalMiniplayer';
 import AuroraBackground from '@/components/AuroraBackground';
+import UserDataPrefetcher from '@/components/UserDataPrefetcher';
 
 export const metadata = {
   title: 'Vybe',
@@ -92,6 +93,7 @@ export default async function RootLayout({ children }) {
                 <Toaster />
                 <GlobalProgressBar />
                 <GlobalMiniplayer />
+                {user && <UserDataPrefetcher />}
               </GlobalStateProvider>
             </RealtimeProvider>
           </QueryProvider>

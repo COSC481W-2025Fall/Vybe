@@ -54,8 +54,10 @@ export default function GroupDetailPage({ params }) {
     console.log('[Realtime] Group updated:', newData);
     setGroup(prev => ({ ...prev, ...newData }));
     
-    // Show toast if sort order changed (by another user)
-    if (newData.all_songs_sort_order && oldData.all_songs_sort_order !== newData.all_songs_sort_order) {
+    // If sort order changed (by another user), notify and songs will re-sort via their own realtime updates
+    if (newData.all_songs_sort_order && 
+        JSON.stringify(oldData?.all_songs_sort_order) !== JSON.stringify(newData.all_songs_sort_order)) {
+      console.log('[Realtime] Sort order changed by another member');
       toast.info('Playlist order was updated by another member');
     }
   }, []);
@@ -72,6 +74,31 @@ export default function GroupDetailPage({ params }) {
     } else if (eventType === 'UPDATE') {
       setPlaylists(prev => prev.map(p => p.id === newData.id ? { ...p, ...newData } : p));
     }
+  }, []);
+
+  // Debounced sort for handling rapid display_order updates (prevents race conditions)
+  const sortTimeoutRef = useRef(null);
+  const needsSortRef = useRef(false);
+  
+  const debouncedSort = useCallback(() => {
+    // Clear any pending sort
+    if (sortTimeoutRef.current) {
+      clearTimeout(sortTimeoutRef.current);
+    }
+    
+    // Mark that we need to sort
+    needsSortRef.current = true;
+    
+    // Schedule sort after updates settle (100ms debounce)
+    sortTimeoutRef.current = setTimeout(() => {
+      if (needsSortRef.current) {
+        setPlaylistSongs(prev => 
+          [...prev].sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+        );
+        needsSortRef.current = false;
+        console.log('[Realtime] Debounced sort completed');
+      }
+    }, 100);
   }, []);
 
   const handleSongChange = useCallback((eventType, newData, oldData) => {
@@ -97,9 +124,19 @@ export default function GroupDetailPage({ params }) {
         [playlistId]: Math.max(0, (prev[playlistId] || 1) - 1)
       }));
     } else if (eventType === 'UPDATE') {
+      // Check if display_order changed (indicates AI sort happened)
+      const displayOrderChanged = oldData?.display_order !== newData?.display_order;
+      
+      // Update the song data immediately
       setPlaylistSongs(prev => prev.map(s => s.id === newData.id ? { ...s, ...newData } : s));
+      
+      // If display_order changed, schedule a debounced re-sort
+      // This batches multiple rapid updates into a single sort operation
+      if (displayOrderChanged) {
+        debouncedSort();
+      }
     }
-  }, [playlists]);
+  }, [playlists, debouncedSort]);
 
   const handleMemberChange = useCallback((eventType, newData, oldData) => {
     console.log('[Realtime] Member change:', eventType, newData);
@@ -150,6 +187,25 @@ export default function GroupDetailPage({ params }) {
       setGroupId(resolvedParams.id); // Can be UUID or slug
     });
   }, [params]);
+
+  // Watch for import task completion and refresh data (backup mechanism)
+  const lastCompletedImportRef = useRef(null);
+  useEffect(() => {
+    const importTask = activeTasks.find(t => 
+      t.type === TASK_TYPES.IMPORT && 
+      t.status === 'completed' &&
+      t.id !== lastCompletedImportRef.current
+    );
+    
+    if (importTask && group?.id) {
+      console.log('[Groups] Import task completed, triggering refresh');
+      lastCompletedImportRef.current = importTask.id;
+      // Small delay to let the modal's onSuccess run first
+      setTimeout(() => {
+        loadGroupData().then(() => loadPlaylistSongs(selectedPlaylist));
+      }, 500);
+    }
+  }, [activeTasks, group?.id, selectedPlaylist]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Helper to check if string is a UUID
   const isUUID = (str) => {
@@ -413,11 +469,14 @@ export default function GroupDetailPage({ params }) {
     }
   }
 
-  // Cleanup progress interval on unmount
+  // Cleanup intervals/timeouts on unmount
   useEffect(() => {
     return () => {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
+      }
+      if (sortTimeoutRef.current) {
+        clearTimeout(sortTimeoutRef.current);
       }
     };
   }, []);
@@ -1426,7 +1485,13 @@ export default function GroupDetailPage({ params }) {
           onClose={() => setShowAddPlaylistModal(false)}
           onSuccess={() => {
             setShowAddPlaylistModal(false);
-            loadGroupData();
+            // Force full reload to pick up new playlist and its songs
+            // (realtime can miss songs for newly created playlists)
+            console.log('[Groups] Import success - reloading all data');
+            loadGroupData().then(() => {
+              // Also reload songs to ensure we have the latest
+              loadPlaylistSongs(selectedPlaylist);
+            });
           }}
         />
       )}
@@ -1807,39 +1872,59 @@ function AddPlaylistModal({ groupId, onClose, onSuccess }) {
       startTask(taskId, TASK_TYPES.IMPORT, isReplacing ? 'Replacing Playlist' : 'Importing Playlist', playlistName);
       updateTaskProgress(taskId, 10, 'Fetching playlist data...', null);
       
-      // Close modal immediately - progress shows globally
-      setLoading(true);
+      // Store callbacks before closing modal (they may become stale after unmount)
+      const successCallback = onSuccess;
+      
+      // Close modal immediately - progress shows globally in GlobalProgressBar
       onClose();
 
-      // Call API to import playlist
-      const response = await fetch('/api/import-playlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          groupId,
-          platform: playlistPlatform,
-          playlistUrl,
-          userId: session.user.id,
-        }),
-      });
+      // Run the import in background (not awaited by component lifecycle)
+      (async () => {
+        try {
+          // Call API to import playlist
+          const response = await fetch('/api/import-playlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              groupId,
+              platform: playlistPlatform,
+              playlistUrl,
+              userId: session.user.id,
+            }),
+          });
 
-      updateTaskProgress(taskId, 50, 'Processing songs...', null);
+          updateTaskProgress(taskId, 50, 'Processing songs...', null);
 
-      const data = await response.json();
+          const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to import playlist');
-      }
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to import playlist');
+          }
 
-      // Complete the task
-      completeTask(taskId, true, `Imported ${data.songCount || 'all'} songs`);
-      onSuccess();
+          // Complete the task successfully
+          completeTask(taskId, true, `Imported ${data.songCount || 'all'} songs`);
+          
+          // Use setTimeout to ensure this runs after React processes state updates
+          setTimeout(() => {
+            try {
+              successCallback();
+            } catch (e) {
+              console.warn('[Import] Success callback failed, data will refresh via realtime');
+            }
+          }, 100);
+        } catch (importErr) {
+          console.error('Error importing playlist:', importErr);
+          // Complete with error using the SAME taskId
+          completeTask(taskId, false, importErr.message || 'Failed to import');
+          toast.error(importErr.message || 'Failed to import playlist');
+        }
+      })();
+      
+      // Return early - the IIFE handles the rest
+      return;
     } catch (err) {
-      console.error('Error importing playlist:', err);
-      // If we started tracking, complete with error
-      const taskId = `import-${groupId}-${Date.now()}`;
-      completeTask(taskId, false, err.message || 'Failed to import');
-      setError(err.message || 'Failed to import playlist');
+      console.error('Error preparing import:', err);
+      setError(err.message || 'Failed to prepare import');
       setLoading(false);
     }
   }

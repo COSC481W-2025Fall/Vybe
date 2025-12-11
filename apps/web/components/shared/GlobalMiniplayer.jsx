@@ -89,135 +89,46 @@ export default function GlobalMiniplayer() {
   
   const queueInfo = songQueue.length > 0 ? `${currentQueueIndex + 1}/${songQueue.length}` : null;
   
-  // Minimized bar (compact controls only)
-  if (isMinimized) {
-    return (
-      <div className="fixed z-50 bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[340px] sm:max-w-[calc(100vw-3rem)] sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-300 bg-[#1a1a1a] [data-theme='light']:bg-white border border-[var(--border-color)]">
-        {/* Minimized header */}
-        <div className="flex items-center justify-between px-3 py-2.5 bg-[#222] [data-theme='light']:bg-gray-100">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {song.thumbnail_url && (
-              <img
-                src={song.thumbnail_url}
-                alt={song.title}
-                className="w-10 h-10 rounded-md object-cover flex-shrink-0 shadow-md"
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-[var(--foreground)] font-semibold text-sm truncate">
-                {song.parsed_title || song.title}
-              </p>
-              <p className="text-[var(--muted-foreground)] text-xs truncate">
-                {song.parsed_artist || song.artist}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-1 ml-2">
-            {/* Previous */}
-            <button
-              onClick={playPrevious}
-              disabled={!hasPrevious}
-              className="p-2 rounded-full bg-[var(--secondary-hover)] hover:bg-[var(--accent-muted)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Previous"
-            >
-              <SkipBack className="h-4 w-4 text-[var(--foreground)]" />
-            </button>
-            
-            {/* Next */}
-            <button
-              onClick={playNext}
-              disabled={!hasNext}
-              className="p-2 rounded-full bg-[var(--secondary-hover)] hover:bg-[var(--accent-muted)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Next"
-            >
-              <SkipForward className="h-4 w-4 text-[var(--foreground)]" />
-            </button>
-            
-            {/* Expand */}
-            <button
-              onClick={() => setIsMinimized(false)}
-              className="p-2 rounded-full transition-colors"
-              style={{ backgroundColor: 'var(--accent)' }}
-              title="Show player"
-            >
-              <ChevronUp className="h-4 w-4 text-white" />
-            </button>
-            
-            {/* Close */}
-            <button
-              onClick={stopPlaying}
-              className="p-2 rounded-full bg-[var(--secondary-hover)] hover:bg-red-600 transition-colors group"
-              title="Close player"
-            >
-              <X className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-white" />
-            </button>
-          </div>
-        </div>
-        
-        {/* Queue progress */}
-        {queueInfo && (
-          <div className="px-3 pb-2 pt-1 bg-[#1a1a1a] [data-theme='light']:bg-white">
-            <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
-              <span>Queue</span>
-              <span>{queueInfo}</span>
-            </div>
-            <div className="h-1 bg-[var(--secondary-bg)] rounded-full overflow-hidden">
-              <div 
-                className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${((currentQueueIndex + 1) / songQueue.length) * 100}%`, backgroundColor: 'var(--accent)' }}
-              />
-            </div>
-          </div>
-        )}
-        
-        {/* Hidden iframe to keep audio playing - uses clip-path to hide without affecting layout */}
-        <div 
-          className="fixed w-[1px] h-[1px] overflow-hidden"
-          style={{ 
-            clipPath: 'inset(50%)',
-            top: 0,
-            left: 0,
-          }}
-        >
-          {isYouTube ? (
-            <iframe
-              ref={iframeRef}
-              key={song.external_id}
-              src={embedUrl}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              width="300"
-              height="170"
-            />
-          ) : (
-            <iframe
-              key={song.external_id}
-              src={embedUrl}
-              frameBorder="0"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="eager"
-              width="300"
-              height="152"
-            />
-          )}
-        </div>
-      </div>
-    );
-  }
+  // Render the iframe element (always the same, never recreated on minimize)
+  const iframeElement = isYouTube ? (
+    <iframe
+      ref={iframeRef}
+      key={song.external_id}
+      src={embedUrl}
+      frameBorder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowFullScreen
+      className="absolute inset-0 w-full h-full"
+    />
+  ) : (
+    <iframe
+      key={song.external_id}
+      src={embedUrl}
+      frameBorder="0"
+      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+      loading="eager"
+      className="w-full h-full"
+    />
+  );
   
-  // Expanded player (full view)
   return (
-    <div className="fixed z-50 shadow-2xl overflow-hidden transition-all duration-300 bg-[#1a1a1a] [data-theme='light']:bg-white border border-[var(--border-color)] bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 sm:w-[360px] sm:max-w-[calc(100vw-3rem)] sm:rounded-xl">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 border-b border-[var(--border-color)] bg-[#222] [data-theme='light']:bg-gray-100">
+    <div 
+      className={`fixed z-50 shadow-2xl overflow-hidden transition-all duration-300 bg-[#1a1a1a] [data-theme='light']:bg-white border border-[var(--border-color)] bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-[calc(100vw-3rem)] sm:rounded-xl ${
+        isMinimized ? 'sm:w-[340px]' : 'sm:w-[360px]'
+      }`}
+    >
+      {/* Header - always visible */}
+      <div className={`flex items-center justify-between px-3 py-2.5 bg-[#222] [data-theme='light']:bg-gray-100 ${
+        isMinimized ? '' : 'sm:px-4 border-b border-[var(--border-color)]'
+      }`}>
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           {song.thumbnail_url && (
             <img
               src={song.thumbnail_url}
               alt={song.title}
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-md object-cover flex-shrink-0 shadow-md"
+              className={`rounded-md object-cover flex-shrink-0 shadow-md ${
+                isMinimized ? 'w-10 h-10' : 'w-10 h-10 sm:w-11 sm:h-11'
+              }`}
             />
           )}
           <div className="min-w-0 flex-1">
@@ -228,7 +139,7 @@ export default function GlobalMiniplayer() {
               {song.parsed_artist || song.artist}
             </p>
           </div>
-          {queueInfo && (
+          {queueInfo && !isMinimized && (
             <span 
               className="hidden sm:inline-block px-2 py-1 text-white text-xs font-medium rounded whitespace-nowrap flex-shrink-0"
               style={{ backgroundColor: 'var(--accent)' }}
@@ -243,7 +154,9 @@ export default function GlobalMiniplayer() {
           <button
             onClick={playPrevious}
             disabled={!hasPrevious}
-            className="p-1.5 sm:p-2 rounded-full bg-[var(--secondary-hover)] hover:bg-[var(--accent-muted)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className={`rounded-full bg-[var(--secondary-hover)] hover:bg-[var(--accent-muted)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+              isMinimized ? 'p-2' : 'p-1.5 sm:p-2'
+            }`}
             title="Previous"
           >
             <SkipBack className="h-4 w-4 text-[var(--foreground)]" />
@@ -253,25 +166,38 @@ export default function GlobalMiniplayer() {
           <button
             onClick={playNext}
             disabled={!hasNext}
-            className="p-1.5 sm:p-2 rounded-full bg-[var(--secondary-hover)] hover:bg-[var(--accent-muted)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className={`rounded-full bg-[var(--secondary-hover)] hover:bg-[var(--accent-muted)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+              isMinimized ? 'p-2' : 'p-1.5 sm:p-2'
+            }`}
             title="Next"
           >
             <SkipForward className="h-4 w-4 text-[var(--foreground)]" />
           </button>
           
-          {/* Minimize */}
+          {/* Minimize/Expand toggle */}
           <button
-            onClick={() => setIsMinimized(true)}
-            className="p-1.5 sm:p-2 rounded-full bg-[var(--secondary-hover)] hover:bg-[var(--accent-muted)] transition-colors"
-            title="Minimize"
+            onClick={() => setIsMinimized(!isMinimized)}
+            className={`rounded-full transition-colors ${
+              isMinimized 
+                ? 'p-2' 
+                : 'p-1.5 sm:p-2 bg-[var(--secondary-hover)] hover:bg-[var(--accent-muted)]'
+            }`}
+            style={isMinimized ? { backgroundColor: 'var(--accent)' } : undefined}
+            title={isMinimized ? 'Show player' : 'Minimize'}
           >
-            <ChevronDown className="h-4 w-4 text-[var(--foreground)]" />
+            {isMinimized ? (
+              <ChevronUp className="h-4 w-4 text-white" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-[var(--foreground)]" />
+            )}
           </button>
           
           {/* Close */}
           <button
             onClick={stopPlaying}
-            className="p-1.5 sm:p-2 rounded-full bg-[var(--secondary-hover)] hover:bg-red-600 transition-colors group"
+            className={`rounded-full bg-[var(--secondary-hover)] hover:bg-red-600 transition-colors group ${
+              isMinimized ? 'p-2' : 'p-1.5 sm:p-2'
+            }`}
             title="Close player"
           >
             <X className="h-4 w-4 text-[var(--muted-foreground)] group-hover:text-white" />
@@ -279,35 +205,45 @@ export default function GlobalMiniplayer() {
         </div>
       </div>
       
-      {/* Player embed */}
-      <div className="overflow-hidden bg-[#1a1a1a] [data-theme='light']:bg-white">
-        {isYouTube ? (
-          <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-            <iframe
-              ref={iframeRef}
-              key={song.external_id}
-              src={embedUrl}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="absolute inset-0 w-full h-full"
+      {/* Queue progress - shown when minimized */}
+      {queueInfo && isMinimized && (
+        <div className="px-3 pb-2 pt-1 bg-[#1a1a1a] [data-theme='light']:bg-white">
+          <div className="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
+            <span>Queue</span>
+            <span>{queueInfo}</span>
+          </div>
+          <div className="h-1 bg-[var(--secondary-bg)] rounded-full overflow-hidden">
+            <div 
+              className="h-full rounded-full transition-all duration-300"
+              style={{ width: `${((currentQueueIndex + 1) / songQueue.length) * 100}%`, backgroundColor: 'var(--accent)' }}
             />
           </div>
+        </div>
+      )}
+      
+      {/* Player embed container - SINGLE iframe, visibility controlled via CSS */}
+      {/* The iframe itself is always the same element, we just change container styling */}
+      <div 
+        className={`bg-[#1a1a1a] [data-theme='light']:bg-white transition-all duration-300 ${
+          isMinimized 
+            ? 'sr-only' 
+            : 'block'
+        }`}
+        aria-hidden={isMinimized}
+      >
+        {isYouTube ? (
+          <div className="relative w-full" style={{ paddingBottom: isMinimized ? '0' : '56.25%', height: isMinimized ? '1px' : 'auto' }}>
+            {iframeElement}
+          </div>
         ) : (
-          <iframe
-            key={song.external_id}
-            src={embedUrl}
-            frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="eager"
-            className="w-full"
-            style={{ height: '152px', borderRadius: 0 }}
-          />
+          <div style={{ height: isMinimized ? '1px' : '152px' }}>
+            {iframeElement}
+          </div>
         )}
       </div>
       
-      {/* Mobile queue info */}
-      {queueInfo && (
+      {/* Mobile queue info - shown when expanded */}
+      {queueInfo && !isMinimized && (
         <div className="sm:hidden px-3 py-2 border-t border-[var(--border-color)] bg-[#222] [data-theme='light']:bg-gray-100">
           <div className="flex items-center justify-between text-xs">
             <span className="text-[var(--muted-foreground)]">Queue</span>

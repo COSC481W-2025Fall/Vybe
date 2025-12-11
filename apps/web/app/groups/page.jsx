@@ -5,18 +5,35 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Users, Plus } from 'lucide-react';
 import FullGroupCard from '@/components/shared/FullGroupCard';
+import { getCachedUserGroups, cacheUserGroups } from '@/lib/cache/clientCache';
+import { useRealtime } from '@/lib/realtime/RealtimeProvider';
 
 export default function GroupsPage() {
   const supabase = supabaseBrowser();
   const router = useRouter();
+  const { subscribe } = useRealtime();
   const [user, setUser] = useState(null);
-  const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState(() => {
+    // Initialize with cached data if available
+    if (typeof window !== 'undefined') {
+      const cached = getCachedUserGroups();
+      return cached || [];
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(() => {
+    // If we have cached data, don't show loading state
+    if (typeof window !== 'undefined') {
+      return getCachedUserGroups() === null;
+    }
+    return true;
+  });
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
+    // Load groups - will use cache if fresh, otherwise fetch
     loadGroups();
   }, []);
 
@@ -32,7 +49,11 @@ export default function GroupsPage() {
   }
 
   async function loadGroups() {
-    setLoading(true);
+    // Only show loading spinner if we have no cached data to display
+    const hasCachedData = groups.length > 0;
+    if (!hasCachedData) {
+      setLoading(true);
+    }
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
@@ -87,7 +108,67 @@ export default function GroupsPage() {
 
     setGroups(uniqueGroups);
     setLoading(false);
+    
+    // Cache the results for next time
+    cacheUserGroups(uniqueGroups);
   }
+
+  // Subscribe to realtime updates for user's groups
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Listen for user being added/removed from groups
+    const unsub1 = subscribe({
+      table: 'group_members',
+      event: '*',
+      filter: `user_id=eq.${user.id}`,
+      callback: (payload) => {
+        console.log('[Groups] Membership change:', payload.eventType);
+        // Refetch to get full group data with counts
+        loadGroups();
+      },
+      channelName: `groups-${user.id}-membership`,
+    });
+
+    // Listen for group metadata updates
+    const unsub2 = subscribe({
+      table: 'groups',
+      event: 'UPDATE',
+      callback: (payload) => {
+        setGroups(prev => {
+          // Only update if this group is in our list
+          if (!prev.some(g => g.id === payload.new.id)) return prev;
+          
+          const updated = prev.map(g => 
+            g.id === payload.new.id ? { ...g, ...payload.new } : g
+          );
+          cacheUserGroups(updated);
+          return updated;
+        });
+      },
+      channelName: `groups-${user.id}-updates`,
+    });
+
+    // Listen for group deletions
+    const unsub3 = subscribe({
+      table: 'groups',
+      event: 'DELETE',
+      callback: (payload) => {
+        setGroups(prev => {
+          const updated = prev.filter(g => g.id !== payload.old.id);
+          cacheUserGroups(updated);
+          return updated;
+        });
+      },
+      channelName: `groups-${user.id}-deletions`,
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
+  }, [user?.id, subscribe]);
 
   return (
     <div className="min-h-screen text-[var(--foreground)]">
