@@ -7,16 +7,26 @@ import { getCachedUserGroups, cacheUserGroups } from '@/lib/cache/clientCache';
 
 export function useGroups() {
   const { subscribe, isConnected } = useRealtime();
-  // Initialize with cached data for instant display
-  const [groups, setGroups] = useState(() => getCachedUserGroups() || []);
-  const [loading, setLoading] = useState(() => getCachedUserGroups() === null);
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // Load cached data after mount to avoid hydration mismatch
+  useEffect(() => {
+    const cached = getCachedUserGroups();
+    if (cached && cached.length > 0) {
+      setGroups(cached);
+      setLoading(false);
+    }
+    setHasMounted(true);
+  }, []);
 
   const loadGroups = useCallback(async () => {
     try {
-      // Don't show loading if we have cached data
-      if (groups.length === 0) {
+      // Don't show loading if we already have data
+      if (groups.length === 0 && hasMounted) {
         setLoading(true);
       }
       const supabase = supabaseBrowser();
@@ -92,12 +102,14 @@ export function useGroups() {
     } finally {
       setLoading(false);
     }
-  }, [groups.length]);
+  }, [groups.length, hasMounted]);
 
-  // Initial load
+  // Initial load - wait for mount to avoid double loading
   useEffect(() => {
-    loadGroups();
-  }, []);
+    if (hasMounted) {
+      loadGroups();
+    }
+  }, [hasMounted]);
 
   // Subscribe to realtime updates for user's group membership
   useEffect(() => {

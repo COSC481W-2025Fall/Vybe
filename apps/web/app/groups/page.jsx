@@ -13,27 +13,19 @@ export default function GroupsPage() {
   const router = useRouter();
   const { subscribe } = useRealtime();
   const [user, setUser] = useState(null);
-  const [groups, setGroups] = useState(() => {
-    // Initialize with cached data if available
-    if (typeof window !== 'undefined') {
-      const cached = getCachedUserGroups();
-      return cached || [];
-    }
-    return [];
-  });
-  const [loading, setLoading] = useState(() => {
-    // If we have cached data, don't show loading state
-    if (typeof window !== 'undefined') {
-      return getCachedUserGroups() === null;
-    }
-    return true;
-  });
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Load cached data after hydration to avoid mismatch
   useEffect(() => {
+    const cached = getCachedUserGroups();
+    if (cached && cached.length > 0) {
+      setGroups(cached);
+      setLoading(false);
+    }
     checkAuth();
-    // Load groups - will use cache if fresh, otherwise fetch
     loadGroups();
   }, []);
 

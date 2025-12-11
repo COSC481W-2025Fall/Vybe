@@ -53,21 +53,18 @@ export default function FriendsPage() {
   const { subscribe } = useRealtime();
   
   const [user, setUser] = useState(null);
-  // Initialize with cached data for instant load
-  const [friends, setFriends] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return getCachedUserFriends() || [];
-    }
-    return [];
-  });
-  const [loading, setLoading] = useState(() => {
-    // If we have cached data, don't show loading state
-    if (typeof window !== 'undefined') {
-      return getCachedUserFriends() === null;
-    }
-    return true;
-  });
+  const [friends, setFriends] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  
+  // Load cached data after hydration to avoid mismatch
+  useEffect(() => {
+    const cached = getCachedUserFriends();
+    if (cached && cached.length > 0) {
+      setFriends(cached);
+      setLoading(false);
+    }
+  }, []);
   
   // Modal states
   const [showAddFriendsModal, setShowAddFriendsModal] = useState(false);
