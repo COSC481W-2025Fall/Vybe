@@ -55,11 +55,11 @@ export async function prefetchUserGroups(supabase, userId) {
       return [];
     }
     
-    // Get group details
+    // Get group details - only select columns that exist
     const groupIds = memberships.map(m => m.group_id);
     const { data: groups, error: groupError } = await supabase
       .from('groups')
-      .select('id, name, description, image_url, slug, created_at')
+      .select('id, name, description, slug, created_at')
       .in('id', groupIds);
     
     if (groupError) throw groupError;
@@ -144,38 +144,12 @@ export async function prefetchConnectedAccounts(supabase, userId) {
 
 /**
  * Prefetch user profile
- * Note: Profile may not exist for all users, so we handle 404 gracefully
+ * Note: Profile table may not exist in all setups, skip silently
  */
 export async function prefetchUserProfile(supabase, userId) {
-  if (!userId) return;
-  
-  // Skip if cache is fresh
-  if (!isCacheStale(CACHE_KEYS.USER_PROFILE)) {
-    return getCache(CACHE_KEYS.USER_PROFILE);
-  }
-  
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle(); // Use maybeSingle to handle missing profiles
-    
-    // If profile doesn't exist, that's okay
-    if (error && error.code !== 'PGRST116') {
-      throw error;
-    }
-    
-    if (data) {
-      setCache(CACHE_KEYS.USER_PROFILE, data, CACHE_TTL.USER_PROFILE);
-      console.log('[prefetch] Cached user profile');
-    }
-    return data;
-  } catch (error) {
-    // Silent fail - prefetch is not critical
-    console.warn('[prefetch] Could not prefetch profile:', error?.message || 'Unknown error');
-    return null;
-  }
+  // Skip profile prefetch - table doesn't exist in current schema
+  // This is a no-op for now, can be enabled when profiles table is added
+  return null;
 }
 
 /**
