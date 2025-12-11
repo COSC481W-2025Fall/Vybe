@@ -56,7 +56,11 @@ export async function prefetchUserGroups(supabase, userId) {
     }
     
     // Get group details - only select columns that exist
-    const groupIds = memberships.map(m => m.group_id);
+    const groupIds = memberships.map(m => m.group_id).filter(Boolean);
+    if (groupIds.length === 0) {
+      setCache(CACHE_KEYS.USER_GROUPS, [], CACHE_TTL.USER_GROUPS);
+      return [];
+    }
     const { data: groups, error: groupError } = await supabase
       .from('groups')
       .select('id, name, description, slug, created_at')

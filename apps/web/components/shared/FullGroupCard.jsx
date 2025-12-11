@@ -20,6 +20,11 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
 
   useEffect(() => {
     async function loadMembers() {
+      // Guard against missing group data
+      if (!group?.id || !group?.owner_id) {
+        return;
+      }
+
       const { data: owner } = await supabase
         .from('users')
         .select('id, username, profile_picture_url')
@@ -33,17 +38,22 @@ export default function FullGroupCard({ group, isOwner, onClick }) {
         .limit(2);
 
       if (groupMembers && groupMembers.length > 0) {
-        const { data: memberUsers } = await supabase
-          .from('users')
-          .select('id, username, profile_picture_url')
-          .in('id', groupMembers.map(m => m.user_id));
-        setMembers([owner, ...(memberUsers || [])].filter(Boolean));
+        const memberIds = groupMembers.map(m => m.user_id).filter(Boolean);
+        if (memberIds.length > 0) {
+          const { data: memberUsers } = await supabase
+            .from('users')
+            .select('id, username, profile_picture_url')
+            .in('id', memberIds);
+          setMembers([owner, ...(memberUsers || [])].filter(Boolean));
+        } else {
+          setMembers(owner ? [owner] : []);
+        }
       } else {
         setMembers(owner ? [owner] : []);
       }
     }
     loadMembers();
-  }, [group.id, group.owner_id]);
+  }, [group?.id, group?.owner_id]);
 
   const formattedDate = new Date(group.created_at).toLocaleDateString('en-US', {
     month: 'short',

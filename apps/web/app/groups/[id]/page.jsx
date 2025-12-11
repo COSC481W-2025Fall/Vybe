@@ -142,6 +142,11 @@ export default function GroupDetailPage({ params }) {
     console.log('[Realtime] Member change:', eventType, newData);
     
     if (eventType === 'INSERT') {
+      // Guard against missing user_id
+      if (!newData?.user_id) {
+        console.warn('[Realtime] Member INSERT missing user_id');
+        return;
+      }
       // Fetch the new member's user info
       supabase
         .from('users')
@@ -155,6 +160,7 @@ export default function GroupDetailPage({ params }) {
           }
         });
     } else if (eventType === 'DELETE') {
+      if (!oldData?.user_id) return;
       setMembers(prev => prev.filter(m => m.user_id !== oldData.user_id));
     }
   }, [supabase]);
@@ -550,14 +556,21 @@ export default function GroupDetailPage({ params }) {
     setPlaylists(playlistData || []);
 
     // Fetch owner and member users in parallel
-    const memberUserIds = (memberData || []).map(m => m.user_id);
-    const userFetchPromises = [
-      supabase
-        .from('users')
-        .select('id, username, display_name, profile_picture_url')
-        .eq('id', groupData.owner_id)
-        .maybeSingle()
-    ];
+    const memberUserIds = (memberData || []).map(m => m.user_id).filter(Boolean);
+    const userFetchPromises = [];
+    
+    // Only fetch owner if owner_id exists
+    if (groupData.owner_id) {
+      userFetchPromises.push(
+        supabase
+          .from('users')
+          .select('id, username, display_name, profile_picture_url')
+          .eq('id', groupData.owner_id)
+          .maybeSingle()
+      );
+    } else {
+      userFetchPromises.push(Promise.resolve({ data: null, error: null }));
+    }
 
     if (memberUserIds.length > 0) {
       userFetchPromises.push(
