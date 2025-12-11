@@ -21,12 +21,14 @@ export default function GroupsPage() {
   // Load cached data after hydration to avoid mismatch
   useEffect(() => {
     const cached = getCachedUserGroups();
-    if (cached && cached.length > 0) {
+    const hasCached = cached && cached.length > 0;
+    if (hasCached) {
       setGroups(cached);
       setLoading(false);
     }
     checkAuth();
-    loadGroups();
+    // Pass whether we have cached data to avoid race condition with state updates
+    loadGroups(hasCached);
   }, []);
 
   async function checkAuth() {
@@ -40,10 +42,11 @@ export default function GroupsPage() {
     setUser(session.user);
   }
 
-  async function loadGroups() {
+  async function loadGroups(hasCachedData = false) {
     // Only show loading spinner if we have no cached data to display
-    const hasCachedData = groups.length > 0;
-    if (!hasCachedData) {
+    // Use the passed flag on initial load (state may not have updated yet)
+    // or check current state for subsequent calls
+    if (!hasCachedData && groups.length === 0) {
       setLoading(true);
     }
 
