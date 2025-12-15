@@ -167,7 +167,7 @@ export async function POST(request, { params }) {
           console.log(`[Smart Sort API] ❌ ACCESS DENIED: User ${user.id} has no membership or playlist in group ${actualGroupId}`);
           
           return NextResponse.json({ 
-            error: "You don't have access to this group. Please make sure you've joined the group first.",
+            error: "Add a playlist to this group to use AI Sort.",
           }, { status: 403 });
         }
         console.log(`[Smart Sort API]   ✅ Access granted via playlist: ${userPlaylist.name}`);

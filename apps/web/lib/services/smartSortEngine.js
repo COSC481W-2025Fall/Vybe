@@ -259,43 +259,228 @@ const aiRequestQueue = new RequestQueue(CONFIG.MAX_CONCURRENT_AI_REQUESTS);
 // ═══════════════════════════════════════════════════════════
 
 const GENRE_MAPPINGS = {
-  // Pop
+  // ═══════════════════════════════════════════════════════════
+  // POP & Pop Variants
+  // ═══════════════════════════════════════════════════════════
   'pop': 'Pop', 'dance-pop': 'Pop', 'synth-pop': 'Pop', 'indie-pop': 'Pop',
   'electropop': 'Pop', 'art pop': 'Pop', 'dream pop': 'Pop', 'k-pop': 'Pop',
+  'j-pop': 'Pop', 'c-pop': 'Pop', 'mandopop': 'Pop', 'cantopop': 'Pop',
+  'bubblegum pop': 'Pop', 'teen pop': 'Pop', 'power pop': 'Pop',
+  'baroque pop': 'Pop', 'chamber pop': 'Pop', 'noise pop': 'Pop',
+  'sophisti-pop': 'Pop', 'sunshine pop': 'Pop', 'jangle pop': 'Pop',
+  'europop': 'Pop', 'latin pop': 'Pop', 'adult contemporary': 'Pop',
+  'easy listening': 'Pop', 'soft rock': 'Pop', 'yacht rock': 'Pop',
+  'new wave': 'Pop', 'britpop': 'Pop', 'swedish pop': 'Pop',
+  'bedroom pop': 'Pop', 'hyperpop': 'Pop', 'pc music': 'Pop',
+  'christmas pop': 'Pop', 'holiday pop': 'Pop',
   
-  // Hip-Hop/Rap
+  // ═══════════════════════════════════════════════════════════
+  // HIP-HOP / RAP
+  // ═══════════════════════════════════════════════════════════
   'hip-hop': 'Hip-Hop/Rap', 'hip hop': 'Hip-Hop/Rap', 'rap': 'Hip-Hop/Rap',
   'trap': 'Hip-Hop/Rap', 'drill': 'Hip-Hop/Rap', 'atlanta bass': 'Hip-Hop/Rap',
   'gangsta rap': 'Hip-Hop/Rap', 'conscious hip hop': 'Hip-Hop/Rap',
+  'boom bap': 'Hip-Hop/Rap', 'east coast hip hop': 'Hip-Hop/Rap',
+  'west coast hip hop': 'Hip-Hop/Rap', 'southern hip hop': 'Hip-Hop/Rap',
+  'dirty south': 'Hip-Hop/Rap', 'crunk': 'Hip-Hop/Rap', 'snap music': 'Hip-Hop/Rap',
+  'cloud rap': 'Hip-Hop/Rap', 'emo rap': 'Hip-Hop/Rap', 'mumble rap': 'Hip-Hop/Rap',
+  'melodic rap': 'Hip-Hop/Rap', 'uk hip hop': 'Hip-Hop/Rap', 'grime': 'Hip-Hop/Rap',
+  'uk drill': 'Hip-Hop/Rap', 'chicago drill': 'Hip-Hop/Rap', 'brooklyn drill': 'Hip-Hop/Rap',
+  'phonk': 'Hip-Hop/Rap', 'memphis rap': 'Hip-Hop/Rap', 'horrorcore': 'Hip-Hop/Rap',
+  'jazz rap': 'Hip-Hop/Rap', 'alternative hip hop': 'Hip-Hop/Rap',
+  'underground hip hop': 'Hip-Hop/Rap', 'instrumental hip hop': 'Hip-Hop/Rap',
+  'lofi hip hop': 'Hip-Hop/Rap', 'lo-fi hip hop': 'Hip-Hop/Rap',
+  'abstract hip hop': 'Hip-Hop/Rap', 'political hip hop': 'Hip-Hop/Rap',
+  'christian hip hop': 'Hip-Hop/Rap', 'gospel rap': 'Hip-Hop/Rap',
+  'christmas rap': 'Hip-Hop/Rap', 'holiday rap': 'Hip-Hop/Rap',
   
-  // Rock
+  // ═══════════════════════════════════════════════════════════
+  // ROCK & Rock Variants
+  // ═══════════════════════════════════════════════════════════
   'rock': 'Rock', 'alternative rock': 'Rock', 'indie rock': 'Rock',
-  'punk': 'Rock', 'metal': 'Rock', 'hard rock': 'Rock', 'grunge': 'Rock',
+  'punk': 'Rock', 'punk rock': 'Rock', 'pop punk': 'Rock', 'post-punk': 'Rock',
+  'metal': 'Rock', 'heavy metal': 'Rock', 'hard rock': 'Rock', 'grunge': 'Rock',
+  'classic rock': 'Rock', 'prog rock': 'Rock', 'progressive rock': 'Rock',
+  'psychedelic rock': 'Rock', 'garage rock': 'Rock', 'surf rock': 'Rock',
+  'blues rock': 'Rock', 'southern rock': 'Rock', 'heartland rock': 'Rock',
+  'arena rock': 'Rock', 'glam rock': 'Rock', 'glam metal': 'Rock',
+  'hair metal': 'Rock', 'thrash metal': 'Rock', 'death metal': 'Rock',
+  'black metal': 'Rock', 'doom metal': 'Rock', 'stoner metal': 'Rock',
+  'sludge metal': 'Rock', 'nu metal': 'Rock', 'metalcore': 'Rock',
+  'deathcore': 'Rock', 'post-metal': 'Rock', 'post-rock': 'Rock',
+  'math rock': 'Rock', 'noise rock': 'Rock', 'shoegaze': 'Rock',
+  'emo': 'Rock', 'screamo': 'Rock', 'post-hardcore': 'Rock', 'hardcore': 'Rock',
+  'hardcore punk': 'Rock', 'skate punk': 'Rock', 'melodic hardcore': 'Rock',
+  'folk rock': 'Rock', 'celtic rock': 'Rock', 'country rock': 'Rock',
+  'roots rock': 'Rock', 'rockabilly': 'Rock', 'psychobilly': 'Rock',
+  'art rock': 'Rock', 'experimental rock': 'Rock', 'krautrock': 'Rock',
+  'space rock': 'Rock', 'stoner rock': 'Rock', 'desert rock': 'Rock',
+  'gothic rock': 'Rock', 'darkwave': 'Rock', 'industrial rock': 'Rock',
+  'industrial metal': 'Rock', 'symphonic metal': 'Rock', 'power metal': 'Rock',
+  'folk metal': 'Rock', 'viking metal': 'Rock', 'pirate metal': 'Rock',
+  'j-rock': 'Rock', 'visual kei': 'Rock', 'britrock': 'Rock',
+  'christmas rock': 'Rock', 'holiday rock': 'Rock',
   
-  // Electronic/Dance
+  // ═══════════════════════════════════════════════════════════
+  // ELECTRONIC / DANCE / EDM
+  // ═══════════════════════════════════════════════════════════
   'electronic': 'Electronic', 'edm': 'Electronic', 'house': 'Electronic',
   'techno': 'Electronic', 'trance': 'Electronic', 'dubstep': 'Electronic',
-  'drum and bass': 'Electronic', 'dnb': 'Electronic',
+  'drum and bass': 'Electronic', 'dnb': 'Electronic', 'd&b': 'Electronic',
+  'jungle': 'Electronic', 'breakbeat': 'Electronic', 'breakcore': 'Electronic',
+  'deep house': 'Electronic', 'tech house': 'Electronic', 'progressive house': 'Electronic',
+  'tropical house': 'Electronic', 'future house': 'Electronic', 'bass house': 'Electronic',
+  'electro house': 'Electronic', 'big room': 'Electronic', 'big room house': 'Electronic',
+  'melbourne bounce': 'Electronic', 'dutch house': 'Electronic',
+  'minimal techno': 'Electronic', 'detroit techno': 'Electronic', 'acid techno': 'Electronic',
+  'industrial techno': 'Electronic', 'hard techno': 'Electronic',
+  'psytrance': 'Electronic', 'progressive trance': 'Electronic', 'uplifting trance': 'Electronic',
+  'goa trance': 'Electronic', 'vocal trance': 'Electronic',
+  'hardstyle': 'Electronic', 'hardcore': 'Electronic', 'gabber': 'Electronic',
+  'happy hardcore': 'Electronic', 'uk hardcore': 'Electronic',
+  'uk garage': 'Electronic', 'garage': 'Electronic', '2-step': 'Electronic',
+  'bassline': 'Electronic', 'speed garage': 'Electronic',
+  'future bass': 'Electronic', 'wave': 'Electronic', 'synthwave': 'Electronic',
+  'retrowave': 'Electronic', 'vaporwave': 'Electronic', 'chillwave': 'Electronic',
+  'lo-fi': 'Electronic', 'lofi': 'Electronic', 'chillhop': 'Electronic',
+  'downtempo': 'Electronic', 'trip-hop': 'Electronic', 'trip hop': 'Electronic',
+  'ambient': 'Electronic', 'dark ambient': 'Electronic', 'drone': 'Electronic',
+  'idm': 'Electronic', 'glitch': 'Electronic', 'glitch hop': 'Electronic',
+  'midtempo': 'Electronic', 'electro': 'Electronic', 'electroclash': 'Electronic',
+  'eurodance': 'Electronic', 'italo disco': 'Electronic', 'nu-disco': 'Electronic',
+  'disco house': 'Electronic', 'french house': 'Electronic',
+  'uk funky': 'Electronic', 'afrobeats': 'Electronic', 'amapiano': 'Electronic',
+  'jersey club': 'Electronic', 'baltimore club': 'Electronic', 'footwork': 'Electronic',
+  'juke': 'Electronic', 'ghetto house': 'Electronic', 'booty house': 'Electronic',
+  'moombahton': 'Electronic', 'dancehall': 'Electronic',
+  'christmas electronic': 'Electronic', 'holiday electronic': 'Electronic',
   
-  // R&B/Soul
-  'r&b': 'R&B/Soul', 'rnb': 'R&B/Soul', 'soul': 'R&B/Soul', 'neo-soul': 'R&B/Soul',
-  'funk': 'R&B/Soul', 'motown': 'R&B/Soul',
+  // ═══════════════════════════════════════════════════════════
+  // R&B / SOUL / FUNK
+  // ═══════════════════════════════════════════════════════════
+  'r&b': 'R&B/Soul', 'rnb': 'R&B/Soul', 'r and b': 'R&B/Soul', 'rhythm and blues': 'R&B/Soul',
+  'soul': 'R&B/Soul', 'neo-soul': 'R&B/Soul', 'neo soul': 'R&B/Soul',
+  'funk': 'R&B/Soul', 'motown': 'R&B/Soul', 'philly soul': 'R&B/Soul',
+  'northern soul': 'R&B/Soul', 'southern soul': 'R&B/Soul', 'memphis soul': 'R&B/Soul',
+  'quiet storm': 'R&B/Soul', 'new jack swing': 'R&B/Soul', 'contemporary r&b': 'R&B/Soul',
+  'alternative r&b': 'R&B/Soul', 'pnb': 'R&B/Soul', 'urban contemporary': 'R&B/Soul',
+  'g-funk': 'R&B/Soul', 'p-funk': 'R&B/Soul', 'boogie': 'R&B/Soul',
+  'disco': 'R&B/Soul', 'post-disco': 'R&B/Soul',
+  'doo-wop': 'R&B/Soul', 'doowop': 'R&B/Soul',
+  'christmas r&b': 'R&B/Soul', 'christmas soul': 'R&B/Soul',
+  'holiday r&b': 'R&B/Soul', 'holiday soul': 'R&B/Soul',
   
-  // Latin
+  // ═══════════════════════════════════════════════════════════
+  // LATIN / REGGAETON / CARIBBEAN
+  // ═══════════════════════════════════════════════════════════
   'latin': 'Latin', 'reggaeton': 'Latin', 'latin pop': 'Latin',
   'salsa': 'Latin', 'bachata': 'Latin', 'cumbia': 'Latin',
+  'merengue': 'Latin', 'dembow': 'Latin', 'urbano latino': 'Latin',
+  'latin trap': 'Latin', 'latin hip hop': 'Latin', 'spanish hip hop': 'Latin',
+  'reggae': 'Latin', 'roots reggae': 'Latin', 'dub': 'Latin', 'dancehall': 'Latin',
+  'ska': 'Latin', 'rocksteady': 'Latin', 'lovers rock': 'Latin',
+  'soca': 'Latin', 'calypso': 'Latin', 'zouk': 'Latin',
+  'bossa nova': 'Latin', 'mpb': 'Latin', 'samba': 'Latin',
+  'brazilian funk': 'Latin', 'funk carioca': 'Latin', 'baile funk': 'Latin',
+  'forro': 'Latin', 'sertanejo': 'Latin', 'axe': 'Latin',
+  'mariachi': 'Latin', 'ranchera': 'Latin', 'norteno': 'Latin',
+  'corrido': 'Latin', 'corridos tumbados': 'Latin', 'banda': 'Latin',
+  'tejano': 'Latin', 'conjunto': 'Latin', 'grupera': 'Latin',
+  'flamenco': 'Latin', 'spanish guitar': 'Latin', 'nuevo flamenco': 'Latin',
+  'tango': 'Latin', 'nuevo tango': 'Latin',
+  'vallenato': 'Latin', 'champeta': 'Latin', 'porro': 'Latin',
+  'afrobeat': 'Latin', 'highlife': 'Latin', 'juju': 'Latin',
+  'christmas latin': 'Latin', 'navidad': 'Latin', 'holiday latin': 'Latin',
   
-  // Country
+  // ═══════════════════════════════════════════════════════════
+  // COUNTRY / FOLK / AMERICANA
+  // ═══════════════════════════════════════════════════════════
   'country': 'Country', 'country pop': 'Country', 'bluegrass': 'Country',
-  'americana': 'Country',
+  'americana': 'Country', 'alt-country': 'Country', 'alternative country': 'Country',
+  'outlaw country': 'Country', 'classic country': 'Country', 'traditional country': 'Country',
+  'honky tonk': 'Country', 'western swing': 'Country', 'country rock': 'Country',
+  'bro-country': 'Country', 'country rap': 'Country', 'hick hop': 'Country',
+  'red dirt': 'Country', 'texas country': 'Country', 'nashville sound': 'Country',
+  'folk': 'Country', 'folk rock': 'Country', 'indie folk': 'Country',
+  'contemporary folk': 'Country', 'traditional folk': 'Country',
+  'singer-songwriter': 'Country', 'acoustic': 'Country',
+  'celtic': 'Country', 'irish folk': 'Country', 'scottish folk': 'Country',
+  'appalachian': 'Country', 'old-time': 'Country', 'newgrass': 'Country',
+  'christmas country': 'Country', 'holiday country': 'Country',
   
-  // Jazz/Blues
+  // ═══════════════════════════════════════════════════════════
+  // JAZZ / BLUES
+  // ═══════════════════════════════════════════════════════════
   'jazz': 'Jazz/Blues', 'blues': 'Jazz/Blues', 'smooth jazz': 'Jazz/Blues',
-  'bebop': 'Jazz/Blues',
+  'bebop': 'Jazz/Blues', 'hard bop': 'Jazz/Blues', 'cool jazz': 'Jazz/Blues',
+  'free jazz': 'Jazz/Blues', 'avant-garde jazz': 'Jazz/Blues', 'fusion': 'Jazz/Blues',
+  'jazz fusion': 'Jazz/Blues', 'acid jazz': 'Jazz/Blues', 'nu jazz': 'Jazz/Blues',
+  'vocal jazz': 'Jazz/Blues', 'jazz vocal': 'Jazz/Blues', 'big band': 'Jazz/Blues',
+  'swing': 'Jazz/Blues', 'dixieland': 'Jazz/Blues', 'new orleans jazz': 'Jazz/Blues',
+  'latin jazz': 'Jazz/Blues', 'bossa nova': 'Jazz/Blues', 'afro-cuban jazz': 'Jazz/Blues',
+  'modal jazz': 'Jazz/Blues', 'post-bop': 'Jazz/Blues', 'contemporary jazz': 'Jazz/Blues',
+  'delta blues': 'Jazz/Blues', 'chicago blues': 'Jazz/Blues', 'electric blues': 'Jazz/Blues',
+  'acoustic blues': 'Jazz/Blues', 'country blues': 'Jazz/Blues', 'piedmont blues': 'Jazz/Blues',
+  'texas blues': 'Jazz/Blues', 'west coast blues': 'Jazz/Blues', 'jump blues': 'Jazz/Blues',
+  'rhythm and blues': 'Jazz/Blues', 'boogie-woogie': 'Jazz/Blues',
+  'christmas jazz': 'Jazz/Blues', 'holiday jazz': 'Jazz/Blues',
+  'christmas blues': 'Jazz/Blues', 'holiday blues': 'Jazz/Blues',
   
-  // Classical
+  // ═══════════════════════════════════════════════════════════
+  // CLASSICAL / ORCHESTRAL / INSTRUMENTAL
+  // ═══════════════════════════════════════════════════════════
   'classical': 'Classical', 'instrumental': 'Classical', 'orchestral': 'Classical',
-  'piano': 'Classical', 'ambient': 'Classical',
+  'piano': 'Classical', 'symphony': 'Classical', 'symphonic': 'Classical',
+  'opera': 'Classical', 'operatic': 'Classical', 'baroque': 'Classical',
+  'romantic': 'Classical', 'renaissance': 'Classical', 'medieval': 'Classical',
+  'contemporary classical': 'Classical', 'modern classical': 'Classical',
+  'minimalist': 'Classical', 'neo-classical': 'Classical', 'neoclassical': 'Classical',
+  'chamber music': 'Classical', 'string quartet': 'Classical', 'concerto': 'Classical',
+  'sonata': 'Classical', 'choral': 'Classical', 'a cappella': 'Classical',
+  'film score': 'Classical', 'soundtrack': 'Classical', 'cinematic': 'Classical',
+  'video game music': 'Classical', 'anime soundtrack': 'Classical',
+  'new age': 'Classical', 'meditation': 'Classical', 'relaxation': 'Classical',
+  'spa': 'Classical', 'sleep': 'Classical', 'nature sounds': 'Classical',
+  'world music': 'Classical', 'ethnic': 'Classical', 'traditional': 'Classical',
+  'christmas classical': 'Classical', 'holiday classical': 'Classical',
+  'christmas instrumental': 'Classical', 'holiday instrumental': 'Classical',
+  
+  // ═══════════════════════════════════════════════════════════
+  // GOSPEL / CHRISTIAN / RELIGIOUS
+  // ═══════════════════════════════════════════════════════════
+  'gospel': 'Gospel', 'christian': 'Gospel', 'ccm': 'Gospel',
+  'contemporary christian': 'Gospel', 'christian rock': 'Gospel',
+  'christian pop': 'Gospel', 'worship': 'Gospel', 'praise': 'Gospel',
+  'hymns': 'Gospel', 'hymn': 'Gospel', 'southern gospel': 'Gospel',
+  'black gospel': 'Gospel', 'urban gospel': 'Gospel', 'choir': 'Gospel',
+  'spiritual': 'Gospel', 'inspirational': 'Gospel',
+  'christmas gospel': 'Gospel', 'holiday gospel': 'Gospel',
+  'christmas hymns': 'Gospel', 'christmas worship': 'Gospel',
+  
+  // ═══════════════════════════════════════════════════════════
+  // CHRISTMAS / HOLIDAY (Maps to underlying style when possible)
+  // When genre is ONLY "christmas" with no style indicator, default to Pop
+  // ═══════════════════════════════════════════════════════════
+  'christmas': 'Pop', 'holiday': 'Pop', 'xmas': 'Pop',
+  'christmas music': 'Pop', 'holiday music': 'Pop',
+  'christmas songs': 'Pop', 'holiday songs': 'Pop',
+  'winter': 'Pop', 'festive': 'Pop', 'seasonal': 'Pop',
+  
+  // ═══════════════════════════════════════════════════════════
+  // CHILDREN'S / KIDS
+  // ═══════════════════════════════════════════════════════════
+  'children': 'Children', 'kids': 'Children', 'children\'s music': 'Children',
+  'kids music': 'Children', 'nursery rhymes': 'Children', 'lullaby': 'Children',
+  'lullabies': 'Children', 'disney': 'Children', 'cartoon': 'Children',
+  'christmas children': 'Children', 'holiday children': 'Children',
+  
+  // ═══════════════════════════════════════════════════════════
+  // COMEDY / NOVELTY / SPOKEN WORD
+  // ═══════════════════════════════════════════════════════════
+  'comedy': 'Comedy/Spoken', 'novelty': 'Comedy/Spoken', 'parody': 'Comedy/Spoken',
+  'spoken word': 'Comedy/Spoken', 'poetry': 'Comedy/Spoken', 'audiobook': 'Comedy/Spoken',
+  'podcast': 'Comedy/Spoken', 'stand-up': 'Comedy/Spoken', 'humor': 'Comedy/Spoken',
+  'christmas comedy': 'Comedy/Spoken', 'holiday novelty': 'Comedy/Spoken',
 };
 
 function mapToStandardGenre(genres) {
@@ -582,6 +767,8 @@ async function aiVerifySort(songs, heuristicOrder, model, timeoutMs) {
 1. Consecutive same artist (BAD)
 2. Consecutive same genre (BAD)
 3. Popular songs not near the top (BAD)
+
+For themed collections (e.g., Christmas, holiday, workout), prioritize artist variety over genre variety since songs may share the same theme.
 
 Current order (sample of ${sampleData.length} songs):
 ${JSON.stringify(sampleData.slice(0, 30), null, 2)}
