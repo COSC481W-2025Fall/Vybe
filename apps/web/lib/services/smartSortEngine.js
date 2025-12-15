@@ -539,17 +539,18 @@ export function heuristicSort(songs) {
 
   console.log(`[Heuristic] Popular: ${popularSongs.length}, Regular: ${regularSongs.length}`);
 
-  // Step 4: Interleave to avoid consecutive same artist/genre
+  // Step 4: Interleave to avoid consecutive same artist/genre/song
   const result = [];
   const lastArtists = []; // Track last N artists
   const lastGenres = [];  // Track last N genres
+  const lastSongIds = []; // Track last N song IDs (for duplicates)
   
   // Process popular songs first (with interleaving)
-  const interleavedPopular = interleaveByConstraints(popularSongs, lastArtists, lastGenres);
+  const interleavedPopular = interleaveByConstraints(popularSongs, lastArtists, lastGenres, lastSongIds);
   result.push(...interleavedPopular);
 
   // Process regular songs (spread throughout, with interleaving)
-  const interleavedRegular = interleaveByConstraints(regularSongs, lastArtists, lastGenres);
+  const interleavedRegular = interleaveByConstraints(regularSongs, lastArtists, lastGenres, lastSongIds);
   
   // Merge regular songs into result, spreading them out
   if (interleavedRegular.length > 0 && result.length > 0) {
@@ -572,9 +573,9 @@ export function heuristicSort(songs) {
 }
 
 /**
- * Interleave songs to avoid consecutive same artist/genre
+ * Interleave songs to avoid consecutive same artist/genre/song
  */
-function interleaveByConstraints(songs, lastArtists, lastGenres) {
+function interleaveByConstraints(songs, lastArtists, lastGenres, lastSongIds = []) {
   if (songs.length === 0) return [];
   
   const result = [];
@@ -587,7 +588,7 @@ function interleaveByConstraints(songs, lastArtists, lastGenres) {
     
     for (let i = 0; i < remaining.length; i++) {
       const song = remaining[i];
-      const score = calculatePlacementScore(song, lastArtists, lastGenres);
+      const score = calculatePlacementScore(song, lastArtists, lastGenres, lastSongIds);
       
       if (score > bestScore) {
         bestScore = score;
@@ -604,8 +605,10 @@ function interleaveByConstraints(songs, lastArtists, lastGenres) {
     // Update tracking
     lastArtists.unshift(chosen.artist);
     lastGenres.unshift(chosen.standardGenre);
+    lastSongIds.unshift(chosen.songId);
     if (lastArtists.length > 3) lastArtists.pop();
     if (lastGenres.length > 3) lastGenres.pop();
+    if (lastSongIds.length > 3) lastSongIds.pop();
   }
   
   return result;
@@ -615,11 +618,19 @@ function interleaveByConstraints(songs, lastArtists, lastGenres) {
  * Calculate score for placing a song at current position
  * Higher score = better placement
  */
-function calculatePlacementScore(song, lastArtists, lastGenres) {
+function calculatePlacementScore(song, lastArtists, lastGenres, lastSongIds = []) {
   let score = 0;
   
   const artist = song.artist || 'Unknown';
   const genre = song.standardGenre || 'Other';
+  const songId = song.songId;
+  
+  // Penalize placing same song consecutively (duplicates) - highest penalty
+  if (lastSongIds.length > 0 && lastSongIds[0] === songId) {
+    score -= 2000;
+  } else if (lastSongIds.length > 1 && lastSongIds[1] === songId) {
+    score -= 200;
+  }
   
   // Penalize consecutive same artist (heavy penalty)
   if (lastArtists.length > 0 && lastArtists[0] === artist) {
@@ -638,6 +649,7 @@ function calculatePlacementScore(song, lastArtists, lastGenres) {
   // Bonus for variety
   if (!lastArtists.includes(artist)) score += 10;
   if (!lastGenres.includes(genre)) score += 5;
+  if (!lastSongIds.includes(songId)) score += 15; // Bonus for not repeating song recently
   
   // Small bonus for popularity (tie-breaker)
   score += (song.popularity || 0) / 100;
