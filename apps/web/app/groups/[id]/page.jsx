@@ -469,7 +469,9 @@ export default function GroupDetailPage({ params }) {
         ? "You've sorted a few times recently. Please wait a moment."
         : error.message?.includes('queue') || error.message?.includes('busy')
         ? "We're a bit busy right now. Please try the Quick sort option!"
-        : "Add a playlist to this group to use AI Sort.";
+        : error.message?.includes('playlist') || error.message?.includes('access')
+        ? "Add a playlist to this group to use AI Sort."
+        : "Couldn't sort your playlist. Please try again.";
       stopProgressAnimation(taskId, false, userMessage);
       toast.error(userMessage, { duration: 7000 });
     }
