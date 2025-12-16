@@ -148,8 +148,8 @@ Sent at: ${new Date().toLocaleString()}
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Use Resend's default domain until you verify your own domain
-          from: 'Vybe <onboarding@resend.dev>',
+          // Using verified domain
+          from: 'Vybe Contact <contact@notifications.vybemusic.app>',
           to: [CONTACT_EMAIL],
           reply_to: email,
           subject: emailSubject,
