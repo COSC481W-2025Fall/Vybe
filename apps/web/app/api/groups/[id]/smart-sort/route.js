@@ -19,9 +19,9 @@ import { getTrackMetadata } from '@/lib/services/musicMetadata';
 async function backgroundMetadataEnrichment(supabase, songsNeedingMetadata, spotifyToken = null) {
   if (!songsNeedingMetadata || songsNeedingMetadata.length === 0) return;
   
-  // Limit to 20 songs per sort to avoid overwhelming APIs
-  const songsToProcess = songsNeedingMetadata.slice(0, 20);
-  console.log(`[Background Metadata] Starting enrichment for ${songsToProcess.length} songs`);
+  // Process the songs passed in (caller limits the batch size)
+  const songsToProcess = songsNeedingMetadata;
+  console.log(`[Metadata Enrichment] Starting for ${songsToProcess.length} songs`);
   
   let enrichedCount = 0;
   let globalUpdatedCount = 0;
@@ -87,11 +87,11 @@ async function backgroundMetadataEnrichment(supabase, songsNeedingMetadata, spot
       }
     } catch (error) {
       // Silently continue - background process shouldn't fail loudly
-      console.warn(`[Background Metadata] Failed for song ${song.id}:`, error.message);
+      console.warn(`[Metadata Enrichment] Failed for song ${song.id}:`, error.message);
     }
   }
   
-  console.log(`[Background Metadata] Enriched ${enrichedCount}/${songsToProcess.length} songs (${globalUpdatedCount} global DB updates)`);
+  console.log(`[Metadata Enrichment] ✅ Enriched ${enrichedCount}/${songsToProcess.length} songs (${globalUpdatedCount} global DB updates)`);
 }
 
 // Helper to check if string is a UUID
@@ -470,16 +470,19 @@ export async function POST(request, { params }) {
     console.log(`[Smart Sort API] ✅ Complete in ${totalTime}s`);
     console.log('========== [Smart Sort API] Done ==========\n');
 
-    // Background metadata enrichment for songs missing genres/popularity
-    // Fire-and-forget, doesn't block response
+    // Metadata enrichment for songs missing genres/popularity
+    // Run synchronously (small batch) since Vercel kills background tasks after response
     const songsNeedingMetadata = allSongs.filter(song => 
       (!song.genres || song.genres.length === 0) && (!song.popularity || song.popularity === 0)
     );
     
     if (songsNeedingMetadata.length > 0) {
-      console.log(`[Smart Sort API] 🔄 Triggering background metadata enrichment for ${songsNeedingMetadata.length} songs`);
-      backgroundMetadataEnrichment(supabase, songsNeedingMetadata)
-        .catch(err => console.warn('[Smart Sort API] Background metadata failed:', err.message));
+      console.log(`[Smart Sort API] 🔄 Running metadata enrichment for ${Math.min(5, songsNeedingMetadata.length)} of ${songsNeedingMetadata.length} songs`);
+      try {
+        await backgroundMetadataEnrichment(supabase, songsNeedingMetadata.slice(0, 5));
+      } catch (err) {
+        console.warn('[Smart Sort API] Metadata enrichment failed:', err.message);
+      }
     }
 
     return NextResponse.json(result);
