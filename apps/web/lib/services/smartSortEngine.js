@@ -541,16 +541,17 @@ export function heuristicSort(songs) {
 
   // Step 4: Interleave to avoid consecutive same artist/genre/song
   const result = [];
-  const lastArtists = []; // Track last N artists
-  const lastGenres = [];  // Track last N genres
-  const lastSongIds = []; // Track last N song IDs (for duplicates)
+  const lastArtists = [];    // Track last N artists
+  const lastGenres = [];     // Track last N genres
+  const lastSongIds = [];    // Track last N song IDs (for duplicates)
+  const lastSignatures = []; // Track last N title+artist combos (for duplicate detection)
   
   // Process popular songs first (with interleaving)
-  const interleavedPopular = interleaveByConstraints(popularSongs, lastArtists, lastGenres, lastSongIds);
+  const interleavedPopular = interleaveByConstraints(popularSongs, lastArtists, lastGenres, lastSongIds, lastSignatures);
   result.push(...interleavedPopular);
 
   // Process regular songs (spread throughout, with interleaving)
-  const interleavedRegular = interleaveByConstraints(regularSongs, lastArtists, lastGenres, lastSongIds);
+  const interleavedRegular = interleaveByConstraints(regularSongs, lastArtists, lastGenres, lastSongIds, lastSignatures);
   
   // Merge regular songs into result, spreading them out
   if (interleavedRegular.length > 0 && result.length > 0) {
@@ -575,7 +576,7 @@ export function heuristicSort(songs) {
 /**
  * Interleave songs to avoid consecutive same artist/genre/song
  */
-function interleaveByConstraints(songs, lastArtists, lastGenres, lastSongIds = []) {
+function interleaveByConstraints(songs, lastArtists, lastGenres, lastSongIds = [], lastSignatures = []) {
   if (songs.length === 0) return [];
   
   const result = [];
@@ -588,7 +589,7 @@ function interleaveByConstraints(songs, lastArtists, lastGenres, lastSongIds = [
     
     for (let i = 0; i < remaining.length; i++) {
       const song = remaining[i];
-      const score = calculatePlacementScore(song, lastArtists, lastGenres, lastSongIds);
+      const score = calculatePlacementScore(song, lastArtists, lastGenres, lastSongIds, lastSignatures);
       
       if (score > bestScore) {
         bestScore = score;
@@ -606,29 +607,48 @@ function interleaveByConstraints(songs, lastArtists, lastGenres, lastSongIds = [
     lastArtists.unshift(chosen.artist);
     lastGenres.unshift(chosen.standardGenre);
     lastSongIds.unshift(chosen.songId);
+    lastSignatures.unshift(getSongSignature(chosen));
     if (lastArtists.length > 3) lastArtists.pop();
     if (lastGenres.length > 3) lastGenres.pop();
     if (lastSongIds.length > 3) lastSongIds.pop();
+    if (lastSignatures.length > 3) lastSignatures.pop();
   }
   
   return result;
 }
 
 /**
+ * Generate a signature for a song based on title + artist (for detecting duplicates)
+ */
+function getSongSignature(song) {
+  const title = (song.title || '').toLowerCase().trim();
+  const artist = (song.artist || '').toLowerCase().trim();
+  return `${title}::${artist}`;
+}
+
+/**
  * Calculate score for placing a song at current position
  * Higher score = better placement
  */
-function calculatePlacementScore(song, lastArtists, lastGenres, lastSongIds = []) {
+function calculatePlacementScore(song, lastArtists, lastGenres, lastSongIds = [], lastSignatures = []) {
   let score = 0;
   
   const artist = song.artist || 'Unknown';
   const genre = song.standardGenre || 'Other';
   const songId = song.songId;
+  const signature = getSongSignature(song);
   
-  // Penalize placing same song consecutively (duplicates) - highest penalty
+  // Penalize placing same song consecutively (by ID) - highest penalty
   if (lastSongIds.length > 0 && lastSongIds[0] === songId) {
     score -= 2000;
   } else if (lastSongIds.length > 1 && lastSongIds[1] === songId) {
+    score -= 200;
+  }
+  
+  // Penalize placing same song by title+artist (catches duplicates with different IDs)
+  if (lastSignatures.length > 0 && lastSignatures[0] === signature) {
+    score -= 2000;
+  } else if (lastSignatures.length > 1 && lastSignatures[1] === signature) {
     score -= 200;
   }
   
@@ -649,7 +669,8 @@ function calculatePlacementScore(song, lastArtists, lastGenres, lastSongIds = []
   // Bonus for variety
   if (!lastArtists.includes(artist)) score += 10;
   if (!lastGenres.includes(genre)) score += 5;
-  if (!lastSongIds.includes(songId)) score += 15; // Bonus for not repeating song recently
+  if (!lastSongIds.includes(songId)) score += 15;
+  if (!lastSignatures.includes(signature)) score += 15; // Bonus for not repeating title+artist
   
   // Small bonus for popularity (tie-breaker)
   score += (song.popularity || 0) / 100;
@@ -776,11 +797,12 @@ async function aiVerifySort(songs, heuristicOrder, model, timeoutMs) {
   });
 
   const prompt = `Review this song order for a playlist. Check for issues:
-1. Consecutive same artist (BAD)
-2. Consecutive same genre (BAD)
-3. Popular songs not near the top (BAD)
+1. Consecutive duplicate songs - same songId OR matching title+artist back-to-back (VERY BAD)
+2. Consecutive same artist (BAD)
+3. Consecutive same genre (BAD)
+4. Popular songs not near the top (BAD)
 
-For themed collections (e.g., Christmas, holiday, workout), prioritize artist variety over genre variety since songs may share the same theme.
+For themed collections (e.g., Christmas, holiday, workout), prioritize artist variety over genre variety since songs may share the same theme. Duplicate songs (same title+artist) should be spread as far apart as possible.
 
 Current order (sample of ${sampleData.length} songs):
 ${JSON.stringify(sampleData.slice(0, 30), null, 2)}
