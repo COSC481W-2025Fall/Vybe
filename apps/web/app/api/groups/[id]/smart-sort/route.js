@@ -6,7 +6,93 @@ import { smartSort, getQueueStatus, heuristicOnlySort, getSystemHealth, isSystem
 import { analyzeAndSortPlaylists } from '@/lib/services/openaiSorting';
 import { updatePlaylistOrder, updateSongOrder } from '@/lib/db/smartSorting';
 import { rateLimitMiddleware } from '@/lib/api/rateLimiter';
-import { lookupSong, batchRegisterSongs, getDatabaseStats } from '@/lib/services/globalSongDatabase';
+import { lookupSong, batchRegisterSongs, getDatabaseStats, updateSongMetadata } from '@/lib/services/globalSongDatabase';
+import { getTrackMetadata } from '@/lib/services/musicMetadata';
+
+/**
+ * Background metadata enrichment - runs after sort completes
+ * Fetches metadata for songs missing genres/popularity and updates both:
+ * - playlist_songs table (user's copy)
+ * - global_songs table (shared database)
+ * Non-blocking, fire-and-forget
+ */
+async function backgroundMetadataEnrichment(supabase, songsNeedingMetadata, spotifyToken = null) {
+  if (!songsNeedingMetadata || songsNeedingMetadata.length === 0) return;
+  
+  // Limit to 20 songs per sort to avoid overwhelming APIs
+  const songsToProcess = songsNeedingMetadata.slice(0, 20);
+  console.log(`[Background Metadata] Starting enrichment for ${songsToProcess.length} songs`);
+  
+  let enrichedCount = 0;
+  let globalUpdatedCount = 0;
+  
+  for (const song of songsToProcess) {
+    try {
+      const metadata = await getTrackMetadata(song, song.platform || 'unknown', spotifyToken);
+      
+      // Only update if we got useful metadata
+      if ((metadata.genres && metadata.genres.length > 0) || metadata.popularity > 0) {
+        const updateData = {
+          metadata_fetched_at: new Date().toISOString(),
+        };
+        
+        if (metadata.genres && metadata.genres.length > 0) {
+          updateData.genres = metadata.genres;
+        }
+        if (metadata.popularity > 0) {
+          updateData.popularity = metadata.popularity;
+        }
+        
+        // Update playlist_songs table
+        await supabase
+          .from('playlist_songs')
+          .update(updateData)
+          .eq('id', song.id);
+        
+        enrichedCount++;
+        
+        // Also update global database if song exists there
+        try {
+          const globalSong = await lookupSong({
+            title: song.title,
+            artist: song.artist,
+            spotifyId: song.spotify_id,
+            youtubeId: song.youtube_id,
+          });
+          
+          if (globalSong && globalSong.id) {
+            // Only update global if it's missing this metadata
+            const globalNeedsUpdate = 
+              (!globalSong.genres || globalSong.genres.length === 0) && updateData.genres ||
+              (!globalSong.popularity || globalSong.popularity === 0) && updateData.popularity;
+            
+            if (globalNeedsUpdate) {
+              const globalUpdate = {};
+              if (updateData.genres && (!globalSong.genres || globalSong.genres.length === 0)) {
+                globalUpdate.genres = updateData.genres;
+              }
+              if (updateData.popularity && (!globalSong.popularity || globalSong.popularity === 0)) {
+                globalUpdate.popularity = updateData.popularity;
+              }
+              
+              if (Object.keys(globalUpdate).length > 0) {
+                await updateSongMetadata(globalSong.id, globalUpdate);
+                globalUpdatedCount++;
+              }
+            }
+          }
+        } catch (globalErr) {
+          // Silently continue - global update is optional
+        }
+      }
+    } catch (error) {
+      // Silently continue - background process shouldn't fail loudly
+      console.warn(`[Background Metadata] Failed for song ${song.id}:`, error.message);
+    }
+  }
+  
+  console.log(`[Background Metadata] Enriched ${enrichedCount}/${songsToProcess.length} songs (${globalUpdatedCount} global DB updates)`);
+}
 
 // Helper to check if string is a UUID
 function isUUID(str) {
@@ -383,6 +469,18 @@ export async function POST(request, { params }) {
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`[Smart Sort API] ✅ Complete in ${totalTime}s`);
     console.log('========== [Smart Sort API] Done ==========\n');
+
+    // Background metadata enrichment for songs missing genres/popularity
+    // Fire-and-forget, doesn't block response
+    const songsNeedingMetadata = allSongs.filter(song => 
+      (!song.genres || song.genres.length === 0) && (!song.popularity || song.popularity === 0)
+    );
+    
+    if (songsNeedingMetadata.length > 0) {
+      console.log(`[Smart Sort API] 🔄 Triggering background metadata enrichment for ${songsNeedingMetadata.length} songs`);
+      backgroundMetadataEnrichment(supabase, songsNeedingMetadata)
+        .catch(err => console.warn('[Smart Sort API] Background metadata failed:', err.message));
+    }
 
     return NextResponse.json(result);
 
