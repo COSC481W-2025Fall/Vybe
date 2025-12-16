@@ -148,7 +148,8 @@ Sent at: ${new Date().toLocaleString()}
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'Vybe Contact <noreply@vybe.app>',
+          // Use Resend's default domain until you verify your own domain
+          from: 'Vybe <onboarding@resend.dev>',
           to: [CONTACT_EMAIL],
           reply_to: email,
           subject: emailSubject,
@@ -157,7 +158,7 @@ Sent at: ${new Date().toLocaleString()}
       });
 
       if (response.ok) {
-        console.log('[Contact API] Email sent via Resend');
+        console.log('[Contact API] Email sent via Resend to', CONTACT_EMAIL);
         return true;
       } else {
         const error = await response.text();
