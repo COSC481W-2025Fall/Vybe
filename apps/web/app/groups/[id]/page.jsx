@@ -863,14 +863,33 @@ export default function GroupDetailPage({ params }) {
       songs = allPlaylistSongs;
     }
 
+    // Get cached likes from localStorage as backup
+    const cachedLikes = (() => {
+      try {
+        const cached = localStorage.getItem(`vybe_liked_songs_${session.user.id}`);
+        return cached ? JSON.parse(cached) : [];
+      } catch {
+        return [];
+      }
+    })();
+
     // Transform songs to include liked status and playlist info
-    const songsWithLikes = (songs || []).map(song => ({
-      ...song,
-      isLiked: song.song_likes?.some(like => like.user_id === session.user.id) || false,
-      likeCount: song.song_likes?.length || 0,
-      playlistName: song.group_playlists?.name || 'Unknown',
-      platform: song.group_playlists?.platform || 'unknown',
-    }));
+    // Uses database likes primarily, falls back to localStorage cache
+    const songsWithLikes = (songs || []).map(song => {
+      const dbLiked = song.song_likes?.some(like => like.user_id === session.user.id) || false;
+      const cacheLiked = cachedLikes.includes(song.id);
+      
+      // Prefer database value, but use cache if DB has no likes data
+      const isLiked = dbLiked || (song.song_likes === null && cacheLiked);
+      
+      return {
+        ...song,
+        isLiked,
+        likeCount: song.song_likes?.length || 0,
+        playlistName: song.group_playlists?.name || 'Unknown',
+        platform: song.group_playlists?.platform || 'unknown',
+      };
+    });
 
     setPlaylistSongs(songsWithLikes);
   }
@@ -910,29 +929,103 @@ export default function GroupDetailPage({ params }) {
     }
   }
 
+  // Helper to get/set likes from localStorage cache
+  function getLikedSongsCache(userId) {
+    try {
+      const cached = localStorage.getItem(`vybe_liked_songs_${userId}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function setLikedSongsCache(userId, likedSongIds) {
+    try {
+      localStorage.setItem(`vybe_liked_songs_${userId}`, JSON.stringify(likedSongIds));
+    } catch (e) {
+      console.warn('[Groups] Could not save likes to localStorage:', e);
+    }
+  }
+
   async function toggleLikeSong(songId, isCurrentlyLiked) {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    if (isCurrentlyLiked) {
-      // Unlike
-      await supabase
-        .from('song_likes')
-        .delete()
-        .eq('song_id', songId)
-        .eq('user_id', session.user.id);
-    } else {
-      // Like
-      await supabase
-        .from('song_likes')
-        .insert({
-          song_id: songId,
-          user_id: session.user.id,
-        });
+    if (!session) {
+      toast.error("You need to be logged in to like songs");
+      return false;
     }
 
-    // Reload songs to update like status
-    loadPlaylistSongs(selectedPlaylist);
+    const userId = session.user.id;
+    console.log(`[Groups] Toggling like for song ${songId}, currently liked: ${isCurrentlyLiked}`);
+
+    try {
+      if (isCurrentlyLiked) {
+        // Unlike
+        const { error } = await supabase
+          .from('song_likes')
+          .delete()
+          .eq('song_id', songId)
+          .eq('user_id', userId);
+        
+        if (error) {
+          console.error('[Groups] Unlike error:', error);
+          throw error;
+        }
+        console.log(`[Groups] Successfully unliked song ${songId}`);
+
+        // Update localStorage cache
+        const cachedLikes = getLikedSongsCache(userId);
+        setLikedSongsCache(userId, cachedLikes.filter(id => id !== songId));
+      } else {
+        // Like
+        const { data, error } = await supabase
+          .from('song_likes')
+          .insert({
+            song_id: songId,
+            user_id: userId,
+          })
+          .select();
+        
+        if (error) {
+          console.error('[Groups] Like error:', error);
+          throw error;
+        }
+        console.log(`[Groups] Successfully liked song ${songId}, inserted:`, data);
+
+        // Update localStorage cache
+        const cachedLikes = getLikedSongsCache(userId);
+        if (!cachedLikes.includes(songId)) {
+          setLikedSongsCache(userId, [...cachedLikes, songId]);
+        }
+      }
+
+      // Verify the change by querying the database
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('song_likes')
+        .select('*')
+        .eq('song_id', songId)
+        .eq('user_id', userId);
+      
+      if (verifyError) {
+        console.warn('[Groups] Could not verify like status:', verifyError);
+      } else {
+        const nowLiked = verifyData && verifyData.length > 0;
+        console.log(`[Groups] Verified: song ${songId} is now ${nowLiked ? 'liked' : 'not liked'} (expected: ${!isCurrentlyLiked})`);
+        
+        if (nowLiked !== !isCurrentlyLiked) {
+          console.error('[Groups] Like status mismatch! Database may not have updated correctly.');
+        }
+      }
+
+      // Reload songs to update like status
+      loadPlaylistSongs(selectedPlaylist);
+      return true;
+    } catch (error) {
+      console.error('[Groups] Error toggling like:', error);
+      toast.error("Couldn't save your like. Please try again.");
+      // Reload to reset the UI to the actual state
+      loadPlaylistSongs(selectedPlaylist);
+      return false;
+    }
   }
 
   async function handleRemoveMember(member) {
@@ -1537,10 +1630,19 @@ function YouTubeIcon({ className }) {
 function SongItem({ song, index, onToggleLike, userId, onPlay, isPlaying }) {
   const [isLiked, setIsLiked] = useState(song.isLiked || false);
 
-  const handleLikeClick = (e) => {
+  // Sync local state with prop when it changes (e.g., after server refresh)
+  useEffect(() => {
+    setIsLiked(song.isLiked || false);
+  }, [song.isLiked]);
+
+  const handleLikeClick = async (e) => {
     e.stopPropagation(); // Prevent opening player when clicking like button
-    setIsLiked(!isLiked);
-    onToggleLike(song.id, isLiked);
+    const previousState = isLiked;
+    setIsLiked(!isLiked); // Optimistic update
+    const success = await onToggleLike(song.id, previousState);
+    if (!success) {
+      setIsLiked(previousState); // Revert on failure
+    }
   };
 
   const handleSongClick = () => {
