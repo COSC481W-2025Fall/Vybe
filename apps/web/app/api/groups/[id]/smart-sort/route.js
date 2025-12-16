@@ -8,6 +8,7 @@ import { updatePlaylistOrder, updateSongOrder } from '@/lib/db/smartSorting';
 import { rateLimitMiddleware } from '@/lib/api/rateLimiter';
 import { lookupSong, batchRegisterSongs, getDatabaseStats, updateSongMetadata } from '@/lib/services/globalSongDatabase';
 import { getTrackMetadata } from '@/lib/services/musicMetadata';
+import { getValidAccessToken as getSpotifyToken } from '@/lib/spotify';
 
 /**
  * Background metadata enrichment - runs after sort completes
@@ -479,7 +480,15 @@ export async function POST(request, { params }) {
     if (songsNeedingMetadata.length > 0) {
       console.log(`[Smart Sort API] 🔄 Running metadata enrichment for ${Math.min(5, songsNeedingMetadata.length)} of ${songsNeedingMetadata.length} songs`);
       try {
-        await backgroundMetadataEnrichment(supabase, songsNeedingMetadata.slice(0, 5));
+        // Try to get Spotify token for better metadata (genres)
+        let spotifyToken = null;
+        try {
+          spotifyToken = await getSpotifyToken(supabase, user.id);
+        } catch (tokenErr) {
+          console.log('[Smart Sort API] No Spotify token available, using Last.fm fallback');
+        }
+        
+        await backgroundMetadataEnrichment(supabase, songsNeedingMetadata.slice(0, 5), spotifyToken);
       } catch (err) {
         console.warn('[Smart Sort API] Metadata enrichment failed:', err.message);
       }
