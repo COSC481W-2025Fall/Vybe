@@ -29,28 +29,76 @@ async function backgroundMetadataEnrichment(supabase, songsNeedingMetadata, spot
   
   for (const song of songsToProcess) {
     try {
-      const metadata = await getTrackMetadata(song, song.platform || 'unknown', spotifyToken);
+      // Clean up song data for better matching
+      const cleanedSong = { ...song };
       
-      // Only update if we got useful metadata
+      // Remove "- Topic" suffix from YouTube auto-generated channels
+      if (cleanedSong.artist && cleanedSong.artist.includes(' - Topic')) {
+        cleanedSong.artist = cleanedSong.artist.replace(' - Topic', '').trim();
+      }
+      
+      // Clean up YouTube-style titles for better Last.fm/MusicBrainz matching
+      if (cleanedSong.title) {
+        let cleanTitle = cleanedSong.title;
+        
+        // Remove common YouTube suffixes: "(Official Video)", "(Lyrics)", "(Audio)", etc.
+        cleanTitle = cleanTitle.replace(/\s*\((?:official|lyric|audio|music|hd|hq|live|acoustic|cover|remix|version|video|visualizer|ft\.|feat\.|featuring)[^)]*\)/gi, '');
+        
+        // Remove "on Spotify & Apple" or similar platform mentions
+        cleanTitle = cleanTitle.replace(/\s+on\s+(?:spotify|apple|youtube|itunes)[^-]*/gi, '');
+        
+        // If title has " - Artist Name" pattern, extract just the song title
+        // Common format: "Song Name - Artist Name" or "Artist - Song Name (extra)"
+        const dashMatch = cleanTitle.match(/^(.+?)\s+-\s+(.+)$/);
+        if (dashMatch) {
+          // Check if the part after dash looks like an artist name (matches our artist)
+          const artistLower = (cleanedSong.artist || '').toLowerCase();
+          if (dashMatch[2].toLowerCase().includes(artistLower) || artistLower.includes(dashMatch[2].toLowerCase())) {
+            cleanTitle = dashMatch[1]; // Use the first part as title
+          } else if (dashMatch[1].toLowerCase().includes(artistLower) || artistLower.includes(dashMatch[1].toLowerCase())) {
+            cleanTitle = dashMatch[2]; // Use the second part as title
+          }
+        }
+        
+        cleanedSong.title = cleanTitle.trim();
+      }
+      
+      // Detect platform from external_id if not set (YouTube IDs are 11 chars)
+      let platform = song.platform || 'unknown';
+      if (platform === 'unknown' && song.external_id) {
+        if (song.external_id.length === 11 && /^[a-zA-Z0-9_-]+$/.test(song.external_id)) {
+          platform = 'youtube';
+        } else if (song.external_id.length === 22) {
+          platform = 'spotify';
+        }
+      }
+      
+      console.log(`[Metadata Enrichment] Cleaned: "${song.title}" -> "${cleanedSong.title}", artist: "${cleanedSong.artist}"`);
+      
+      const metadata = await getTrackMetadata(cleanedSong, platform, spotifyToken);
+      
+      // Always mark as fetched, include any metadata we got
+      const updateData = {
+        metadata_fetched_at: new Date().toISOString(),
+      };
+      
+      if (metadata.genres && metadata.genres.length > 0) {
+        updateData.genres = metadata.genres;
+      }
+      if (metadata.popularity > 0) {
+        updateData.popularity = metadata.popularity;
+      }
+      
+      // Update playlist_songs table
+      await supabase
+        .from('playlist_songs')
+        .update(updateData)
+        .eq('id', song.id);
+      
+      enrichedCount++;
+      
+      // Only update global DB if we got useful metadata
       if ((metadata.genres && metadata.genres.length > 0) || metadata.popularity > 0) {
-        const updateData = {
-          metadata_fetched_at: new Date().toISOString(),
-        };
-        
-        if (metadata.genres && metadata.genres.length > 0) {
-          updateData.genres = metadata.genres;
-        }
-        if (metadata.popularity > 0) {
-          updateData.popularity = metadata.popularity;
-        }
-        
-        // Update playlist_songs table
-        await supabase
-          .from('playlist_songs')
-          .update(updateData)
-          .eq('id', song.id);
-        
-        enrichedCount++;
         
         // Also update global database if song exists there
         try {
