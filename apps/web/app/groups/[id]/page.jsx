@@ -947,6 +947,65 @@ export default function GroupDetailPage({ params }) {
     }
   }
 
+  // Debug function - can be called from console via window.testLikeSystem()
+  useEffect(() => {
+    window.testLikeSystem = async () => {
+      console.log('=== TESTING LIKE SYSTEM ===');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('1. Session:', session ? `Logged in as ${session.user.id}` : 'NOT LOGGED IN');
+      
+      if (!session) {
+        console.error('Cannot test - not logged in');
+        return;
+      }
+      
+      // Test: Can we read from song_likes?
+      const { data: readTest, error: readError } = await supabase
+        .from('song_likes')
+        .select('*')
+        .limit(5);
+      console.log('2. Read test:', readError ? `ERROR: ${readError.message}` : `OK - found ${readTest?.length || 0} likes`);
+      
+      // Test: Get a song ID to test with
+      const testSongId = playlistSongs[0]?.id;
+      if (!testSongId) {
+        console.error('No songs available to test with');
+        return;
+      }
+      console.log('3. Test song ID:', testSongId);
+      
+      // Test: Try to insert a like
+      const { data: insertData, error: insertError } = await supabase
+        .from('song_likes')
+        .insert({ song_id: testSongId, user_id: session.user.id })
+        .select();
+      console.log('4. Insert test:', insertError ? `ERROR: ${insertError.message} (code: ${insertError.code})` : 'OK', insertData);
+      
+      // Test: Verify it was inserted
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('song_likes')
+        .select('*')
+        .eq('song_id', testSongId)
+        .eq('user_id', session.user.id);
+      console.log('5. Verify test:', verifyError ? `ERROR: ${verifyError.message}` : `Found ${verifyData?.length || 0} likes for this song`);
+      
+      // Cleanup: Delete the test like
+      if (!insertError) {
+        const { error: deleteError } = await supabase
+          .from('song_likes')
+          .delete()
+          .eq('song_id', testSongId)
+          .eq('user_id', session.user.id);
+        console.log('6. Cleanup:', deleteError ? `ERROR: ${deleteError.message}` : 'OK - removed test like');
+      }
+      
+      console.log('=== TEST COMPLETE ===');
+    };
+    
+    return () => { delete window.testLikeSystem; };
+  }, [playlistSongs, supabase]);
+
   async function toggleLikeSong(songId, isCurrentlyLiked) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
